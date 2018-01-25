@@ -28,9 +28,9 @@ Put training datasets of your own under /Classics.
 
 Modify, then run
 
-'''
+```
 python3 Convert.py
-'''
+```
 
 for visualizations of the generated results.
 
@@ -39,6 +39,10 @@ Conversion of generated results to midi files are being implemented.
 ## Deployment
 
 Currently manual.
+
+## TODOs
+
+Integrate [Gradient Checkpointing](https://github.com/openai/gradient-checkpointing)
 
 ## Authors
 
