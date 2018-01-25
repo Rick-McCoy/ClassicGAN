@@ -65,7 +65,7 @@ def discriminator(inputs, reuse=False, train=False):
         pool3 = tf.layers.average_pooling2d(conv3, pool_size=[2, 2], strides=2)
         conv4 = tf.layers.conv2d(inputs=pool3, filters=128, kernel_size=[12, 8], padding='same', activation=leaky_relu, name='conv4')
         pool4 = tf.layers.average_pooling2d(conv4, pool_size=[2, 2], strides=2)
-        dense1 = tf.layers.dense(inputs=tf.contrib.layers.flatten(pool4), units=hidden_unit_num // 10, activation=tf.nn.sigmoid, name='dense1')
+        dense1 = tf.layers.dense(inputs=tf.contrib.layers.flatten(pool4), units=hidden_unit_num // 10, activation=leaky_relu, name='dense1')
         output = tf.layers.dense(inputs=dense1, units=1, activation=tf.sigmoid, name='output')
         output_scalar = tf.reduce_mean(output)
         tf.summary.scalar('output_mean', output_scalar)
