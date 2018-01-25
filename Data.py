@@ -38,5 +38,4 @@ def roll(path):
     if np.sum(data) == 0:
         return FileNotFoundError
     data = (data - 0.5) * 2
-    print(data)
     return length, data
