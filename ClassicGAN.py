@@ -22,7 +22,8 @@ def main():
     shared_noise_len = 400
     noise_length = 200
     total_train_epoch = 100
-    
+    Lambda = 10
+
     with tf.name_scope('inputs'):
         inputs = tf.placeholder(tf.float32, [None, class_num, input_length, channel_num], name='inputs')
         sharednoise = tf.placeholder(tf.float32, [None, shared_noise_len], name='sharednoise')
@@ -39,8 +40,17 @@ def main():
         dis_gene = discriminator(inputs=input_gen, reuse=True)
     print('discriminator set')
     with tf.name_scope('loss'):
-        loss_dis = -tf.reduce_mean(tf.log(dis_real) + tf.log(1 - dis_gene))
-        loss_gen = -tf.reduce_mean(tf.log(dis_gene))
+        #loss_dis = -tf.reduce_mean(tf.log(dis_real) + tf.log(1 - dis_gene))
+        #loss_gen = -tf.reduce_mean(tf.log(dis_gene))
+        loss_dis = tf.reduce_mean(dis_gene-dis_real)
+        loss_gen = -tf.reduce_mean(dis_gene)
+        alpha = tf.random_uniform(shape=tf.shape(dis_gene), minval=0., maxval=1.)
+        diff = input_gen-inputs
+        interpolate = inputs+alpha*diff
+        gradients = tf.gradients(discriminator(inputs=interpolate, reuse=True), [interpolate])[0]
+        slopes = tf.sqrt(tf.reduce_sum(tf.square(gradients), reduction_indices=[1]))
+        gradient_penalty = tf.reduce_mean((slopes-1.)**2)
+        loss_dis+=Lambda*gradient_penalty
         tf.summary.scalar('discriminator_loss', loss_dis)
         tf.summary.scalar('generator_loss', loss_gen)
     print('loss set')
