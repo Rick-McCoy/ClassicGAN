@@ -6,9 +6,8 @@ import tensorflow as tf
 import numpy as np
 import pathlib
 import os
+from Data import class_num, input_length
 
-class_num = 84
-input_length = 512
 hidden_unit_num = 1000
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'

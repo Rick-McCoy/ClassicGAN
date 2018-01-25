@@ -9,7 +9,7 @@ import random
 import tensorflow as tf
 import numpy as np
 from tqdm import tqdm
-from Data import roll, channel_num
+from Data import roll, channel_num, class_num, input_length
 from Model import generator, discriminator, get_noise
 #import memory_saving_gradients
 # monkey patch tf.gradients to point to our custom version, with automatic
@@ -21,8 +21,6 @@ def main():
 
     shared_noise_len = 400
     noise_length = 200
-    class_num = 84
-    input_length = 512
     total_train_epoch = 100
     
     with tf.name_scope('inputs'):
