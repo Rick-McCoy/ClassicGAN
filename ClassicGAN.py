@@ -61,7 +61,7 @@ def main():
         writer = tf.summary.FileWriter('train', sess.graph)
         sess.run(tf.global_variables_initializer())
         data = []
-        pathlist = list(pathlib.Path('Classics').glob('**/*.mid'))
+        pathlist = list(pathlib.Path('Classics').glob('**/*.mid')) + list(pathlib.Path('TPD').glob('**/*.mid'))
         train_count = 0
         print('preparing complete')
         for epoch in tqdm(range(total_train_epoch)):
