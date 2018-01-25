@@ -81,8 +81,8 @@ def main():
     with tf.name_scope('optimizers'):
         extra_update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
         with tf.control_dependencies(extra_update_ops):
-            dis_train = tf.train.GradientDescentOptimizer(learning_rate=0.01).minimize(loss_dis, var_list=dis_var, name='dis_train')
-        gen_train = tf.train.AdamOptimizer(learning_rate=0.01).minimize(loss_gen, var_list=gen_var, name='gen_train')
+            gen_train = tf.train.AdamOptimizer(learning_rate=0.01).minimize(loss_gen, var_list=gen_var, name='gen_train')
+        dis_train = tf.train.GradientDescentOptimizer(learning_rate=0.01).minimize(loss_dis, var_list=dis_var, name='dis_train')
     print('optimizer set')
     loss_val_dis = loss_val_gen = 1.0
     gpu_options = tf.GPUOptions(allow_growth=True)

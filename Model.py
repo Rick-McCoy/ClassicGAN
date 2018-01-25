@@ -24,43 +24,43 @@ def generator(noise, sharednoise, num, train):
         dense2 = tf.layers.dense(inputs=dropout1, units=class_num * input_length // 4, activation=leaky_relu, name='dense2')
         dropout2 = tf.layers.dropout(inputs=dense2, training=train, name='dropout2')
         dropout2 = tf.reshape(dropout2, [-1, class_num // 12, input_length // 32, 96])
-        deconv1 = tf.layers.conv2d_transpose(inputs=dropout2, filters=64, kernel_size=[2, 4], strides=(2, 2), padding='same', activation=leaky_relu, name='deconv1')
+        deconv1 = tf.layers.conv2d_transpose(inputs=dropout2, filters=64, kernel_size=[2, 4], strides=(2, 2), padding='same', activation=leaky_relu, name='deconv1', bias_initializer=None)
+        batch_norm1 = tf.layers.batch_normalization(inputs=deconv1)
+        deconv2 = tf.layers.conv2d_transpose(inputs=batch_norm1, filters=32, kernel_size=[4, 6], strides=(2, 2), padding='same', activation=leaky_relu, name='deconv2', bias_initializer=None)
+        batch_norm2 = tf.layers.batch_normalization(inputs=deconv2)
+        deconv3 = tf.layers.conv2d_transpose(inputs=batch_norm2, filters=16, kernel_size=[6, 8], strides=(3, 2), padding='same', activation=leaky_relu, name='deconv3', bias_initializer=None)
+        batch_norm3 = tf.layers.batch_normalization(inputs=deconv3)
+        deconv4 = tf.layers.conv2d_transpose(inputs=batch_norm3, filters=8, kernel_size=[12, 8], strides=(1, 2), padding='same', activation=leaky_relu, name='deconv4', bias_initializer=None)
+        batch_norm4 = tf.layers.batch_normalization(deconv4)
+        deconv5 = tf.layers.conv2d_transpose(inputs=batch_norm4, filters=1, kernel_size=[12, 8], strides=(1, 2), padding='same', activation=leaky_relu, name='deconv5', bias_initializer=None)
+        batch_norm5 = tf.layers.batch_normalization(deconv5)
+        output = tf.tanh(tf.squeeze(batch_norm5, axis=3))
         if num == 0 or num == 1:
             with tf.variable_scope('deconv1', reuse=True):
                 deconv1_w = tf.get_variable('kernel')
-                deconv1_b = tf.get_variable('bias')
+                #deconv1_b = tf.get_variable('bias')
             tf.summary.histogram('deconv1_weight', deconv1_w)
-            tf.summary.histogram('deconv1_bias', deconv1_b)
-        deconv2 = tf.layers.conv2d_transpose(inputs=deconv1, filters=32, kernel_size=[4, 6], strides=(2, 2), padding='same', activation=leaky_relu, name='deconv2')
-        if num == 0 or num == 1:
+            #tf.summary.histogram('deconv1_bias', deconv1_b)
             with tf.variable_scope('deconv2', reuse=True):
                 deconv2_w = tf.get_variable('kernel')
-                deconv2_b = tf.get_variable('bias')
+                #deconv2_b = tf.get_variable('bias')
             tf.summary.histogram('deconv2_weight', deconv2_w)
-            tf.summary.histogram('deconv2_bias', deconv2_b)
-        deconv3 = tf.layers.conv2d_transpose(inputs=deconv2, filters=16, kernel_size=[6, 8], strides=(3, 2), padding='same', activation=leaky_relu, name='deconv3')
-        if num == 0 or num == 1:
+            #tf.summary.histogram('deconv2_bias', deconv2_b)
             with tf.variable_scope('deconv3', reuse=True):
                 deconv3_w = tf.get_variable('kernel')
-                deconv3_b = tf.get_variable('bias')
+                #deconv3_b = tf.get_variable('bias')
             tf.summary.histogram('deconv3_weight', deconv3_w)
-            tf.summary.histogram('deconv3_bias', deconv3_b)
-        deconv4 = tf.layers.conv2d_transpose(inputs=deconv3, filters=8, kernel_size=[12, 8], strides=(1, 2), padding='same', activation=leaky_relu, name='deconv4')
-        if num == 0 or num == 1:
+            #tf.summary.histogram('deconv3_bias', deconv3_b)
             with tf.variable_scope('deconv4', reuse=True):
                 deconv4_w = tf.get_variable('kernel')
-                deconv4_b = tf.get_variable('bias')
+                #deconv4_b = tf.get_variable('bias')
             tf.summary.histogram('deconv4_weight', deconv4_w)
-            tf.summary.histogram('deconv4_bias', deconv4_b)
-        deconv5 = tf.layers.conv2d_transpose(inputs=deconv4, filters=1, kernel_size=[12, 8], strides=(1, 2), padding='same', activation=leaky_relu, name='deconv5')
-        if num == 0 or num == 1:
+            #tf.summary.histogram('deconv4_bias', deconv4_b)
             with tf.variable_scope('deconv5', reuse=True):
                 deconv5_w = tf.get_variable('kernel')
-                deconv5_b = tf.get_variable('bias')
+                #deconv5_b = tf.get_variable('bias')
             tf.summary.histogram('deconv5_weight', deconv5_w)
-            tf.summary.histogram('deconv5_bias', deconv5_b)
-        output = tf.tanh(tf.squeeze(deconv5, axis=3))
-        print(output.get_shape())
+            #tf.summary.histogram('deconv5_bias', deconv5_b)
     return output
 
 def discriminator(inputs, reuse=False, train=False):
