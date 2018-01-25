@@ -39,39 +39,9 @@ def main():
         dis_gene = discriminator(inputs=input_gen, reuse=True)
     print('discriminator set')
     with tf.name_scope('loss'):
-        #loss_dis_real =
-        #tf.reduce_mean(tf.losses.softmax_cross_entropy(onehot_labels=tf.ones_like(dis_real),
-        #logits=dis_real, label_smoothing=0.1), name='loss_dis_real')
-        #loss_dis_real =
-        #tf.reduce_mean(tf.losses.sigmoid_cross_entropy(multi_class_labels=tf.ones_like(dis_real),
-        #logits=dis_real, label_smoothing=0.1), name='loss_dis_real')
-        #loss_dis_real =
-        #tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=dis_real,
-        #labels=tf.ones_like(dis_real)), name='loss_dis_real')
-        #loss_dis_gene =
-        #tf.reduce_mean(tf.losses.softmax_cross_entropy(onehot_labels=tf.zeros_like(dis_gene),
-        #logits=dis_gene, label_smoothing=0.1), name='loss_dis_gene')
-        #loss_dis_gene =
-        #tf.reduce_mean(tf.losses.sigmoid_cross_entropy(multi_class_labels=label_dis_gene,
-        #logits=dis_gene, label_smoothing=0.1), name='loss_dis_gene')
-        #loss_dis_gene =
-        #tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=dis_gene,
-        #labels=tf.zeros_like(dis_gene)), name='loss_dis_gene')
-        #loss_dis = loss_dis_real + loss_dis_gene
         loss_dis = -tf.reduce_mean(tf.log(dis_real) + tf.log(1 - dis_gene))
-        #loss_gen =
-        #tf.reduce_mean(tf.losses.softmax_cross_entropy(onehot_labels=tf.ones_like(dis_gene),
-        #logits=dis_gene, label_smoothing=0.1), name='loss_gen')
-        #loss_gen =
-        #tf.reduce_mean(tf.losses.sigmoid_cross_entropy(multi_class_labels=label_dis_real,
-        #logits=dis_gene, label_smoothing=0.1), name='loss_gen')
-        #loss_gen =
-        #tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=dis_gene,
-        #labels=tf.ones_like(dis_gene)), name='loss_gen')
         loss_gen = -tf.reduce_mean(tf.log(dis_gene))
         tf.summary.scalar('discriminator_loss', loss_dis)
-        #tf.summary.scalar('loss_dis_real', loss_dis_real)
-        #tf.summary.scalar('loss_dis_gene', loss_dis_gene)
         tf.summary.scalar('generator_loss', loss_gen)
     print('loss set')
     dis_var = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='dis')
