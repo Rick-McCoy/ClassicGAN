@@ -42,15 +42,15 @@ def main():
     with tf.name_scope('loss'):
         #loss_dis = -tf.reduce_mean(tf.log(dis_real) + tf.log(1 - dis_gene))
         #loss_gen = -tf.reduce_mean(tf.log(dis_gene))
-        loss_dis = tf.reduce_mean(dis_gene-dis_real)
+        loss_dis = tf.reduce_mean(dis_gene - dis_real)
         loss_gen = -tf.reduce_mean(dis_gene)
-        alpha = tf.random_uniform(shape=tf.shape(dis_gene), minval=0., maxval=1.)
-        diff = input_gen-inputs
-        interpolate = inputs+alpha*diff
+        alpha = tf.random_uniform(shape=tf.shape(inputs), minval=0., maxval=1.)
+        diff = input_gen - inputs
+        interpolate = inputs + tf.multiply(diff, alpha)
         gradients = tf.gradients(discriminator(inputs=interpolate, reuse=True), [interpolate])[0]
         slopes = tf.sqrt(tf.reduce_sum(tf.square(gradients), reduction_indices=[1]))
-        gradient_penalty = tf.reduce_mean((slopes-1.)**2)
-        loss_dis+=Lambda*gradient_penalty
+        gradient_penalty = tf.reduce_mean((slopes - 1.) ** 2)
+        loss_dis+=Lambda * gradient_penalty
         tf.summary.scalar('discriminator_loss', loss_dis)
         tf.summary.scalar('generator_loss', loss_gen)
     print('loss set')
