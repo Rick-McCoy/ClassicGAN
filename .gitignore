@@ -272,6 +272,8 @@ paket-files/
 
 # Python Tools for Visual Studio (PTVS)
 __pycache__/
+Samples/
+train/
 *.pyproj
 *.pyc
 
