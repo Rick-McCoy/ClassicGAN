@@ -38,29 +38,19 @@ def generator(noise, sharednoise, num, train):
         if num == 0 or num == 1:
             with tf.variable_scope('deconv1', reuse=True):
                 deconv1_w = tf.get_variable('kernel')
-                #deconv1_b = tf.get_variable('bias')
             tf.summary.histogram('deconv1_weight', deconv1_w)
-            #tf.summary.histogram('deconv1_bias', deconv1_b)
             with tf.variable_scope('deconv2', reuse=True):
                 deconv2_w = tf.get_variable('kernel')
-                #deconv2_b = tf.get_variable('bias')
             tf.summary.histogram('deconv2_weight', deconv2_w)
-            #tf.summary.histogram('deconv2_bias', deconv2_b)
             with tf.variable_scope('deconv3', reuse=True):
                 deconv3_w = tf.get_variable('kernel')
-                #deconv3_b = tf.get_variable('bias')
             tf.summary.histogram('deconv3_weight', deconv3_w)
-            #tf.summary.histogram('deconv3_bias', deconv3_b)
             with tf.variable_scope('deconv4', reuse=True):
                 deconv4_w = tf.get_variable('kernel')
-                #deconv4_b = tf.get_variable('bias')
             tf.summary.histogram('deconv4_weight', deconv4_w)
-            #tf.summary.histogram('deconv4_bias', deconv4_b)
             with tf.variable_scope('deconv5', reuse=True):
                 deconv5_w = tf.get_variable('kernel')
-                #deconv5_b = tf.get_variable('bias')
             tf.summary.histogram('deconv5_weight', deconv5_w)
-            #tf.summary.histogram('deconv5_bias', deconv5_b)
     return output
 
 def discriminator(inputs, reuse=False, train=False):
