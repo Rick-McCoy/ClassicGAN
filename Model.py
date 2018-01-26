@@ -9,10 +9,10 @@ import os
 from Data import class_num, input_length
 
 hidden_unit_num = 1000
+alpha = 0.2
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 def leaky_relu(s):
-    alpha = tf.get_variable(name='alpha', initializer=tf.constant(0.3, dtype=tf.float32), dtype=tf.float32)
     return tf.nn.relu(s) - alpha * tf.nn.relu(-s)
 
 def generator(noise, sharednoise, num, train):
