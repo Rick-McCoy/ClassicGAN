@@ -49,8 +49,8 @@ def main():
     program_nums[16] = 0
     is_drum = [False for i in range(17)]
     is_drum[16] = True
-    index = '010237'
-    pathlist = ['Samples/song_' + str(index) + '/song_' + str(index) + '.npy']
+    index = '002000'
+    pathlist = ['Samples/song_' + index + '/song_' + index + '.npy']
     for num, path in enumerate(pathlist):
         '''song = pm.PrettyMIDI(path)
         for j, ins in enumerate(song.instruments):
@@ -66,7 +66,7 @@ def main():
             for i, piano in enumerate(data[j]):
                 fig = plt.figure(figsize=(12, 4))
                 librosa.display.specshow(piano, hop_length=1, sr=100, x_axis='time', y_axis='cqt_note', fmin=pm.note_number_to_hz(12))
-                plt.title('midi piano roll: ' + 'song_' + str(index) + '.npy' + ' ' + (pm.program_to_instrument_name(i * 8) if i < 16 else 'drums'))
+                plt.title('midi piano roll: ' + 'song_' + index + '.npy' + ' ' + (pm.program_to_instrument_name(i * 8) if i < 16 else 'drums'))
                 fig.savefig(str(path) + '_' + str(j) + '_' + str(i) + '.png')
                 plt.close(fig)
             '''print(piano.shape)

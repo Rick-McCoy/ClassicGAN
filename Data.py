@@ -9,7 +9,7 @@ from tqdm import tqdm
 
 channel_num = 17
 class_num = 84
-input_length = 256
+input_length = 512
 
 def roll(path):
     try:
