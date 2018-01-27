@@ -19,8 +19,8 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 def main():
 
-    shared_noise_len = 400
-    noise_length = 200
+    shared_noise_len = 1000
+    noise_length = 500
     total_train_epoch = 100
     Lambda = 10
 
@@ -66,6 +66,7 @@ def main():
     gpu_options = tf.GPUOptions(allow_growth=True)
     config = tf.ConfigProto(allow_soft_placement=True, gpu_options=gpu_options)
     config.gpu_options.allocator_type = 'BFC'
+    saver = tf.train.Saver()
     with tf.Session(config=config) as sess:
         merged = tf.summary.merge_all()
         writer = tf.summary.FileWriter('train', sess.graph)
@@ -98,7 +99,7 @@ def main():
                     writer.add_summary(summary, train_count)
                     train_count += 1
                 tqdm.write('%06d' % train_count + ' D loss: {:.7}'.format(loss_val_dis) + ' G loss: {:.7}'.format(loss_val_gen))
-                if songnum % 1000 == 0:
+                if songnum % 500 == 0:
                     n_batch = 15
                     feed_sharednoise = get_noise(n_batch, shared_noise_len)
                     feed_noise = np.empty([channel_num, n_batch, noise_length])
@@ -107,6 +108,8 @@ def main():
                     samples = sess.run([gen], feed_dict={noise: feed_noise, sharednoise: feed_sharednoise, train: False})
                     samples = np.stack(samples)
                     np.save(file='Samples/song_%06d' % (songnum + epoch * len(pathlist)), arr=samples)
+                    save_path = saver.save(sess, 'Checkpoints/song_%06d' % (songnum + epoch * len(pathlist)) + '.ckpt')
+                    tqdm.write('Model Saved: %s' % save_path)
         writer.close()
 if __name__ == '__main__':
     main()
