@@ -49,6 +49,7 @@ def generator(noise, sharednoise, num, train):
             with tf.variable_scope('deconv5', reuse=True):
                 deconv5_w = tf.get_variable('kernel')
             tf.summary.histogram('deconv5_weight', deconv5_w)
+        tf.summary.image('piano_roll', tf.expand_dims(output, -1))
     return output
 
 def discriminator(inputs, reuse=False, train=False):

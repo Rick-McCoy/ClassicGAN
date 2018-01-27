@@ -274,6 +274,7 @@ paket-files/
 __pycache__/
 Samples/
 train/
+Checkpoints/
 *.pyproj
 *.pyc
 

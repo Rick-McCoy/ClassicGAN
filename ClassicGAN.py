@@ -71,7 +71,8 @@ def main():
         merged = tf.summary.merge_all()
         writer = tf.summary.FileWriter('train', sess.graph)
         sess.run(tf.global_variables_initializer())
-        data = []
+        if tf.train.latest_checkpoint('Checkpoints') is not None:
+            saver.restore(sess, tf.train.latest_checkpoint('Checkpoints'))
         pathlist = list(pathlib.Path('Classics').glob('**/*.mid')) + list(pathlib.Path('TPD').glob('**/*.mid'))
         train_count = 0
         print('preparing complete')
