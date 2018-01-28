@@ -8,7 +8,7 @@ import pathlib
 from tqdm import tqdm
 
 channel_num = 17
-class_num = 84
+class_num = 72
 input_length = 512
 
 def roll(path):
@@ -31,7 +31,7 @@ def roll(path):
         #    data[i.program // 8] = np.add(data[i.program // 8],
         #    i.get_piano_roll()[12:96, :length])
         if not i.is_drum and i.program < (data.shape[0] + 1) * 8:
-            data[i.program // 8] = np.add(data[i.program // 8], i.get_piano_roll()[12:96, :length])
+            data[i.program // 8] = np.add(data[i.program // 8], i.get_piano_roll()[24:96, :length])
     data = np.transpose(data, (1, 2, 0)) > 0
     #if np.sum(data[:, :, 1:]) == 0:
     #    return FileNotFoundError

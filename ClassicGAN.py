@@ -19,20 +19,20 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 def main():
 
-    shared_noise_len = 1000
+    shared_noise_length = 1000
     noise_length = 500
     total_train_epoch = 100
     Lambda = 10
 
     with tf.name_scope('inputs'):
         inputs = tf.placeholder(tf.float32, [None, class_num, input_length, channel_num], name='inputs')
-        sharednoise = tf.placeholder(tf.float32, [None, shared_noise_len], name='sharednoise')
+        sharednoise = tf.placeholder(tf.float32, [None, shared_noise_length], name='sharednoise')
         noise = tf.placeholder(tf.float32, [channel_num, None, noise_length], name='noise')
         train = tf.placeholder(tf.bool, name='traintest')
     with tf.name_scope('gen'):
         gen = [0] * channel_num
         for i in range(channel_num):
-            gen[i] = generator(noise, sharednoise, i, train)
+            gen[i] = generator(noise[i], sharednoise, i, train)
         input_gen = tf.stack(gen, axis=3, name='gen_stack')
     print('generator set')
     with tf.name_scope('dis'):
@@ -88,24 +88,20 @@ def main():
                 batch_input = np.empty([n_batch, class_num, input_length, channel_num])
                 for i in range(n_batch):
                     batch_input[i] = data[:, i * input_length:(i + 1) * input_length, :]
-                feed_sharednoise = get_noise(n_batch, shared_noise_len)
-                feed_noise = np.empty([channel_num, n_batch, noise_length])
-                for i in range(channel_num):
-                    feed_noise[i] = get_noise(n_batch, noise_length)
+                feed_sharednoise = get_noise([n_batch, shared_noise_length])
+                feed_noise = get_noise([channel_num, n_batch, noise_length])
                 summary, _, loss_val_dis = sess.run([merged, dis_train, loss_dis], feed_dict={inputs: batch_input, noise: feed_noise, sharednoise: feed_sharednoise, train: True})
                 writer.add_summary(summary, train_count)
                 train_count += 1
-                for i in range(10):
+                for i in range(5):
                     summary, _, loss_val_gen = sess.run([merged, gen_train, loss_gen], feed_dict={inputs: batch_input, noise: feed_noise, sharednoise: feed_sharednoise, train: True})
                     writer.add_summary(summary, train_count)
                     train_count += 1
                 tqdm.write('%06d' % train_count + ' D loss: {:.7}'.format(loss_val_dis) + ' G loss: {:.7}'.format(loss_val_gen))
                 if songnum % 500 == 0:
                     n_batch = 15
-                    feed_sharednoise = get_noise(n_batch, shared_noise_len)
-                    feed_noise = np.empty([channel_num, n_batch, noise_length])
-                    for i in range(channel_num):
-                        feed_noise[i] = get_noise(n_batch, noise_length)
+                    feed_sharednoise = get_noise([n_batch, shared_noise_length])
+                    feed_noise = get_noise([channel_num, n_batch, noise_length])
                     samples = sess.run([gen], feed_dict={noise: feed_noise, sharednoise: feed_sharednoise, train: False})
                     samples = np.stack(samples)
                     np.save(file='Samples/song_%06d' % (songnum + epoch * len(pathlist)), arr=samples)
