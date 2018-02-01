@@ -34,13 +34,11 @@ def roll(path):
     try:
         song = pm.PrettyMIDI(str(path))
     except:
-        return FileNotFoundError
-    if len(song.instruments) < 2:
-        return FileNotFoundError
+        raise Exception
     length = np.min([i.get_piano_roll().shape[1] for i in song.instruments])
     t = np.max([i.program // 8 for i in song.instruments])
     if t < 1 or length == 0:
-        return FileNotFoundError
+        raise Exception
     length = length if length < INPUT_LENGTH * BATCH_NUM else INPUT_LENGTH * BATCH_NUM
     data = np.zeros(shape=(CHANNEL_NUM, CLASS_NUM, length))
     for i in song.instruments:
@@ -61,11 +59,10 @@ def roll(path):
                 data[6] = np.add(data[6], i.get_piano_roll()[24:96, :length])
     data = np.transpose(data, (1, 2, 0)) > 0
     if np.sum(data) == 0:
-        return FileNotFoundError
+        raise Exception
     data = (data - 0.5) * 2
     while length < INPUT_LENGTH * BATCH_NUM:
         np.concatenate((data, data), axis=-1)
         length *= 2
     data = np.stack([data[:, i*INPUT_LENGTH:(i+1)*INPUT_LENGTH, :] for i in range(BATCH_NUM)], axis=0)
-    print(data.shape())
     return data

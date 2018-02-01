@@ -62,6 +62,8 @@ def main():
         slopes = tf.sqrt(tf.reduce_sum(tf.square(gradients), axis=[1]))
         gradient_penalty = tf.reduce_mean((slopes - 1.) ** 2)
         loss_dis1+=LAMBDA * gradient_penalty
+        tf.summary.scalar('dis1_gen', tf.reduce_mean(dis1_gen))
+        tf.summary.scalar('dis1_real', tf.reduce_mean(dis1_real))
         tf.summary.scalar('discriminator_loss1', loss_dis1)
         tf.summary.scalar('generator_loss1', loss_gen1)
     print('Loss1 set')
@@ -83,6 +85,8 @@ def main():
         slopes = tf.sqrt(tf.reduce_sum(tf.square(gradients), axis=[1]))
         gradient_penalty = tf.reduce_mean((slopes - 1.) ** 2)
         loss_dis2+=LAMBDA * gradient_penalty
+        tf.summary.scalar('dis2_gen', tf.reduce_mean(dis2_gen))
+        tf.summary.scalar('dis2_real', tf.reduce_mean(dis2_real))
         tf.summary.scalar('discriminator_loss2', loss_dis2)
         tf.summary.scalar('generator_loss2', loss_gen2)
     print('Loss2 set')
@@ -104,6 +108,8 @@ def main():
         slopes = tf.sqrt(tf.reduce_sum(tf.square(gradients), axis=[1]))
         gradient_penalty = tf.reduce_mean((slopes - 1.) ** 2)
         loss_dis3+=LAMBDA * gradient_penalty
+        tf.summary.scalar('dis3_gen', tf.reduce_mean(dis3_gen))
+        tf.summary.scalar('dis3_real', tf.reduce_mean(dis3_real))
         tf.summary.scalar('discriminator_loss3', loss_dis3)
         tf.summary.scalar('generator_loss3', loss_gen3)
     print('Loss3 set')
@@ -112,18 +118,18 @@ def main():
     dis1_var = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='discriminator1')
     gen1_var = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='generator1') + noise_gen_var + time_seq_noise_gen_var
     dis2_var = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='discriminator2')
-    gen2_var = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='generator2') + noise_gen_var + time_seq_noise_gen_var
+    gen2_var = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='generator2')
     dis3_var = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='discriminator3')
-    gen3_var = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='generator3') + noise_gen_var + time_seq_noise_gen_var
+    gen3_var = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='generator3')
     with tf.name_scope('optimizers'):
         noise_gen_extra_update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='noise2')
         time_seq_noise_gen_extra_update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='noise4')
         dis1_extra_update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='discriminator1')
         gen1_extra_update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='generator1') + noise_gen_extra_update_ops + time_seq_noise_gen_extra_update_ops
         dis2_extra_update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='discriminator2')
-        gen2_extra_update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='generator2') + noise_gen_extra_update_ops + time_seq_noise_gen_extra_update_ops
+        gen2_extra_update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='generator2')
         dis3_extra_update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='discriminator3')
-        gen3_extra_update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='generator3') + noise_gen_extra_update_ops + time_seq_noise_gen_extra_update_ops
+        gen3_extra_update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='generator3')
         with tf.control_dependencies(dis1_extra_update_ops):
             dis1_train = tf.train.AdamOptimizer(learning_rate=0.0001, beta1=0.5, beta2=0.9).minimize(loss=loss_dis1, var_list=dis1_var, name='dis1_train')
         with tf.control_dependencies(gen1_extra_update_ops):
@@ -203,15 +209,14 @@ def main():
             for songnum, path in enumerate(tqdm(pathlist)):
                 try:
                     batch_input = roll(path)
-                except:
+                except Exception:
                     continue
                 tqdm.write(str(path))
                 feed_noise1 = get_noise([NOISE_LENGTH])
                 feed_noise2 = get_noise([1, NOISE_LENGTH])
                 feed_noise3 = get_noise([CHANNEL_NUM, NOISE_LENGTH])
                 feed_noise4 = get_noise([1, NOISE_LENGTH])
-                #feed_dict = {input_noise1: feed_noise1, input_noise2: feed_noise2, input_noise3: feed_noise3, input_noise4: feed_noise4, real_input: batch_input, train: True}
-                feed_dict = {input_noise1: feed_noise1, input_noise2: feed_noise2, input_noise3: feed_noise3, input_noise4: feed_noise4, real_input: batch_input}
+                feed_dict = {input_noise1: feed_noise1, input_noise2: feed_noise2, input_noise3: feed_noise3, input_noise4: feed_noise4, real_input: batch_input, train: True}
                 summary, _, loss_val_dis1 = sess.run([merged, dis1_train, loss_dis1], feed_dict=feed_dict)
                 writer.add_summary(summary, train_count)
                 train_count+=1
@@ -219,20 +224,23 @@ def main():
                     summary, _, loss_val_gen1 = sess.run([merged, gen1_train, loss_gen1], feed_dict=feed_dict)
                     writer.add_summary(summary, train_count)
                     train_count+=1
+                tqdm.write('%06d' % train_count + ' Discriminator1 loss: {:.7}'.format(loss_val_dis1) + ' Generator1 loss: {:.7}'.format(loss_val_gen1))
                 summary, _, loss_val_dis2 = sess.run([merged, dis2_train, loss_dis2], feed_dict=feed_dict)
                 writer.add_summary(summary, train_count)
                 train_count+=1
                 for i in range(5):
-                    summary, _, loss_val_gen1 = sess.run([merged, gen1_train, loss_gen1], feed_dict=feed_dict)
+                    summary, _, loss_val_gen2 = sess.run([merged, gen2_train, loss_gen2], feed_dict=feed_dict)
                     writer.add_summary(summary, train_count)
                     train_count+=1
-                summary, _, loss_val_dis1 = sess.run([merged, dis1_train, loss_dis1], feed_dict=feed_dict)
+                tqdm.write('%06d' % train_count + ' Discriminator2 loss: {:.7}'.format(loss_val_dis2) + ' Generator2 loss: {:.7}'.format(loss_val_gen2))
+                summary, _, loss_val_dis3 = sess.run([merged, dis3_train, loss_dis3], feed_dict=feed_dict)
                 writer.add_summary(summary, train_count)
                 train_count+=1
                 for i in range(5):
-                    summary, _, loss_val_gen1 = sess.run([merged, gen1_train, loss_gen1], feed_dict=feed_dict)
+                    summary, _, loss_val_gen3 = sess.run([merged, gen3_train, loss_gen3], feed_dict=feed_dict)
                     writer.add_summary(summary, train_count)
                     train_count+=1
+                tqdm.write('%06d' % train_count + ' Discriminator3 loss: {:.7}'.format(loss_val_dis3) + ' Generator3 loss: {:.7}'.format(loss_val_gen3))
                 if songnum % 500 == 0:
                     samples = sess.run([gen3], feed_dict=feed_dict)
                     np.save(file='Samples/song_%06d' % (songnum + epoch * len(pathlist)), arr=samples)
