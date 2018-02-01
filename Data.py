@@ -10,6 +10,7 @@ from tqdm import tqdm
 CHANNEL_NUM = 7
 CLASS_NUM = 72
 INPUT_LENGTH = 512
+BATCH_NUM = 50
 #[22584, 216, 500, 6691, 151, 4356, 5304, 2044, 2497, 1277, 70, 139, 51, 91,
 #56, 36, 411]
 #0 Piano: 22584
@@ -40,7 +41,7 @@ def roll(path):
     t = np.max([i.program // 8 for i in song.instruments])
     if t < 1 or length == 0:
         return FileNotFoundError
-    length = length if length < INPUT_LENGTH * 50 else INPUT_LENGTH * 50
+    length = length if length < INPUT_LENGTH * BATCH_NUM else INPUT_LENGTH * BATCH_NUM
     data = np.zeros(shape=(CHANNEL_NUM, CLASS_NUM, length))
     for i in song.instruments:
         if not i.is_drum:
@@ -62,4 +63,7 @@ def roll(path):
     if np.sum(data) == 0:
         return FileNotFoundError
     data = (data - 0.5) * 2
-    return length, data
+    while length < INPUT_LENGTH * BATCH_NUM:
+        np.concatenate((data, data))
+    data = data[:, :length]
+    return data
