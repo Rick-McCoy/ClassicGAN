@@ -30,11 +30,11 @@ def main():
         input_noise3 = tf.placeholder(dtype=tf.float32, shape=[CHANNEL_NUM, NOISE_LENGTH], name='input_noise3')
         input_noise4 = tf.placeholder(dtype=tf.float32, shape=[1, NOISE_LENGTH], name='input_noise4')
         train = tf.placeholder(dtype=tf.bool, name='traintest')
-        noise1 = tf.stack(values=[input_noise1]*BATCH_NUM, axis=0)
-        noise1 = tf.stack(values=[noise1]*CHANNEL_NUM, axis=0, name='noise1')
+        noise1 = tf.stack(values=[input_noise1] * BATCH_NUM, axis=0)
+        noise1 = tf.stack(values=[noise1] * CHANNEL_NUM, axis=0, name='noise1')
         noise2 = noise_generator(noise=input_noise2)
         noise2 = tf.stack(values=[noise2] * CHANNEL_NUM, axis=0, name='noise2')
-        noise3 = tf.stack(values=[input_noise3]*BATCH_NUM, axis=1, name='noise3')
+        noise3 = tf.stack(values=[input_noise3] * BATCH_NUM, axis=1, name='noise3')
         noise4 = tf.stack(values=[time_seq_noise_generator(noise=input_noise4, num=i) for i in range(CHANNEL_NUM)], axis=0, name='noise4')
         input_noise = tf.concat(values=[noise1, noise2, noise3, noise4], axis=2, name='input_noise')
     with tf.name_scope('input_real'):
@@ -202,38 +202,39 @@ def main():
             random.shuffle(pathlist)
             for songnum, path in enumerate(tqdm(pathlist)):
                 try:
-                    data = roll(path)
+                    batch_input = roll(path)
                 except:
                     continue
                 tqdm.write(str(path))
-                batch_input = np.stack([data[:, i * INPUT_LENGTH:(i + 1) * INPUT_LENGTH, :] for i in range(BATCH_NUM)], axis=0)
                 feed_noise1 = get_noise([NOISE_LENGTH])
                 feed_noise2 = get_noise([1, NOISE_LENGTH])
-                feed_noise3 = np.stack([get_noise([CHANNEL_NUM, NOISE_LENGTH])] * BATCH_NUM, axis=1)
+                feed_noise3 = get_noise([CHANNEL_NUM, NOISE_LENGTH])
                 feed_noise4 = get_noise([1, NOISE_LENGTH])
-                summary, _, loss_val_dis1 = sess.run([merged, dis1_train, loss_dis1], feed_dict={input_noise1: feed_noise1, input_noise2: feed_noise2, input_noise3: feed_noise3, input_noise4: feed_noise4, real_input: batch_input, train: True})
+                #feed_dict = {input_noise1: feed_noise1, input_noise2: feed_noise2, input_noise3: feed_noise3, input_noise4: feed_noise4, real_input: batch_input, train: True}
+                feed_dict = {input_noise1: feed_noise1, input_noise2: feed_noise2, input_noise3: feed_noise3, input_noise4: feed_noise4, real_input: batch_input}
+                summary, _, loss_val_dis1 = sess.run([merged, dis1_train, loss_dis1], feed_dict=feed_dict)
                 writer.add_summary(summary, train_count)
                 train_count+=1
                 for i in range(5):
-                    summary, _, loss_val_gen1 = sess.run([merged, gen1_train, loss_gen1], feed_dict={input_noise1: feed_noise1, input_noise2: feed_noise2, input_noise3: feed_noise3, input_noise4: feed_noise4, real_input: batch_input, train: True})
+                    summary, _, loss_val_gen1 = sess.run([merged, gen1_train, loss_gen1], feed_dict=feed_dict)
                     writer.add_summary(summary, train_count)
                     train_count+=1
-                summary, _, loss_val_dis2 = sess.run([merged, dis2_train, loss_dis2], feed_dict={input_noise1: feed_noise1, input_noise2: feed_noise2, input_noise3: feed_noise3, input_noise4: feed_noise4, real_input: batch_input, train: True})
+                summary, _, loss_val_dis2 = sess.run([merged, dis2_train, loss_dis2], feed_dict=feed_dict)
                 writer.add_summary(summary, train_count)
                 train_count+=1
                 for i in range(5):
-                    summary, _, loss_val_gen1 = sess.run([merged, gen1_train, loss_gen1], feed_dict={input_noise1: feed_noise1, input_noise2: feed_noise2, input_noise3: feed_noise3, input_noise4: feed_noise4, real_input: batch_input, train: True})
+                    summary, _, loss_val_gen1 = sess.run([merged, gen1_train, loss_gen1], feed_dict=feed_dict)
                     writer.add_summary(summary, train_count)
                     train_count+=1
-                summary, _, loss_val_dis1 = sess.run([merged, dis1_train, loss_dis1], feed_dict={input_noise1: feed_noise1, input_noise2: feed_noise2, input_noise3: feed_noise3, input_noise4: feed_noise4, real_input: batch_input, train: True})
+                summary, _, loss_val_dis1 = sess.run([merged, dis1_train, loss_dis1], feed_dict=feed_dict)
                 writer.add_summary(summary, train_count)
                 train_count+=1
                 for i in range(5):
-                    summary, _, loss_val_gen1 = sess.run([merged, gen1_train, loss_gen1], feed_dict={input_noise1: feed_noise1, input_noise2: feed_noise2, input_noise3: feed_noise3, input_noise4: feed_noise4, real_input: batch_input, train: True})
+                    summary, _, loss_val_gen1 = sess.run([merged, gen1_train, loss_gen1], feed_dict=feed_dict)
                     writer.add_summary(summary, train_count)
                     train_count+=1
                 if songnum % 500 == 0:
-                    samples = sess.run([gen3], feed_dict={input_noise1: feed_noise1, input_noise2: feed_noise2, input_noise3: feed_noise3, input_noise4: feed_noise4, real_input: batch_input, train: True})
+                    samples = sess.run([gen3], feed_dict=feed_dict)
                     np.save(file='Samples/song_%06d' % (songnum + epoch * len(pathlist)), arr=samples)
                     save_path = saver.save(sess, 'Checkpoints/song_%06d' % (songnum + epoch * len(pathlist)) + '.ckpt')
                     tqdm.write('Model Saved: %s' % save_path)

@@ -55,7 +55,7 @@ def roll(path):
                 data[3] = np.add(data[3], i.get_piano_roll()[24:96, :length])
             elif i.program // 8 == 8:
                 data[4] = np.add(data[4], i.get_piano_roll()[24:96, :length])
-            elif i.program//8 == 9:
+            elif i.program // 8 == 9:
                 data[5] = np.add(data[5], i.get_piano_roll()[24:96, :length])
             else:
                 data[6] = np.add(data[6], i.get_piano_roll()[24:96, :length])
@@ -64,6 +64,8 @@ def roll(path):
         return FileNotFoundError
     data = (data - 0.5) * 2
     while length < INPUT_LENGTH * BATCH_NUM:
-        np.concatenate((data, data))
-    data = data[:, :length]
+        np.concatenate((data, data), axis=-1)
+        length *= 2
+    data = np.stack([data[:, i*INPUT_LENGTH:(i+1)*INPUT_LENGTH, :] for i in range(BATCH_NUM)], axis=0)
+    print(data.shape())
     return data
