@@ -19,10 +19,10 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 def main():
 
-    #SHARED_NOISE_LENGTH = 1000
     NOISE_LENGTH = 64
     TOTAL_TRAIN_EPOCH = 100
     LAMBDA = 10
+    TRAIN_RATIO = 2
 
     with tf.name_scope('input_noises'):
         input_noise1 = tf.placeholder(dtype=tf.float32, shape=[NOISE_LENGTH], name='input_noise1')
@@ -181,23 +181,26 @@ def main():
                 summary, _, loss_val_dis1 = sess.run([merged, dis1_train, loss_dis1], feed_dict=feed_dict)
                 writer.add_summary(summary, train_count)
                 train_count+=1
-                summary, _, loss_val_gen1 = sess.run([merged, gen1_train, loss_gen1], feed_dict=feed_dict)
-                writer.add_summary(summary, train_count)
-                train_count+=1
+                for i in range(TRAIN_RATIO):
+                    summary, _, loss_val_gen1 = sess.run([merged, gen1_train, loss_gen1], feed_dict=feed_dict)
+                    writer.add_summary(summary, train_count)
+                    train_count+=1
                 tqdm.write('%06d' % train_count + ' Discriminator1 loss: {:.7}'.format(loss_val_dis1) + ' Generator1 loss: {:.7}'.format(loss_val_gen1))
                 summary, _, loss_val_dis2 = sess.run([merged, dis2_train, loss_dis2], feed_dict=feed_dict)
                 writer.add_summary(summary, train_count)
                 train_count+=1
-                summary, _, loss_val_gen2 = sess.run([merged, gen2_train, loss_gen2], feed_dict=feed_dict)
-                writer.add_summary(summary, train_count)
-                train_count+=1
+                for i in range(TRAIN_RATIO):
+                    summary, _, loss_val_gen2 = sess.run([merged, gen2_train, loss_gen2], feed_dict=feed_dict)
+                    writer.add_summary(summary, train_count)
+                    train_count+=1
                 tqdm.write('%06d' % train_count + ' Discriminator2 loss: {:.7}'.format(loss_val_dis2) + ' Generator2 loss: {:.7}'.format(loss_val_gen2))
                 summary, _, loss_val_dis3 = sess.run([merged, dis3_train, loss_dis3], feed_dict=feed_dict)
                 writer.add_summary(summary, train_count)
                 train_count+=1
-                summary, _, loss_val_gen3 = sess.run([merged, gen3_train, loss_gen3], feed_dict=feed_dict)
-                writer.add_summary(summary, train_count)
-                train_count+=1
+                for i in range(TRAIN_RATIO):
+                    summary, _, loss_val_gen3 = sess.run([merged, gen3_train, loss_gen3], feed_dict=feed_dict)
+                    writer.add_summary(summary, train_count)
+                    train_count+=1
                 tqdm.write('%06d' % train_count + ' Discriminator3 loss: {:.7}'.format(loss_val_dis3) + ' Generator3 loss: {:.7}'.format(loss_val_gen3))
                 if songnum % 500 == 0:
                     samples = sess.run([gen3], feed_dict=feed_dict)
