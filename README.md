@@ -1,10 +1,8 @@
 # ClassicGAN
 
-Generates classical MIDI files. Stackes 17 generators to simulate various instruments.
+Generates classical MIDI files. Stacks 7 GANs, 3 levels deep.
 
 ## Getting Started
-
-These instructions will get you a copy of the project up and running on your local machine for development and testing purposes. See deployment for notes on how to deploy the project on a live system.
 
 ### Prerequisites
 
@@ -55,6 +53,9 @@ This project is licensed under the MIT License.
 ## Acknowledgments
 
 * **Jin-Jung Kim** - *General structure of code adapted* - [golbin](https://github.com/golbin)
+* **Ishaan Gulrajani** - *Loss function code used* - [igul222](https://github.com/igul222)
 * **MuseGAN: Multi-track Sequential Generative Adversarial Networks for Symbolic Music Generation and Accompaniment, Hao-Wen Dong et al.** - *Idea of stacking generators* - [link](http://arxiv.org/abs/1709.06298v2)
+* **StackGAN++: Realistic Image Synthesis with Stacked Generative Adversarial Networks, Han Zhang et al.** - *Idea of multiple levels* - [link](http://arxiv.org/abs/1710.10916v2)
+* **Improved Training of Wasserstein GANs, Ishaan Gulrajani et al.** - *WGAN-GP used.* - [link](http://arxiv.org/abs/1704.00028v3)
 * **Amazon** - *Provider of funding*
 * **Everyone Else I Questioned** - *Thanks!*
