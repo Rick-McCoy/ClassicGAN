@@ -161,7 +161,7 @@ def discriminator1(inputs, reuse=False):
         batch_norm5 = tf.layers.batch_normalization(inputs=conv4, axis=1, name='batch_norm5', fused=True)
         conv5 = tf.layers.conv2d(inputs=batch_norm5, filters=16, kernel_size=[12, 16], padding='same', data_format='channels_first', activation=leaky_relu, use_bias=False, name='conv5')
         batch_norm6 = tf.layers.batch_normalization(inputs=conv5 + batch_norm5, axis=1, name='batch_norm6', fused=True)
-        conv6 = tf.layers.conv2d(inputs=batch_norm7, filters=16, kernel_size=[12, 16], padding='same', data_format='channels_first', activation=leaky_relu, use_bias=False, name='conv6')
+        conv6 = tf.layers.conv2d(inputs=batch_norm6, filters=16, kernel_size=[12, 16], padding='same', data_format='channels_first', activation=leaky_relu, use_bias=False, name='conv6')
         pool2 = tf.layers.max_pooling2d(inputs=conv6 + batch_norm6, pool_size=[2, 2], strides=2, data_format='channels_first', name='pool2')
         # shape: [BATCH_SIZE, 16, CLASS_NUM // 16, INPUT_LENGTH // 16]
         batch_norm7 = tf.layers.batch_normalization(inputs=pool2, axis=1, name='batch_norm7', fused=True)
@@ -186,9 +186,9 @@ def discriminator2(inputs, reuse=False):
         conv4 = tf.layers.conv2d(inputs=batch_norm4, filters=16, kernel_size=[12, 16], padding='same', data_format='channels_first', activation=leaky_relu, use_bias=False, name='conv4')
         # shape: [BATCH_SIZE, 16, CLASS_NUM // 4, INPUT_LENGTH // 4]
         batch_norm5 = tf.layers.batch_normalization(inputs=conv4, axis=1, name='batch_norm5', fused=True)
-        conv5 = tf.layers.conv2d(inputs=batch_norm6, filters=16, kernel_size=[12, 16], padding='same', data_format='channels_first', activation=leaky_relu, use_bias=False, name='conv5')
+        conv5 = tf.layers.conv2d(inputs=batch_norm5, filters=16, kernel_size=[12, 16], padding='same', data_format='channels_first', activation=leaky_relu, use_bias=False, name='conv5')
         batch_norm6 = tf.layers.batch_normalization(inputs=conv5 + batch_norm5, axis=1, name='batch_norm6', fused=True)
-        conv6 = tf.layers.conv2d(inputs=batch_norm7, filters=16, kernel_size=[12, 16], padding='same', data_format='channels_first', activation=leaky_relu, use_bias=False, name='conv6')
+        conv6 = tf.layers.conv2d(inputs=batch_norm6, filters=16, kernel_size=[12, 16], padding='same', data_format='channels_first', activation=leaky_relu, use_bias=False, name='conv6')
         pool2 = tf.layers.max_pooling2d(inputs=conv6 + batch_norm6, pool_size=[2, 2], strides=2, data_format='channels_first', name='pool2')
         # shape: [BATCH_SIZE, 16, CLASS_NUM // 8, INPUT_LENGTH // 8]
         batch_norm7 = tf.layers.batch_normalization(inputs=pool2, axis=1, name='batch_norm7', fused=True)
@@ -201,7 +201,7 @@ def discriminator2(inputs, reuse=False):
         pool3 = tf.layers.max_pooling2d(inputs=conv9 + batch_norm9, pool_size=[2, 2], strides=2, data_format='channels_first', name='pool3')
         # shape: [BATCH_SIZE, 32, CLASS_NUM // 16, INPUT_LENGTH // 8]
         batch_norm10 = tf.layers.batch_normalization(inputs=pool3, axis=1, name='batch_norm10', fused=True)
-        output = tf.layers.dense(inputs=batch_norm13, units=1, activation=tf.sigmoid, name='output')
+        output = tf.layers.dense(inputs=batch_norm10, units=1, activation=tf.sigmoid, name='output')
     return output
 
 def discriminator3(inputs, reuse=False):
