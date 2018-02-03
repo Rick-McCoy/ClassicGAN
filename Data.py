@@ -36,8 +36,7 @@ def roll(path):
     except:
         raise Exception
     length = np.min([i.get_piano_roll().shape[1] for i in song.instruments])
-    t = np.max([i.program // 8 for i in song.instruments])
-    if t < 1 or length == 0:
+    if length == 0:
         raise Exception
     length = length if length < INPUT_LENGTH * BATCH_NUM else INPUT_LENGTH * BATCH_NUM
     data = np.zeros(shape=(CHANNEL_NUM, CLASS_NUM, length))
@@ -57,10 +56,9 @@ def roll(path):
                 data[5] = np.add(data[5], i.get_piano_roll()[24:96, :length])
             else:
                 data[6] = np.add(data[6], i.get_piano_roll()[24:96, :length])
-    data = data > 0
-    if np.sum(data) == 0:
+    if np.max(data) == 0:
         raise Exception
-    data = (data - 0.5) * 2
+    data = (data / np.max(data) - 0.5) * 2
     while length < INPUT_LENGTH * BATCH_NUM:
         np.concatenate((data, data), axis=-1)
         length *= 2
