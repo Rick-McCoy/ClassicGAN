@@ -62,5 +62,5 @@ def roll(path):
     while length < INPUT_LENGTH * BATCH_NUM:
         np.concatenate((data, data), axis=-1)
         length *= 2
-    data = np.stack([data[:, :, i*INPUT_LENGTH:(i+1)*INPUT_LENGTH] for i in range(BATCH_NUM)], axis=0)
+    data = np.stack([data[:, :, i * INPUT_LENGTH:(i + 1) * INPUT_LENGTH] for i in range(BATCH_NUM)], axis=0)
     return data
