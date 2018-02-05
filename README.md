@@ -7,11 +7,14 @@ Generates classical MIDI files. Stacks 7 GANs, 3 levels deep.
 ### Prerequisites
 
 ```
-Tensorflow
+tensorflow-gpu
 tqdm
 numpy
 pretty-midi
 matplotlib
+toposort
+networkx
+pytest
 ```
 
 ### Installing
@@ -40,7 +43,8 @@ Currently manual.
 
 ## TODOs
 
-Integrate [Gradient Checkpointing](https://github.com/openai/gradient-checkpointing)
+Integrate [Gradient Checkpointing](https://github.com/openai/gradient-checkpointing) - Completed.
+
 
 ## Authors
 
