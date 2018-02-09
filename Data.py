@@ -9,8 +9,8 @@ from tqdm import tqdm
 
 CHANNEL_NUM = 7
 CLASS_NUM = 72
-INPUT_LENGTH = 512
-BATCH_NUM = 50
+INPUT_LENGTH = 384
+BATCH_NUM = 32
 #[22584, 216, 500, 6691, 151, 4356, 5304, 2044, 2497, 1277, 70, 139, 51, 91,
 #56, 36, 411]
 #0 Piano: 22584
@@ -32,7 +32,7 @@ BATCH_NUM = 50
 #16 Drums: 411
 def roll(path):
     try:
-        song = pm.PrettyMIDI(str(path))
+        song = pm.PrettyMIDI(midi_file=str(path), resolution=96)
     except:
         raise Exception
     length = np.min([i.get_piano_roll().shape[1] for i in song.instruments])
@@ -58,7 +58,8 @@ def roll(path):
                 data[6] = np.add(data[6], i.get_piano_roll()[24:96, :length])
     if np.max(data) == 0:
         raise Exception
-    data = (data / np.max(data) - 0.5) * 2
+    data = data > 0
+    data = (data - 0.5) * 1.8
     while length < INPUT_LENGTH * BATCH_NUM:
         np.concatenate((data, data), axis=-1)
         length *= 2
