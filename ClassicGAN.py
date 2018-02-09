@@ -21,6 +21,13 @@ def main():
     TRAIN_RATIO_DIS = 5
     TRAIN_RATIO_GEN = 1
 
+    if not os.path.exists('Checkpoints'):
+        os.makedirs('Checkpoints')
+    if not os.path.exists('train'):
+        os.makedirs('train')
+    if not os.path.exists('Samples'):
+        os.makedirs('Samples')
+
     with tf.name_scope('inputs'):
         input_noise1 = tf.placeholder(dtype=tf.float32, shape=[NOISE_LENGTH], name='input_noise1')
         input_noise2 = tf.placeholder(dtype=tf.float32, shape=[1, NOISE_LENGTH], name='input_noise2')
@@ -157,27 +164,6 @@ def main():
     tf.summary.scalar('loss_dis', loss_dis)
     tf.summary.scalar('loss_gen', loss_gen)
     with tf.name_scope('optimizers'):
-        #with tf.control_dependencies(dis1_extra_update_ops):
-        #    #dis1_train = tf.train.GradientDescentOptimizer(learning_rate=0.001).minimize(loss=loss_dis1, var_list=dis1_var, name='dis1_train')
-        #    dis1_train = tf.train.AdamOptimizer(learning_rate=0.001, beta1=0.5, beta2=0.9).minimize(loss=loss_dis1, var_list=dis1_var, name='dis1_train')
-        #print('dis1_train setup')
-        #with tf.control_dependencies(gen1_extra_update_ops):
-        #    gen1_train = tf.train.AdamOptimizer(learning_rate=0.001, beta1=0.5, beta2=0.9).minimize(loss=loss_gen1, var_list=gen1_var, name='gen1_train')
-        #print('gen1_train setup')
-        #with tf.control_dependencies(dis2_extra_update_ops):
-        #    #dis2_train = tf.train.GradientDescentOptimizer(learning_rate=0.001).minimize(loss=loss_dis2, var_list=dis2_var, name='dis2_train')
-        #    dis2_train = tf.train.AdamOptimizer(learning_rate=0.001, beta1=0.5, beta2=0.9).minimize(loss=loss_dis2, var_list=dis2_var, name='dis2_train')
-        #print('dis2_train setup')
-        #with tf.control_dependencies(gen2_extra_update_ops):
-        #    gen2_train = tf.train.AdamOptimizer(learning_rate=0.001, beta1=0.5, beta2=0.9).minimize(loss=loss_gen2, var_list=gen2_var, name='gen2_train')
-        #print('gen2_train setup')
-        #with tf.control_dependencies(dis3_extra_update_ops):
-        #    #dis3_train = tf.train.GradientDescentOptimizer(learning_rate=0.001).minimize(loss=loss_dis3, var_list=dis3_var, name='dis3_train')
-        #    dis3_train = tf.train.AdamOptimizer(learning_rate=0.001, beta1=0.5, beta2=0.9).minimize(loss=loss_dis3, var_list=dis3_var, name='dis3_train')
-        #print('dis3_train setup')
-        #with tf.control_dependencies(gen3_extra_update_ops):
-        #    gen3_train = tf.train.AdamOptimizer(learning_rate=0.001, beta1=0.5, beta2=0.9).minimize(loss=loss_gen3, var_list=gen3_var, name='gen3_train')
-        #print('gen3_train setup')
         with tf.control_dependencies(dis_extra_update_ops):
             dis_train = tf.train.AdamOptimizer(learning_rate=0.001, beta1=0.5, beta2=0.9).minimize(loss=loss_dis, var_list=dis_var, name='dis_train')
         print('dis_train setup')
@@ -215,31 +201,11 @@ def main():
                 feed_dict = {input_noise1: feed_noise1, input_noise2: feed_noise2, input_noise3: feed_noise3, input_noise4: feed_noise4, real_input_3: batch_input, train: True}
                 for i in range(TRAIN_RATIO_DIS):
                     _, loss_val_dis = sess.run([dis_train, loss_dis], feed_dict=feed_dict)
-                summary, _, loss_val_gen = sess.run([gen_train, loss_gen], feed_dict=feed_dict)
+                for i in range(TRAIN_RATIO_GEN):
+                    summary, _, loss_val_gen = sess.run([merged, gen_train, loss_gen], feed_dict=feed_dict)
                 writer.add_summary(summary, train_count)
                 train_count+=1
-                #for i in range(TRAIN_RATIO_DIS):
-                #    if train_index == 0:
-                #        _, loss_val_dis1 = sess.run([dis1_train, loss_dis1], feed_dict=feed_dict)
-                #    elif train_index == 1:
-                #        _, loss_val_dis2 = sess.run([dis2_train, loss_dis2], feed_dict=feed_dict)
-                #    else:
-                #        _, loss_val_dis3 = sess.run([dis3_train, loss_dis3], feed_dict=feed_dict)
-                #for i in range(TRAIN_RATIO_GEN):
-                #    if train_index == 0:
-                #        summary, _, loss_val_gen1 = sess.run([merged, gen1_train, loss_gen1], feed_dict=feed_dict)
-                #    elif train_index == 1:
-                #        summary, _, loss_val_gen2 = sess.run([merged, gen2_train, loss_gen2], feed_dict=feed_dict)
-                #    else:
-                #        summary, _, loss_val_gen3 = sess.run([merged, gen3_train, loss_gen3], feed_dict=feed_dict)
-                #writer.add_summary(summary, train_count)
-                #train_count+=1
-                #if train_index == 0:
-                #    tqdm.write('%06d' % train_count + ' Discriminator1 loss: {:.7}'.format(loss_val_dis1) + ' Generator1 loss: {:.7}'.format(loss_val_gen1))
-                #elif train_index == 1:
-                #    tqdm.write('%06d' % train_count + ' Discriminator2 loss: {:.7}'.format(loss_val_dis2) + ' Generator2 loss: {:.7}'.format(loss_val_gen2))
-                #else:
-                #    tqdm.write('%06d' % train_count + ' Discriminator3 loss: {:.7}'.format(loss_val_dis3) + ' Generator3 loss: {:.7}'.format(loss_val_gen3))
+                tqdm.write('%06d' % train_count + ' Discriminator loss: {:.7}'.format(loss_val_dis) + ' Generator loss: {:.7}'.format(loss_val_gen))
                 if train_count % 1000 == 0:
                     save_feed_dict = feed_dict
                     save_feed_dict[train] = False
