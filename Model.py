@@ -93,7 +93,7 @@ def encoder(inputs, train):
         # shape: [BATCH_NUM, CHANNEL_NUM, CLASS_NUM // 18, INPUT_LENGTH // 3]
         conv5 = conv2d(inputs=conv4, filters=CHANNEL_NUM, training=train, kernel_size=[1, 4], strides=(1, 4), name='conv5')
         # shape: [BATCH_NUM, CHANNEL_NUM, CLASS_NUM // 18, INPUT_LENGTH // 12]
-        output = tf.transpose(tf.reshape(output, [BATCH_NUM, CHANNEL_NUM, NOISE_LENGTH * 4]), [1, 0, 2])
+        output = tf.transpose(tf.reshape(conv5, [BATCH_NUM, CHANNEL_NUM, NOISE_LENGTH * 4]), [1, 0, 2])
         # shape: [CHANNEL_NUM, BATCH_NUM, NOISE_LENGTH * 4]
         return output
 
