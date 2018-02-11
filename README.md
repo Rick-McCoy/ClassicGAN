@@ -1,6 +1,6 @@
 # ClassicGAN
 
-Generates classical MIDI files. Stacks 7 GANs, 3 levels deep.
+Generates classical MIDI files. Stacks 7 Generators, 3 levels deep, StackGAN++ style.
 
 ## Getting Started
 
