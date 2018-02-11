@@ -16,8 +16,8 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 TOTAL_TRAIN_EPOCH = 100
 LAMBDA = 10
-LAMBDA1 = 1
-LAMBDA2 = 5
+LAMBDA1 = 2
+LAMBDA2 = 10
 TRAIN_RATIO_DIS = 5
 TRAIN_RATIO_GEN = 5
 
@@ -40,15 +40,14 @@ def main():
 
     with tf.name_scope('inputs'):
         input_noise1 = tf.placeholder(dtype=tf.float32, shape=[1, 1, NOISE_LENGTH], name='input_noise1')
-        input_noise2 = tf.placeholder(dtype=tf.float32, shape=[1, NOISE_LENGTH], name='input_noise2')
-        input_noise3 = tf.placeholder(dtype=tf.float32, shape=[CHANNEL_NUM, NOISE_LENGTH], name='input_noise3')
-        input_noise4 = tf.placeholder(dtype=tf.float32, shape=[1, NOISE_LENGTH], name='input_noise4')
+        input_noise2 = tf.placeholder(dtype=tf.float32, shape=[1, 1, NOISE_LENGTH], name='input_noise2')
+        input_noise3 = tf.placeholder(dtype=tf.float32, shape=[CHANNEL_NUM, 1, NOISE_LENGTH], name='input_noise3')
+        input_noise4 = tf.placeholder(dtype=tf.float32, shape=[1, 1, NOISE_LENGTH], name='input_noise4')
         train = tf.placeholder(dtype=tf.bool, name='traintest')
         noise1 = tf.tile(input=input_noise1, multiples=[CHANNEL_NUM, BATCH_NUM, 1], name='noise1')
-        noise2 = noise_generator(noise=input_noise2)
-        noise2 = tf.stack(values=[noise2] * CHANNEL_NUM, axis=0, name='noise2')
-        noise3 = tf.stack(values=[input_noise3] * BATCH_NUM, axis=1, name='noise3')
-        noise4 = tf.stack(values=[time_seq_noise_generator(noise=input_noise4, num=i) for i in range(CHANNEL_NUM)], axis=0, name='noise4')
+        noise2 = tf.tile(noise_generator(noise=input_noise2), multiples=[CHANNEL_NUM, 1, 1], name='noise2')
+        noise3 = tf.tile(input_noise3, multiples=[1, BATCH_NUM, 1], name='noise3')
+        noise4 = tf.concat(values=[time_seq_noise_generator(noise=input_noise4, num=i) for i in range(CHANNEL_NUM)], axis=0, name='noise4')
         real_input_3 = tf.placeholder(dtype=tf.float32, shape=[BATCH_NUM, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH], name='real_input_3')
         real_input_2 = tf.layers.average_pooling2d(inputs=real_input_3, pool_size=[2, 2], strides=2, padding='same', data_format='channels_first', name='real_input_2')
         real_input_1 = tf.layers.average_pooling2d(inputs=real_input_2, pool_size=[2, 2], strides=2, padding='same', data_format='channels_first', name='real_input_1')
@@ -117,16 +116,16 @@ def main():
     dis3_extra_update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Discriminator3_Conditional')
     with tf.name_scope('optimizers'):
         with tf.control_dependencies(dis1_extra_update_ops):
-            dis1_train = tf.train.AdamOptimizer(learning_rate=0.001, beta1=0.5, beta2=0.99).minimize(loss=loss_dis1, var_list=dis1_var, name='dis1_train')
+            dis1_train = tf.train.AdamOptimizer(learning_rate=0.0002, beta1=0.5, beta2=0.99).minimize(loss=loss_dis1, var_list=dis1_var, name='dis1_train')
         print('dis1_train setup')
         with tf.control_dependencies(dis2_extra_update_ops):
-            dis2_train = tf.train.AdamOptimizer(learning_rate=0.001, beta1=0.5, beta2=0.99).minimize(loss=loss_dis2, var_list=dis2_var, name='dis2_train')
+            dis2_train = tf.train.AdamOptimizer(learning_rate=0.0002, beta1=0.5, beta2=0.99).minimize(loss=loss_dis2, var_list=dis2_var, name='dis2_train')
         print('dis2_train setup')
         with tf.control_dependencies(dis3_extra_update_ops):
-            dis3_train = tf.train.AdamOptimizer(learning_rate=0.001, beta1=0.5, beta2=0.99).minimize(loss=loss_dis3, var_list=dis3_var, name='dis3_train')
+            dis3_train = tf.train.AdamOptimizer(learning_rate=0.0002, beta1=0.5, beta2=0.99).minimize(loss=loss_dis3, var_list=dis3_var, name='dis3_train')
         print('dis3_train setup')
         with tf.control_dependencies(gen_extra_update_ops):
-            gen_train = tf.train.AdamOptimizer(learning_rate=0.001, beta1=0.5, beta2=0.9).minimize(loss=loss_gen, var_list=gen_var, name='gen_train')
+            gen_train = tf.train.AdamOptimizer(learning_rate=0.0002, beta1=0.5, beta2=0.99).minimize(loss=loss_gen, var_list=gen_var, name='gen_train')
         print('gen_train setup')
     print('Optimizers set')
     loss_val_dis = loss_val_gen = 1.0
@@ -146,16 +145,15 @@ def main():
         for epoch in tqdm(range(TOTAL_TRAIN_EPOCH)):
             random.shuffle(pathlist)
             for songnum, path in enumerate(tqdm(pathlist)):
-                train_index = songnum // 300 % 3
                 try:
                     batch_input = roll(path)
                 except Exception:
                     continue
                 tqdm.write(str(path))
                 feed_noise1 = get_noise([1, 1, NOISE_LENGTH])
-                feed_noise2 = get_noise([1, NOISE_LENGTH])
-                feed_noise3 = get_noise([CHANNEL_NUM, NOISE_LENGTH])
-                feed_noise4 = get_noise([1, NOISE_LENGTH])
+                feed_noise2 = get_noise([1, 1, NOISE_LENGTH])
+                feed_noise3 = get_noise([CHANNEL_NUM, 1, NOISE_LENGTH])
+                feed_noise4 = get_noise([1, 1, NOISE_LENGTH])
                 feed_dict = {input_noise1: feed_noise1, input_noise2: feed_noise2, input_noise3: feed_noise3, input_noise4: feed_noise4, real_input_3: batch_input, train: True}
                 for i in range(TRAIN_RATIO_DIS):
                     _, loss_val_dis1 = sess.run([dis1_train, loss_dis1], feed_dict=feed_dict)
@@ -166,6 +164,11 @@ def main():
                 writer.add_summary(summary, train_count)
                 train_count+=1
                 tqdm.write('%06d' % train_count + ' Discriminator1 loss: {:.7}'.format(loss_val_dis1) + ' Discriminator2 loss: {:.7}'.format(loss_val_dis2) + ' Discriminator3 loss: {:.7}'.format(loss_val_dis3) + ' Generator loss: {:.7}'.format(loss_val_gen))
+                if train_count % 100 == 0:
+                    run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
+                    run_metadata = tf.RunMetadata()
+                    summary, _1, _2, _3, _4 = sess.run([merged, dis1_train, dis2_train, dis3_train, gen_train], feed_dict=feed_dict, options=run_options, run_metadata=run_metadata)
+                    writer.add_run_metadata(run_metadata, 'step%d' % train_count)
                 if train_count % 1000 == 0:
                     save_feed_dict = feed_dict
                     save_feed_dict[train] = False
