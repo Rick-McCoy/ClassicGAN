@@ -11,9 +11,9 @@ from Data import CLASS_NUM, INPUT_LENGTH, CHANNEL_NUM, BATCH_NUM
 NOISE_LENGTH = 32
 HIDDEN_UNIT_NUM = 1000
 ALPHA = 0.2
-SUMM1 = [True] * CHANNEL_NUM
-SUMM2 = [True] * CHANNEL_NUM
-SUMM3 = [True] * CHANNEL_NUM
+#SUMM1 = [True] * CHANNEL_NUM
+#SUMM2 = [True] * CHANNEL_NUM
+#SUMM3 = [True] * CHANNEL_NUM
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
@@ -103,76 +103,81 @@ def generator1(noise, encode, num, train):
         noise = tf.reshape(tensor=noise, shape=[-1, NOISE_LENGTH * 8, 1, 1])
         # shape: [BATCH_NUM, NOISE_LENGTH * 8, 1, 1]
         deconv1 = conv2d_transpose(inputs=noise, filters=NOISE_LENGTH * 64, strides=(1, 2), training=train, name='deconv1')
-        # shape: [BATCH_NUM, NOISE_LENGTH * 8, 1, 2]
+        # shape: [BATCH_NUM, NOISE_LENGTH * 64, 1, 2]
         deconv2 = conv2d_transpose(inputs=deconv1, filters=NOISE_LENGTH * 32, strides=(1, 3), training=train, name='deconv2')
-        # shape: [BATCH_NUM, NOISE_LENGTH * 4, 1, 6]
+        # shape: [BATCH_NUM, NOISE_LENGTH * 32, 1, 6]
         deconv3 = conv2d_transpose(inputs=deconv2, filters=NOISE_LENGTH * 16, strides=(1, 4), training=train, name='deconv3')
-        # shape: [BATCH_NUM, NOISE_LENGTH * 2, 1, 24]
+        # shape: [BATCH_NUM, NOISE_LENGTH * 16, 1, 24]
         deconv4 = conv2d_transpose(inputs=deconv3, filters=NOISE_LENGTH * 8, strides=(1, 4), training=train, name='deconv4')
-        # shape: [BATCH_NUM, NOISE_LENGTH, 1, 96]
+        # shape: [BATCH_NUM, NOISE_LENGTH * 8, 1, 96]
         deconv5 = conv2d_transpose(inputs=deconv4, filters=NOISE_LENGTH * 4, strides=(2, 1), training=train, name='deconv5')
-        # shape: [BATCH_NUM, NOISE_LENGTH // 2, 2, 96]
+        # shape: [BATCH_NUM, NOISE_LENGTH * 4, 2, 96]
         deconv6 = conv2d_transpose(inputs=deconv5, filters=NOISE_LENGTH * 2, strides=(3, 1), training=train, name='deconv6')
-        # shape: [BATCH_NUM, NOISE_LENGTH // 4, 6, 96]
+        # shape: [BATCH_NUM, NOISE_LENGTH * 2, 6, 96]
         deconv7 = conv2d_transpose(inputs=deconv6, filters=NOISE_LENGTH, strides=(3, 1), training=train, name='deconv7')
-        # shape: [BATCH_NUM, NOISE_LENGTH // 8, CLASS_NUM // 4, INPUT_LENGTH // 4]
+        # shape: [BATCH_NUM, NOISE_LENGTH, CLASS_NUM // 4, INPUT_LENGTH // 4]
         conv1 = conv2d(inputs=deconv7, filters=1, training=train, use_batch_norm=False, name='conv1')
+        # shape: [BATCH_NUM, 1, CLASS_NUM // 4, INPUT_LENGTH // 4]
+        output = tf.tanh(tf.squeeze(input=conv1, axis=1))
         # shape: [BATCH_NUM, CLASS_NUM // 4, INPUT_LENGTH // 4]
-        output_dis = tf.tanh(tf.squeeze(input=conv1, axis=1))
-        # shape: [BATCH_NUM, CLASS_NUM // 4, INPUT_LENGTH // 4]
-        if SUMM1[num]:
-            tf.summary.image(name='piano_roll', tensor=tf.expand_dims(output_dis[:BATCH_NUM // 10], -1))
-            SUMM1[num] = False
-        return output_dis, deconv7
+        tf.summary.image(name='piano_roll', tensor=tf.expand_dims(output[:BATCH_NUM // 10], -1))
+        #if SUMM1[num]:
+        #    tf.summary.image(name='piano_roll', tensor=tf.expand_dims(output[:BATCH_NUM // 10], -1))
+        #    SUMM1[num] = False
+        return output, deconv7
 
 def generator2(inputs, encode, num, train):
     with tf.variable_scope('Generator2_' + str(num)):
-        encode = tf.transpose(encode, [1, 0, 2])
-        # shape: [BATCH_NUM, CHANNEL_NUM, NOISE_LENGTH * 4]
-        encode = tf.layers.max_pooling1d(inputs=encode, pool_size=2, strides=2, padding='same', data_format='channels_first')
-        # shape: [BATCH_NUM, CHANNEL_NUM, NOISE_LENGTH * 2]
-        encode = tf.reshape(encode, [BATCH_NUM, CHANNEL_NUM, CLASS_NUM // 36, INPUT_LENGTH // 12])
-        # shape: [BATCH_NUM, CHANNEL_NUM , CLASS_NUM // 36, INPUT_LENGTH // 12]
-        encode = tf.tile(input=encode, multiples=(1, 1, 9, 3))
+        encode = tf.expand_dims(input=encode, axis=1)
+        # shape: [BATCH_NUM, 1, NOISE_LENGTH * 4]
+        encode = tf.layers.average_pooling1d(inputs=encode, pool_size=2, strides=2, padding='same', data_format='channels_first')
+        # shape: [BATCH_NUM, 1, NOISE_LENGTH * 2]
+        encode = tf.reshape(encode, [BATCH_NUM, 1, CLASS_NUM // 36, INPUT_LENGTH // 12])
+        # shape: [BATCH_NUM, 1, CLASS_NUM // 36, INPUT_LENGTH // 12]
+        encode = tf.tile(input=encode, multiples=(1, CHANNEL_NUM, 9, 3))
         # shape: [BATCH_NUM, CHANNEL_NUM, CLASS_NUM // 4, INPUT_LENGTH // 4]
         inputs = tf.concat([inputs, encode], axis=1)
         res1 = residual_block(inputs=inputs, filters=64, training=train, name='res1')
         # shape: [BATCH_NUM, 64, CLASS_NUM // 4, INPUT_LENGTH // 4]
         res2 = residual_block(inputs=res1, filters=32, training=train, name='res2')
-        # shape: [BATCH_NUM, 16, CLASS_NUM // 4, INPUT_LENGTH // 4]
+        # shape: [BATCH_NUM, 32, CLASS_NUM // 4, INPUT_LENGTH // 4]
         deconv1 = conv2d_transpose(inputs=res2, filters=16, strides=(2, 1), training=train, name='deconv1')
-        # shape: [BATCH_NUM, 4, CLASS_NUM // 2, INPUT_LENGTH // 4]
-        deconv2 = conv2d_transpose(inputs=deconv1, filters=4, strides=(1, 2), training=train, name='deconv2')
-        # shape: [BATCH_NUM, 1, CLASS_NUM // 2, INPUT_LENGTH // 2]
+        # shape: [BATCH_NUM, 16, CLASS_NUM // 2, INPUT_LENGTH // 4]
+        deconv2 = conv2d_transpose(inputs=deconv1, filters=8, strides=(1, 2), training=train, name='deconv2')
+        # shape: [BATCH_NUM, 8, CLASS_NUM // 2, INPUT_LENGTH // 2]
         conv1 = conv2d(inputs=deconv2, filters=1, training=train, use_batch_norm=False, name='conv1')
-        output_dis = tf.tanh(tf.squeeze(input=conv1, axis=1))
+        # shape: [BATCH_NUM, 1, CLASS_NUM // 2, INPUT_LENGTH // 2]
+        output = tf.tanh(tf.squeeze(input=conv1, axis=1))
         # shape: [BATCH_NUM, CLASS_NUM // 2, INPUT_LENGTH // 2]
-        if SUMM2[num]:
-            tf.summary.image(name='piano_roll', tensor=tf.expand_dims(output_dis[:BATCH_NUM // 10], -1))
-            SUMM2[num] = False
-        return output_dis, deconv2
+        tf.summary.image(name='piano_roll', tensor=tf.expand_dims(output[:BATCH_NUM // 10], -1))
+        #if SUMM2[num]:
+        #    tf.summary.image(name='piano_roll', tensor=tf.expand_dims(output[:BATCH_NUM // 10], -1))
+        #    SUMM2[num] = False
+        return output, deconv2
 
 def generator3(inputs, encode, num, train):
     with tf.variable_scope('Generator3_' + str(num)):
-        encode = tf.transpose(encode, [1, 0, 2])
-        # shape: [BATCH_NUM, CHANNEL_NUM, NOISE_LENGTH * 4]
-        encode = tf.reshape(encode, [BATCH_NUM, CHANNEL_NUM, CLASS_NUM // 18, INPUT_LENGTH // 12])
-        # shape: [BATCH_NUM, CHANNEL_NUM , CLASS_NUM // 18, INPUT_LENGTH // 12]
-        encode = tf.tile(input=encode, multiples=(1, 1, 9, 6))
+        encode = tf.expand_dims(input=encode, axis=1)
+        # shape: [BATCH_NUM, 1, NOISE_LENGTH * 4]
+        encode = tf.reshape(encode, [BATCH_NUM, 1, CLASS_NUM // 18, INPUT_LENGTH // 12])
+        # shape: [BATCH_NUM, 1, CLASS_NUM // 18, INPUT_LENGTH // 12]
+        encode = tf.tile(input=encode, multiples=(1, CHANNEL_NUM, 9, 6))
         # shape: [BATCH_NUM, CHANNEL_NUM, CLASS_NUM // 2, INPUT_LENGTH // 2]
         inputs = tf.concat([inputs, encode], axis=1)
         res1 = residual_block(inputs=inputs, filters=64, training=train, name='res1')
-        # shape: [BATCH_NUM, 16, CLASS_NUM // 2, INPUT_LENGTH // 2]
+        # shape: [BATCH_NUM, 64, CLASS_NUM // 2, INPUT_LENGTH // 2]
         res2 = residual_block(inputs=res1, filters=16, training=train, name='res2')
+        # shape: [BATCH_NUM, 16, CLASS_NUM // 2, INPUT_LENGTH // 2]
         deconv1 = conv2d_transpose(inputs=res2, filters=4, strides=(2, 1), training=train, name='deconv1')
         # shape: [BATCH_NUM, 4, CLASS_NUM // 2, INPUT_LENGTH // 4]
         deconv2 = conv2d_transpose(inputs=deconv1, filters=1, strides=(1, 2), training=train, use_batch_norm=False, name='deconv2')
         # shape: [BATCH_NUM, 1, CLASS_NUM // 2, INPUT_LENGTH // 2]
         output = tf.tanh(tf.squeeze(input=deconv2, axis=1))
         # shape: [BATCH_NUM, CLASS_NUM, INPUT_LENGTH]
-        if SUMM3[num]:
-            tf.summary.image(name='piano_roll', tensor=tf.expand_dims(output[:BATCH_NUM // 10], -1))
-            SUMM3[num] = False
+        tf.summary.image(name='piano_roll', tensor=tf.expand_dims(output[:BATCH_NUM // 10], -1))
+        #if SUMM3[num]:
+        #    tf.summary.image(name='piano_roll', tensor=tf.expand_dims(output[:BATCH_NUM // 10], -1))
+        #    SUMM3[num] = False
         return output
 
 def discriminator1(inputs, train, name):

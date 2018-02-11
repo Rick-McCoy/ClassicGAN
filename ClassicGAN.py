@@ -14,12 +14,20 @@ import memory_saving_gradients
 tf.__dict__["gradients"] = memory_saving_gradients.gradients_speed
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
-def main():
+TOTAL_TRAIN_EPOCH = 100
+LAMBDA = 10
+TRAIN_RATIO_DIS = 5
+TRAIN_RATIO_GEN = 5
 
-    TOTAL_TRAIN_EPOCH = 100
-    LAMBDA = 10
-    TRAIN_RATIO_DIS = 5
-    TRAIN_RATIO_GEN = 1
+def gradient_penalty(real, gen, encode, discriminator, train):
+    alpha = tf.random_uniform(shape=[BATCH_NUM] + [1] * (gen.shape.ndims - 1), minval=0., maxval=1.)
+    interpolate = real + alpha * (gen - real)
+    gradients = tf.gradients(discriminator(inputs=interpolate, encode=encode, train=train), interpolate)[0]
+    slopes = tf.sqrt(1e-10 + tf.reduce_sum(tf.square(gradients), axis=list(range(1, gradients.shape.ndims))))
+    gradient_penalty = tf.reduce_mean((slopes - 1.) ** 2)
+    return LAMBDA * gradient_penalty
+
+def main():
 
     if not os.path.exists('Checkpoints'):
         os.makedirs('Checkpoints')
@@ -41,108 +49,75 @@ def main():
         noise3 = tf.stack(values=[input_noise3] * BATCH_NUM, axis=1, name='noise3')
         noise4 = tf.stack(values=[time_seq_noise_generator(noise=input_noise4, num=i) for i in range(CHANNEL_NUM)], axis=0, name='noise4')
         real_input_3 = tf.placeholder(dtype=tf.float32, shape=[BATCH_NUM, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH], name='real_input_3')
-        encode = encoder(inputs=real_input_3, train=train)
-        input_noise = tf.concat(values=[noise1, noise2, noise3, noise4], axis=2, name='input_noise')
         real_input_2 = tf.layers.max_pooling2d(inputs=real_input_3, pool_size=[2, 2], strides=2, padding='same', data_format='channels_first', name='real_input_2')
         real_input_1 = tf.layers.max_pooling2d(inputs=real_input_2, pool_size=[2, 2], strides=2, padding='same', data_format='channels_first', name='real_input_1')
+        encode = encoder(inputs=real_input_3, train=train)
+        input_noise = tf.concat(values=[noise1, noise2, noise3, noise4], axis=2, name='input_noise')
         for i in range(CHANNEL_NUM):
             tf.summary.image('input_real' + str(i), tf.transpose(real_input_3[:BATCH_NUM // 10, i:i + 1, :, :], [0, 2, 3, 1]))
             tf.summary.image('input_real_1_' + str(i), tf.transpose(real_input_1[:BATCH_NUM // 10, i:i + 1, :, :], [0, 2, 3, 1]))
             tf.summary.image('input_real_2_' + str(i), tf.transpose(real_input_2[:BATCH_NUM // 10, i:i + 1, :, :], [0, 2, 3, 1]))
     print('Inputs set')
-    with tf.name_scope('generator1'):
+    with tf.name_scope('generator'):
         input_gen1, gen1 = zip(*[generator1(noise=input_noise[i], encode=encode[i], num=i, train=train) for i in range(CHANNEL_NUM)])
-        gen1 = tf.concat(gen1, axis=1, name='gen1_concat')
         input_gen1 = tf.stack(input_gen1, axis=1, name='input_gen1_stack')
-    print('Generator1 set')
-    with tf.name_scope('discriminator1'):
+        input_gen2, gen2 = zip(*[generator2(inputs=gen1[i], encode=encode[i], num=i, train=train) for i in range(CHANNEL_NUM)])
+        input_gen2 = tf.stack(input_gen2, axis=1, name='input_gen2_stack')
+        input_gen3 = [generator3(inputs=gen2[i], encode=encode[i], num=i, train=train) for i in range(CHANNEL_NUM)]
+        input_gen3 = tf.stack(input_gen3, axis=1, name='input_gen3_stack')
+    print('Generators set')
+    with tf.name_scope('discriminator'):
         dis1_real = discriminator1_conditional(inputs=real_input_1, encode=encode, train=train)
         dis1_gen = discriminator1_conditional(inputs=input_gen1, encode=encode, train=train)
-    print('Discriminator1 set')
-    with tf.name_scope('loss1'):
-        loss_dis1 = tf.reduce_mean(dis1_gen - dis1_real)
-        loss_gen1 = -tf.reduce_mean(dis1_gen)
-        alpha = tf.random_uniform(shape=[1], minval=0., maxval=1.)
-        diff = input_gen1 - real_input_1
-        interpolate = real_input_1 + alpha * diff
-        gradients = tf.gradients(discriminator1_conditional(inputs=interpolate, encode=encode, train=train), interpolate)[0]
-        slopes = tf.sqrt(1e-8 + tf.reduce_sum(tf.square(gradients), axis=[1, 2, 3]))
-        gradient_penalty = tf.reduce_mean((slopes - 1.) ** 2)
-        loss_dis1 += LAMBDA * gradient_penalty
-        tf.summary.scalar('dis1_gen', tf.reduce_mean(dis1_gen))
-        tf.summary.scalar('dis1_real', tf.reduce_mean(dis1_real))
-        tf.summary.scalar('discriminator_loss1', loss_dis1)
-        tf.summary.scalar('generator_loss1', loss_gen1)
-    print('Loss1 set')
-    with tf.name_scope('generator2'):
-        input_gen2, gen2 = zip(*[generator2(inputs=gen1, encode=encode, num=i, train=train) for i in range(CHANNEL_NUM)])
-        gen2 = tf.concat(gen2, axis=1, name='gen2_concat')
-        input_gen2 = tf.stack(input_gen2, axis=1, name='input_gen2_stack')
-    print('Generator2 set')
-    with tf.name_scope('discriminator2'):
         dis2_real = discriminator2_conditional(inputs=real_input_2, encode=encode, train=train)
         dis2_gen = discriminator2_conditional(inputs=input_gen2, encode=encode, train=train)
-    print('Discriminator2 set')
-    with tf.name_scope('loss2'):
-        loss_dis2 = tf.reduce_mean(dis2_gen - dis2_real)
-        loss_gen2 = -tf.reduce_mean(dis2_gen)
-        alpha = tf.random_uniform(shape=[1], minval=0., maxval=1.)
-        diff = input_gen2 - real_input_2
-        interpolate = real_input_2 + alpha * diff
-        gradients = tf.gradients(discriminator2_conditional(inputs=interpolate, encode=encode, train=train), interpolate)[0]
-        slopes = tf.sqrt(1e-8 + tf.reduce_sum(tf.square(gradients), axis=[1, 2, 3]))
-        gradient_penalty = tf.reduce_mean((slopes - 1.) ** 2)
-        loss_dis2 += LAMBDA * gradient_penalty
-        tf.summary.scalar('dis2_gen', tf.reduce_mean(dis2_gen))
-        tf.summary.scalar('dis2_real', tf.reduce_mean(dis2_real))
-        tf.summary.scalar('discriminator_loss2', loss_dis2)
-        tf.summary.scalar('generator_loss2', loss_gen2)
-    print('Loss2 set')
-    with tf.name_scope('generator3'):
-        gen3 = [generator3(inputs=gen2, encode=encode, num=i, train=train) for i in range(CHANNEL_NUM)]
-        input_gen3 = tf.stack(gen3, axis=1, name='gen3_stack')
-    print('Generator3 set')
-    with tf.name_scope('discriminator3'):
         dis3_real = discriminator3_conditional(inputs=real_input_3, encode=encode, train=train)
         dis3_gen = discriminator3_conditional(inputs=input_gen3, encode=encode, train=train)
-    print('Discriminator3 set')
-    with tf.name_scope('loss3'):
-        loss_dis3 = tf.reduce_mean(dis3_gen - dis3_real)
+    print('Discriminators set')
+    with tf.name_scope('loss'):
+        loss_dis1 = tf.reduce_mean(dis1_gen - dis1_real) + gradient_penalty(real=real_input_1, gen=input_gen1, encode=encode, discriminator=discriminator1_conditional, train=train)
+        loss_gen1 = -tf.reduce_mean(dis1_gen)
+        loss_dis2 = tf.reduce_mean(dis2_gen - dis2_real) + gradient_penalty(real=real_input_2, gen=input_gen2, encode=encode, discriminator=discriminator2_conditional, train=train)
+        loss_gen2 = -tf.reduce_mean(dis2_gen)
+        loss_dis3 = tf.reduce_mean(dis3_gen - dis3_real) + gradient_penalty(real=real_input_3, gen=input_gen3, encode=encode, discriminator=discriminator3_conditional, train=train)
         loss_gen3 = -tf.reduce_mean(dis3_gen)
-        alpha = tf.random_uniform(shape=[1], minval=0., maxval=1.)
-        diff = input_gen3 - real_input_3
-        interpolate = real_input_3 + alpha * diff
-        gradients = tf.gradients(discriminator3_conditional(inputs=interpolate, encode=encode, train=train), interpolate)[0]
-        slopes = tf.sqrt(1e-8 + tf.reduce_sum(tf.square(gradients), axis=[1, 2, 3]))
-        gradient_penalty = tf.reduce_mean((slopes - 1.) ** 2)
-        loss_dis3 += LAMBDA * gradient_penalty
-        tf.summary.scalar('dis3_gen', tf.reduce_mean(dis3_gen))
-        tf.summary.scalar('dis3_real', tf.reduce_mean(dis3_real))
-        tf.summary.scalar('discriminator_loss3', loss_dis3)
-        tf.summary.scalar('generator_loss3', loss_gen3)
-    print('Loss3 set')
+        loss_gen = (loss_gen1 + loss_gen2 + loss_gen3) / 3.0
+        tf.summary.scalar('loss_dis1', loss_dis1)
+        tf.summary.scalar('loss_gen1', loss_gen1)
+        tf.summary.scalar('loss_dis2', loss_dis2)
+        tf.summary.scalar('loss_gen2', loss_gen2)
+        tf.summary.scalar('loss_dis3', loss_dis3)
+        tf.summary.scalar('loss_gen3', loss_gen3)
+        tf.summary.scalar('loss_gen', loss_gen)
+    print('Losses set')
     gen_var = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Noise_generator') + tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Encoder')
     for i in range(CHANNEL_NUM):
         gen_var += tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Time_seq_noise_generator' + str(i))
         gen_var += tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Generator1_' + str(i))
         gen_var += tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Generator2_' + str(i))
         gen_var += tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Generator3_' + str(i))
-    dis_var = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Discriminator1_Conditional') + tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Discriminator2_Conditional') + tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Discriminator3_Conditional')
+    dis1_var = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Discriminator1_Conditional')
+    dis2_var = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Discriminator2_Conditional')
+    dis3_var = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Discriminator3_Conditional')
     gen_extra_update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Noise_generator') + tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Encoder')
     for i in range(CHANNEL_NUM):
         gen_extra_update_ops += tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Time_seq_noise_generator' + str(i))
         gen_extra_update_ops += tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Generator1_' + str(i))
         gen_extra_update_ops += tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Generator2_' + str(i))
         gen_extra_update_ops += tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Generator3_' + str(i))
-    dis_extra_update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Discriminator1_Conditional') + tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Discriminator2_Conditional') + tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Discriminator3_Conditional')
-    loss_dis = (loss_dis1 + loss_dis2 + loss_dis3) / 3.0
-    loss_gen = (loss_gen1 + loss_gen2 + loss_gen3) / 3.0
-    tf.summary.scalar('loss_dis', loss_dis)
-    tf.summary.scalar('loss_gen', loss_gen)
+    dis1_extra_update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Discriminator1_Conditional')
+    dis2_extra_update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Discriminator2_Conditional')
+    dis3_extra_update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Discriminator3_Conditional')
     with tf.name_scope('optimizers'):
-        with tf.control_dependencies(dis_extra_update_ops):
-            dis_train = tf.train.AdamOptimizer(learning_rate=0.001, beta1=0.5, beta2=0.9).minimize(loss=loss_dis, var_list=dis_var, name='dis_train')
-        print('dis_train setup')
+        with tf.control_dependencies(dis1_extra_update_ops):
+            dis1_train = tf.train.AdamOptimizer(learning_rate=0.001, beta1=0.5, beta2=0.99).minimize(loss=loss_dis1, var_list=dis1_var, name='dis1_train')
+        print('dis1_train setup')
+        with tf.control_dependencies(dis2_extra_update_ops):
+            dis2_train = tf.train.AdamOptimizer(learning_rate=0.001, beta1=0.5, beta2=0.99).minimize(loss=loss_dis2, var_list=dis2_var, name='dis2_train')
+        print('dis2_train setup')
+        with tf.control_dependencies(dis3_extra_update_ops):
+            dis3_train = tf.train.AdamOptimizer(learning_rate=0.001, beta1=0.5, beta2=0.99).minimize(loss=loss_dis3, var_list=dis3_var, name='dis3_train')
+        print('dis3_train setup')
         with tf.control_dependencies(gen_extra_update_ops):
             gen_train = tf.train.AdamOptimizer(learning_rate=0.001, beta1=0.5, beta2=0.9).minimize(loss=loss_gen, var_list=gen_var, name='gen_train')
         print('gen_train setup')
@@ -176,12 +151,14 @@ def main():
                 feed_noise4 = get_noise([1, NOISE_LENGTH])
                 feed_dict = {input_noise1: feed_noise1, input_noise2: feed_noise2, input_noise3: feed_noise3, input_noise4: feed_noise4, real_input_3: batch_input, train: True}
                 for i in range(TRAIN_RATIO_DIS):
-                    _, loss_val_dis = sess.run([dis_train, loss_dis], feed_dict=feed_dict)
+                    _, loss_val_dis1 = sess.run([dis1_train, loss_dis1], feed_dict=feed_dict)
+                    _, loss_val_dis2 = sess.run([dis2_train, loss_dis2], feed_dict=feed_dict)
+                    _, loss_val_dis3 = sess.run([dis3_train, loss_dis3], feed_dict=feed_dict)
                 for i in range(TRAIN_RATIO_GEN):
                     summary, _, loss_val_gen = sess.run([merged, gen_train, loss_gen], feed_dict=feed_dict)
                 writer.add_summary(summary, train_count)
                 train_count+=1
-                tqdm.write('%06d' % train_count + ' Discriminator loss: {:.7}'.format(loss_val_dis) + ' Generator loss: {:.7}'.format(loss_val_gen))
+                tqdm.write('%06d' % train_count + ' Discriminator1 loss: {:.7}'.format(loss_val_dis1) + ' Discriminator2 loss: {:.7}'.format(loss_val_dis2) + ' Discriminator3 loss: {:.7}'.format(loss_val_dis3) + ' Generator loss: {:.7}'.format(loss_val_gen))
                 if train_count % 1000 == 0:
                     save_feed_dict = feed_dict
                     save_feed_dict[train] = False
