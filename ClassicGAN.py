@@ -37,13 +37,12 @@ def main():
         os.makedirs('Samples')
 
     with tf.name_scope('inputs'):
-        input_noise1 = tf.placeholder(dtype=tf.float32, shape=[NOISE_LENGTH], name='input_noise1')
+        input_noise1 = tf.placeholder(dtype=tf.float32, shape=[1, 1, NOISE_LENGTH], name='input_noise1')
         input_noise2 = tf.placeholder(dtype=tf.float32, shape=[1, NOISE_LENGTH], name='input_noise2')
         input_noise3 = tf.placeholder(dtype=tf.float32, shape=[CHANNEL_NUM, NOISE_LENGTH], name='input_noise3')
         input_noise4 = tf.placeholder(dtype=tf.float32, shape=[1, NOISE_LENGTH], name='input_noise4')
         train = tf.placeholder(dtype=tf.bool, name='traintest')
-        noise1 = tf.stack(values=[input_noise1] * BATCH_NUM, axis=0)
-        noise1 = tf.stack(values=[noise1] * CHANNEL_NUM, axis=0, name='noise1')
+        noise1 = tf.tile(input=input_noise1, multiples=[CHANNEL_NUM, BATCH_NUM, 1], name='noise1')
         noise2 = noise_generator(noise=input_noise2)
         noise2 = tf.stack(values=[noise2] * CHANNEL_NUM, axis=0, name='noise2')
         noise3 = tf.stack(values=[input_noise3] * BATCH_NUM, axis=1, name='noise3')
@@ -145,7 +144,7 @@ def main():
                 except Exception:
                     continue
                 tqdm.write(str(path))
-                feed_noise1 = get_noise([NOISE_LENGTH])
+                feed_noise1 = get_noise([1, 1, NOISE_LENGTH])
                 feed_noise2 = get_noise([1, NOISE_LENGTH])
                 feed_noise3 = get_noise([CHANNEL_NUM, NOISE_LENGTH])
                 feed_noise4 = get_noise([1, NOISE_LENGTH])
@@ -162,7 +161,7 @@ def main():
                 if train_count % 1000 == 0:
                     save_feed_dict = feed_dict
                     save_feed_dict[train] = False
-                    samples = sess.run([gen3], feed_dict=save_feed_dict)
+                    samples = sess.run([input_gen3], feed_dict=save_feed_dict)
                     np.save(file='Samples/song_%06d' % train_count, arr=samples)
                     save_path = saver.save(sess, 'Checkpoints/song_%06d' % train_count + '.ckpt')
                     tqdm.write('Model Saved: %s' % save_path)
