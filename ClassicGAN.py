@@ -19,7 +19,15 @@ LAMBDA = 10
 LAMBDA1 = 2
 LAMBDA2 = 10
 TRAIN_RATIO_DIS = 5
-TRAIN_RATIO_GEN = 5
+TRAIN_RATIO_GEN = 1
+
+def get_feed_dict(real_data, train):
+    feed_noise1 = get_noise([1, 1, NOISE_LENGTH])
+    feed_noise2 = get_noise([1, 1, NOISE_LENGTH])
+    feed_noise3 = get_noise([CHANNEL_NUM, 1, NOISE_LENGTH])
+    feed_noise4 = get_noise([1, 1, NOISE_LENGTH])
+    feed_dict = {input_noise1: feed_noise1, input_noise2: feed_noise2, input_noise3: feed_noise3, input_noise4: feed_noise4, real_input_3: real_data, train: train}
+    return feed_dict
 
 def gradient_penalty(real, gen, encode, discriminator, train):
     alpha = tf.random_uniform(shape=[BATCH_NUM] + [1] * (gen.shape.ndims - 1), minval=0., maxval=1.)
@@ -150,24 +158,17 @@ def main():
                 except Exception:
                     continue
                 tqdm.write(str(path))
-                feed_noise1 = get_noise([1, 1, NOISE_LENGTH])
-                feed_noise2 = get_noise([1, 1, NOISE_LENGTH])
-                feed_noise3 = get_noise([CHANNEL_NUM, 1, NOISE_LENGTH])
-                feed_noise4 = get_noise([1, 1, NOISE_LENGTH])
-                feed_dict = {input_noise1: feed_noise1, input_noise2: feed_noise2, input_noise3: feed_noise3, input_noise4: feed_noise4, real_input_3: batch_input, train: True}
                 for i in range(TRAIN_RATIO_DIS):
-                    _, loss_val_dis1 = sess.run([dis1_train, loss_dis1], feed_dict=feed_dict)
-                    _, loss_val_dis2 = sess.run([dis2_train, loss_dis2], feed_dict=feed_dict)
-                    _, loss_val_dis3 = sess.run([dis3_train, loss_dis3], feed_dict=feed_dict)
+                    _, loss_val_dis1 = sess.run([dis1_train, loss_dis1], feed_dict=get_feed_dict(real_data=batch_input, train=True))
+                    _, loss_val_dis2 = sess.run([dis2_train, loss_dis2], feed_dict=get_feed_dict(real_data=batch_input, train=True))
+                    _, loss_val_dis3 = sess.run([dis3_train, loss_dis3], feed_dict=get_feed_dict(real_data=batch_input, train=True))
                 for i in range(TRAIN_RATIO_GEN):
-                    summary, _, loss_val_gen = sess.run([merged, gen_train, loss_gen], feed_dict=feed_dict)
+                    summary, _, loss_val_gen = sess.run([merged, gen_train, loss_gen], feed_dict=get_feed_dict(real_data=batch_input, train=True))
                 writer.add_summary(summary, train_count)
                 train_count+=1
                 tqdm.write('%06d' % train_count + ' Discriminator1 loss: {:.7}'.format(loss_val_dis1) + ' Discriminator2 loss: {:.7}'.format(loss_val_dis2) + ' Discriminator3 loss: {:.7}'.format(loss_val_dis3) + ' Generator loss: {:.7}'.format(loss_val_gen))
                 if train_count % 1000 == 0:
-                    save_feed_dict = feed_dict
-                    save_feed_dict[train] = False
-                    samples = sess.run([input_gen3], feed_dict=save_feed_dict)
+                    samples = sess.run([input_gen3], feed_dict=get_feed_dict(real_data=batch_input, train=False))
                     np.save(file='Samples/song_%06d' % train_count, arr=samples)
                     save_path = saver.save(sess, 'Checkpoints/song_%06d' % train_count + '.ckpt')
                     tqdm.write('Model Saved: %s' % save_path)
