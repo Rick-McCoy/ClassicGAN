@@ -167,7 +167,7 @@ def main():
                 if train_count % 100 == 0:
                     run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
                     run_metadata = tf.RunMetadata()
-                    summary, _1, _2, _3, _4 = sess.run([merged, dis1_train, dis2_train, dis3_train, gen_train], feed_dict=feed_dict, options=run_options, run_metadata=run_metadata)
+                    summary, _ = sess.run([merged, gen_train], feed_dict=feed_dict, options=run_options, run_metadata=run_metadata)
                     writer.add_run_metadata(run_metadata, 'step%d' % train_count)
                 if train_count % 1000 == 0:
                     save_feed_dict = feed_dict
