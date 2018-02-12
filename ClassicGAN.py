@@ -164,11 +164,6 @@ def main():
                 writer.add_summary(summary, train_count)
                 train_count+=1
                 tqdm.write('%06d' % train_count + ' Discriminator1 loss: {:.7}'.format(loss_val_dis1) + ' Discriminator2 loss: {:.7}'.format(loss_val_dis2) + ' Discriminator3 loss: {:.7}'.format(loss_val_dis3) + ' Generator loss: {:.7}'.format(loss_val_gen))
-                if train_count % 100 == 0:
-                    run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
-                    run_metadata = tf.RunMetadata()
-                    summary, _ = sess.run([merged, gen_train], feed_dict=feed_dict, options=run_options, run_metadata=run_metadata)
-                    writer.add_run_metadata(run_metadata, 'step%d' % train_count)
                 if train_count % 1000 == 0:
                     save_feed_dict = feed_dict
                     save_feed_dict[train] = False
