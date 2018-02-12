@@ -21,14 +21,6 @@ LAMBDA2 = 10
 TRAIN_RATIO_DIS = 5
 TRAIN_RATIO_GEN = 1
 
-def get_feed_dict(real_data, train):
-    feed_noise1 = get_noise([1, 1, NOISE_LENGTH])
-    feed_noise2 = get_noise([1, 1, NOISE_LENGTH])
-    feed_noise3 = get_noise([CHANNEL_NUM, 1, NOISE_LENGTH])
-    feed_noise4 = get_noise([1, 1, NOISE_LENGTH])
-    feed_dict = {input_noise1: feed_noise1, input_noise2: feed_noise2, input_noise3: feed_noise3, input_noise4: feed_noise4, real_input_3: real_data, train: train}
-    return feed_dict
-
 def gradient_penalty(real, gen, encode, discriminator, train):
     alpha = tf.random_uniform(shape=[BATCH_NUM] + [1] * (gen.shape.ndims - 1), minval=0., maxval=1.)
     interpolate = real + alpha * (gen - real)
@@ -158,6 +150,13 @@ def main():
                 except Exception:
                     continue
                 tqdm.write(str(path))
+                def get_feed_dict(real_data, train):
+                    feed_noise1 = get_noise([1, 1, NOISE_LENGTH])
+                    feed_noise2 = get_noise([1, 1, NOISE_LENGTH])
+                    feed_noise3 = get_noise([CHANNEL_NUM, 1, NOISE_LENGTH])
+                    feed_noise4 = get_noise([1, 1, NOISE_LENGTH])
+                    feed_dict = {input_noise1: feed_noise1, input_noise2: feed_noise2, input_noise3: feed_noise3, input_noise4: feed_noise4, real_input_3: real_data, train: train}
+                    return feed_dict
                 for i in range(TRAIN_RATIO_DIS):
                     _, loss_val_dis1 = sess.run([dis1_train, loss_dis1], feed_dict=get_feed_dict(real_data=batch_input, train=True))
                     _, loss_val_dis2 = sess.run([dis2_train, loss_dis2], feed_dict=get_feed_dict(real_data=batch_input, train=True))
