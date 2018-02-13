@@ -14,7 +14,7 @@ ALPHA = 0.2
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
-def conv2d(inputs, filters, training, kernel_size=[5, 5], strides=(1, 1), use_batch_norm=True, name=''):
+def conv2d(inputs, filters, training, kernel_size=[3, 3], strides=(1, 1), use_batch_norm=True, name=''):
     with tf.variable_scope(name):
         conv = tf.layers.conv2d(inputs=inputs, filters=filters, kernel_size=kernel_size, strides=strides, padding='same', data_format='channels_first', activation=tf.nn.leaky_relu, use_bias=not use_batch_norm, name='conv')
         if use_batch_norm:
