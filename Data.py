@@ -59,7 +59,7 @@ def roll(path):
     if np.max(data) == 0:
         raise Exception
     data = data > 0
-    data = (data - 0.5) * 1.8
+    data = (data - 0.5) * 2.0
     while length < INPUT_LENGTH * BATCH_NUM:
         np.concatenate((data, data), axis=-1)
         length *= 2

@@ -42,12 +42,12 @@ def main():
         input_noise1 = tf.placeholder(dtype=tf.float32, shape=[1, 1, NOISE_LENGTH], name='input_noise1')
         input_noise2 = tf.placeholder(dtype=tf.float32, shape=[1, 1, NOISE_LENGTH], name='input_noise2')
         input_noise3 = tf.placeholder(dtype=tf.float32, shape=[CHANNEL_NUM, 1, NOISE_LENGTH], name='input_noise3')
-        input_noise4 = tf.placeholder(dtype=tf.float32, shape=[1, 1, NOISE_LENGTH], name='input_noise4')
+        input_noise4 = tf.placeholder(dtype=tf.float32, shape=[CHANNEL_NUM, 1, NOISE_LENGTH], name='input_noise4')
         train = tf.placeholder(dtype=tf.bool, name='traintest')
         noise1 = tf.tile(input=input_noise1, multiples=[CHANNEL_NUM, BATCH_NUM, 1], name='noise1')
         noise2 = tf.tile(noise_generator(noise=input_noise2), multiples=[CHANNEL_NUM, 1, 1], name='noise2')
         noise3 = tf.tile(input_noise3, multiples=[1, BATCH_NUM, 1], name='noise3')
-        noise4 = tf.concat(values=[time_seq_noise_generator(noise=input_noise4, num=i) for i in range(CHANNEL_NUM)], axis=0, name='noise4')
+        noise4 = tf.concat(values=[time_seq_noise_generator(noise=input_noise4[i:i+1], num=i) for i in range(CHANNEL_NUM)], axis=0, name='noise4')
         real_input_3 = tf.placeholder(dtype=tf.float32, shape=[BATCH_NUM, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH], name='real_input_3')
         real_input_2 = tf.layers.average_pooling2d(inputs=real_input_3, pool_size=[2, 2], strides=2, padding='same', data_format='channels_first', name='real_input_2')
         real_input_1 = tf.layers.average_pooling2d(inputs=real_input_2, pool_size=[2, 2], strides=2, padding='same', data_format='channels_first', name='real_input_1')
@@ -151,13 +151,13 @@ def main():
                 except Exception:
                     continue
                 tqdm.write(str(path))
+                feed_dict[real_input_3] = batch_input
+                feed_dict[train] = True
                 for i in range(TRAIN_RATIO_DIS):
                     feed_dict[input_noise1] = get_noise([1, 1, NOISE_LENGTH])
                     feed_dict[input_noise2] = get_noise([1, 1, NOISE_LENGTH])
                     feed_dict[input_noise3] = get_noise([CHANNEL_NUM, 1, NOISE_LENGTH])
-                    feed_dict[input_noise4] = get_noise([1, 1, NOISE_LENGTH])
-                    feed_dict[real_input_3] = batch_input
-                    feed_dict[train] = True
+                    feed_dict[input_noise4] = get_noise([CHANNEL_NUM, 1, NOISE_LENGTH])
                     _, loss_val_dis1 = sess.run([dis1_train, loss_dis1], feed_dict=feed_dict)
                     _, loss_val_dis2 = sess.run([dis2_train, loss_dis2], feed_dict=feed_dict)
                     _, loss_val_dis3 = sess.run([dis3_train, loss_dis3], feed_dict=feed_dict)
@@ -165,9 +165,7 @@ def main():
                     feed_dict[input_noise1] = get_noise([1, 1, NOISE_LENGTH])
                     feed_dict[input_noise2] = get_noise([1, 1, NOISE_LENGTH])
                     feed_dict[input_noise3] = get_noise([CHANNEL_NUM, 1, NOISE_LENGTH])
-                    feed_dict[input_noise4] = get_noise([1, 1, NOISE_LENGTH])
-                    feed_dict[real_input_3] = batch_input
-                    feed_dict[train] = True
+                    feed_dict[input_noise4] = get_noise([CHANNEL_NUM, 1, NOISE_LENGTH])
                     summary, _, loss_val_gen = sess.run([merged, gen_train, loss_gen], feed_dict=feed_dict)
                 writer.add_summary(summary, train_count)
                 train_count+=1
@@ -176,8 +174,7 @@ def main():
                     feed_dict[input_noise1] = get_noise([1, 1, NOISE_LENGTH])
                     feed_dict[input_noise2] = get_noise([1, 1, NOISE_LENGTH])
                     feed_dict[input_noise3] = get_noise([CHANNEL_NUM, 1, NOISE_LENGTH])
-                    feed_dict[input_noise4] = get_noise([1, 1, NOISE_LENGTH])
-                    feed_dict[real_input_3] = batch_input
+                    feed_dict[input_noise4] = get_noise([CHANNEL_NUM, 1, NOISE_LENGTH])
                     feed_dict[train] = False
                     samples = sess.run([input_gen3], feed_dict=feed_dict)
                     np.save(file='Samples/song_%06d' % train_count, arr=samples)

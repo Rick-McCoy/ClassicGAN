@@ -125,13 +125,14 @@ def generator2(inputs, encode, num, train):
         encode = tf.tile(input=encode, multiples=(1, CHANNEL_NUM, 9, 3))
         # shape: [BATCH_NUM, CHANNEL_NUM, CLASS_NUM // 4, INPUT_LENGTH // 4]
         inputs = tf.concat([inputs, encode], axis=1)
-        res1 = residual_block(inputs=inputs, filters=64, training=train, name='res1')
-        # shape: [BATCH_NUM, 64, CLASS_NUM // 4, INPUT_LENGTH // 4]
-        res2 = residual_block(inputs=res1, filters=32, training=train, name='res2')
+        # shape: [BATCH_NUM, CHANNEL_NUM * (NOISE_LENGTH + 1), CLASS_NUM // 4, INPUT_LENGTH // 4]
+        res1 = residual_block(inputs=inputs, filters=128, training=train, name='res1')
+        # shape: [BATCH_NUM, 128, CLASS_NUM // 4, INPUT_LENGTH // 4]
+        res2 = residual_block(inputs=res1, filters=64, training=train, name='res2')
         # shape: [BATCH_NUM, 32, CLASS_NUM // 4, INPUT_LENGTH // 4]
-        deconv1 = conv2d_transpose(inputs=res2, filters=16, strides=(2, 1), training=train, name='deconv1')
+        deconv1 = conv2d_transpose(inputs=res2, filters=32, strides=(2, 1), training=train, name='deconv1')
         # shape: [BATCH_NUM, 16, CLASS_NUM // 2, INPUT_LENGTH // 4]
-        deconv2 = conv2d_transpose(inputs=deconv1, filters=8, strides=(1, 2), training=train, name='deconv2')
+        deconv2 = conv2d_transpose(inputs=deconv1, filters=16, strides=(1, 2), training=train, name='deconv2')
         # shape: [BATCH_NUM, 8, CLASS_NUM // 2, INPUT_LENGTH // 2]
         conv1 = conv2d(inputs=deconv2, filters=1, training=train, use_batch_norm=False, name='conv1')
         # shape: [BATCH_NUM, 1, CLASS_NUM // 2, INPUT_LENGTH // 2]
@@ -149,6 +150,7 @@ def generator3(inputs, encode, num, train):
         encode = tf.tile(input=encode, multiples=(1, CHANNEL_NUM, 9, 6))
         # shape: [BATCH_NUM, CHANNEL_NUM, CLASS_NUM // 2, INPUT_LENGTH // 2]
         inputs = tf.concat([inputs, encode], axis=1)
+        # shape: [BATCH_NUM, CHANNEL_NUM * 17, CLASS_NUM // 2, INPUT_LENGTH // 2]
         res1 = residual_block(inputs=inputs, filters=64, training=train, name='res1')
         # shape: [BATCH_NUM, 64, CLASS_NUM // 2, INPUT_LENGTH // 2]
         res2 = residual_block(inputs=res1, filters=16, training=train, name='res2')
