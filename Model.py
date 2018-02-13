@@ -120,18 +120,18 @@ def generator2(inputs, encode, num, train):
         # shape: [BATCH_NUM, 1, NOISE_LENGTH * 4]
         encode = tf.reshape(encode, [BATCH_NUM, 2, CLASS_NUM // 36, INPUT_LENGTH // 12])
         # shape: [BATCH_NUM, 2, CLASS_NUM // 36, INPUT_LENGTH // 12]
-        encode = tf.tile(input=encode, multiples=(1, CHANNEL_NUM, 9, 3))
-        # shape: [BATCH_NUM, CHANNEL_NUM * 2, CLASS_NUM // 4, INPUT_LENGTH // 4]
-        inputs = tf.concat([inputs, encode], axis=1)
-        # shape: [BATCH_NUM, CHANNEL_NUM * (NOISE_LENGTH + 2), CLASS_NUM // 4, INPUT_LENGTH // 4]
-        res1 = residual_block(inputs=inputs, filters=256, training=train, name='res1')
-        # shape: [BATCH_NUM, 128, CLASS_NUM // 4, INPUT_LENGTH // 4]
-        res2 = residual_block(inputs=res1, filters=128, training=train, name='res2')
+        encode = tf.tile(input=encode, multiples=(1, 16, 9, 3))
         # shape: [BATCH_NUM, 32, CLASS_NUM // 4, INPUT_LENGTH // 4]
-        deconv1 = conv2d_transpose(inputs=res2, filters=64, strides=(2, 1), training=train, name='deconv1')
-        # shape: [BATCH_NUM, 16, CLASS_NUM // 2, INPUT_LENGTH // 4]
+        inputs = tf.concat([inputs, encode], axis=1)
+        # shape: [BATCH_NUM, 64, CLASS_NUM // 4, INPUT_LENGTH // 4]
+        res1 = residual_block(inputs=inputs, filters=64, training=train, name='res1')
+        # shape: [BATCH_NUM, 64, CLASS_NUM // 4, INPUT_LENGTH // 4]
+        res2 = residual_block(inputs=res1, filters=64, training=train, name='res2')
+        # shape: [BATCH_NUM, 64, CLASS_NUM // 4, INPUT_LENGTH // 4]
+        deconv1 = conv2d_transpose(inputs=res2, filters=32, strides=(2, 1), training=train, name='deconv1')
+        # shape: [BATCH_NUM, 32, CLASS_NUM // 2, INPUT_LENGTH // 4]
         deconv2 = conv2d_transpose(inputs=deconv1, filters=32, strides=(1, 2), training=train, name='deconv2')
-        # shape: [BATCH_NUM, 8, CLASS_NUM // 2, INPUT_LENGTH // 2]
+        # shape: [BATCH_NUM, 32, CLASS_NUM // 2, INPUT_LENGTH // 2]
         conv1 = conv2d(inputs=deconv2, filters=1, training=train, use_batch_norm=False, name='conv1')
         # shape: [BATCH_NUM, 1, CLASS_NUM // 2, INPUT_LENGTH // 2]
         output = tf.tanh(tf.squeeze(input=conv1, axis=1))
@@ -145,18 +145,18 @@ def generator3(inputs, encode, num, train):
         # shape: [BATCH_NUM, 1, NOISE_LENGTH * 4]
         encode = tf.reshape(encode, [BATCH_NUM, 1, CLASS_NUM // 18, INPUT_LENGTH // 12])
         # shape: [BATCH_NUM, 1, CLASS_NUM // 18, INPUT_LENGTH // 12]
-        encode = tf.tile(input=encode, multiples=(1, CHANNEL_NUM, 9, 6))
-        # shape: [BATCH_NUM, CHANNEL_NUM, CLASS_NUM // 2, INPUT_LENGTH // 2]
-        inputs = tf.concat([inputs, encode], axis=1)
-        # shape: [BATCH_NUM, CHANNEL_NUM * 33, CLASS_NUM // 2, INPUT_LENGTH // 2]
-        res1 = residual_block(inputs=inputs, filters=128, training=train, name='res1')
-        # shape: [BATCH_NUM, 64, CLASS_NUM // 2, INPUT_LENGTH // 2]
-        res2 = residual_block(inputs=res1, filters=64, training=train, name='res2')
+        encode = tf.tile(input=encode, multiples=(1, 32, 9, 6))
         # shape: [BATCH_NUM, 32, CLASS_NUM // 2, INPUT_LENGTH // 2]
-        deconv1 = conv2d_transpose(inputs=res2, filters=32, strides=(2, 1), training=train, name='deconv1')
+        inputs = tf.concat([inputs, encode], axis=1)
+        # shape: [BATCH_NUM, 64, CLASS_NUM // 2, INPUT_LENGTH // 2]
+        res1 = residual_block(inputs=inputs, filters=32, training=train, name='res1')
+        # shape: [BATCH_NUM, 32, CLASS_NUM // 2, INPUT_LENGTH // 2]
+        res2 = residual_block(inputs=res1, filters=32, training=train, name='res2')
+        # shape: [BATCH_NUM, 32, CLASS_NUM // 2, INPUT_LENGTH // 2]
+        deconv1 = conv2d_transpose(inputs=res2, filters=16, strides=(2, 1), training=train, name='deconv1')
         # shape: [BATCH_NUM, 16, CLASS_NUM, INPUT_LENGTH // 2]
-        deconv2 = conv2d_transpose(inputs=deconv1, filters=16, strides=(1, 2), training=train, name='deconv2')
-        # shape: [BATCH_NUM, 8, CLASS_NUM, INPUT_LENGTH]
+        deconv2 = conv2d_transpose(inputs=deconv1, filters=4, strides=(1, 2), training=train, name='deconv2')
+        # shape: [BATCH_NUM, 4, CLASS_NUM, INPUT_LENGTH]
         conv1 = conv2d(inputs=deconv2, filters=1, training=train, use_batch_norm=False, name='conv1')
         # shape: [BATCH_NUM, 1, CLASS_NUM, INPUT_LENGTH]
         output = tf.tanh(tf.squeeze(input=conv1, axis=1))
@@ -166,6 +166,7 @@ def generator3(inputs, encode, num, train):
 
 def discriminator1(inputs, train, name):
     with tf.variable_scope(name, reuse=tf.AUTO_REUSE):
+        # shape: [BATCH_NUM, CHANNEL_NUM, CLASS_NUM // 4, INPUT_LENGTH // 4]
         conv1 = conv2d(inputs=inputs, filters=8, kernel_size=[2, 1], training=train, strides=(2, 1), use_batch_norm=False, name='conv1')
         # shape: [BATCH_NUM, 8, CLASS_NUM // 8, INPUT_LENGTH // 4]
         conv2 = conv2d(inputs=conv1, filters=16, kernel_size=[2, 1], training=train, strides=(2, 1), use_batch_norm=False, name='conv2')
@@ -193,6 +194,7 @@ def discriminator1_conditional(inputs, encode, train):
 
 def discriminator2(inputs, train, name):
     with tf.variable_scope(name, reuse=tf.AUTO_REUSE):
+        # shape: [BATCH_NUM, CHANNEL_NUM, CLASS_NUM // 2, INPUT_LENGTH // 2]
         conv1 = conv2d(inputs=inputs, filters=8, kernel_size=[2, 1], training=train, strides=(2, 1), use_batch_norm=False, name='conv1')
         # shape: [BATCH_NUM, 8, CLASS_NUM // 4, INPUT_LENGTH // 2]
         conv2 = conv2d(inputs=conv1, filters=16, kernel_size=[4, 1], training=train, strides=(4, 1), use_batch_norm=False, name='conv2')
@@ -218,6 +220,7 @@ def discriminator2_conditional(inputs, encode, train):
 
 def discriminator3(inputs, train, name):
     with tf.variable_scope(name, reuse=tf.AUTO_REUSE):
+        # shape: [BATCH_NUM, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH]
         conv1 = conv2d(inputs=inputs, filters=8, kernel_size=[4, 1], training=train, strides=(4, 1), use_batch_norm=False, name='conv1')
         # shape: [BATCH_NUM, 8, CLASS_NUM // 4, INPUT_LENGTH]
         conv2 = conv2d(inputs=conv1, filters=16, kernel_size=[4, 1], training=train, strides=(4, 1), use_batch_norm=False, name='conv2')
