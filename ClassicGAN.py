@@ -10,16 +10,15 @@ from tqdm import tqdm
 from Data import roll, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH, BATCH_NUM
 from Model import get_noise, generator1, generator2, generator3, noise_generator, time_seq_noise_generator, discriminator1_conditional, discriminator2_conditional, discriminator3_conditional, encoder, NOISE_LENGTH
 import memory_saving_gradients
-# monkey patch memory_saving_gradients.gradients_speed to point to our custom version, with automatic checkpoint selection
 tf.__dict__["gradients"] = memory_saving_gradients.gradients_speed
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 TOTAL_TRAIN_EPOCH = 100
 LAMBDA = 10
-LAMBDA1 = 2
-LAMBDA2 = 10
+LAMBDA1 = 1
+LAMBDA2 = 5
 TRAIN_RATIO_DIS = 5
-TRAIN_RATIO_GEN = 1
+TRAIN_RATIO_GEN = 2
 
 def gradient_penalty(real, gen, encode, discriminator, train):
     alpha = tf.random_uniform(shape=[BATCH_NUM] + [1] * (gen.shape.ndims - 1), minval=0., maxval=1.)
@@ -128,7 +127,6 @@ def main():
             gen_train = tf.train.AdamOptimizer(learning_rate=0.0002, beta1=0.5, beta2=0.99).minimize(loss=loss_gen, var_list=gen_var, name='gen_train')
         print('gen_train setup')
     print('Optimizers set')
-    loss_val_dis = loss_val_gen = 1.0
     gpu_options = tf.GPUOptions(allow_growth=True)
     config = tf.ConfigProto(allow_soft_placement=True, gpu_options=gpu_options)
     config.gpu_options.allocator_type = 'BFC'
@@ -143,9 +141,9 @@ def main():
         train_count = 0
         feed_dict = {input_noise1: None, input_noise2: None, input_noise3: None, input_noise4: None, real_input_3: None, train: True}
         print('preparing complete')
-        for epoch in tqdm(range(TOTAL_TRAIN_EPOCH)):
+        for __ in tqdm(range(TOTAL_TRAIN_EPOCH)):
             random.shuffle(pathlist)
-            for songnum, path in enumerate(tqdm(pathlist)):
+            for path in tqdm(pathlist):
                 try:
                     batch_input = roll(path)
                 except Exception:
@@ -168,7 +166,7 @@ def main():
                     feed_dict[input_noise4] = get_noise([CHANNEL_NUM, 1, NOISE_LENGTH])
                     summary, _, loss_val_gen = sess.run([merged, gen_train, loss_gen], feed_dict=feed_dict)
                 writer.add_summary(summary, train_count)
-                train_count+=1
+                train_count += 1
                 tqdm.write('%06d' % train_count + ' Discriminator1 loss: {:.7}'.format(loss_val_dis1) + ' Discriminator2 loss: {:.7}'.format(loss_val_dis2) + ' Discriminator3 loss: {:.7}'.format(loss_val_dis3) + ' Generator loss: {:.7}'.format(loss_val_gen))
                 if train_count % 1000 == 0:
                     feed_dict[input_noise1] = get_noise([1, 1, NOISE_LENGTH])

@@ -4,8 +4,6 @@ from __future__ import print_function
 
 import pretty_midi as pm
 import numpy as np
-import pathlib
-from tqdm import tqdm
 
 CHANNEL_NUM = 7
 CLASS_NUM = 72

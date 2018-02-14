@@ -2,15 +2,12 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import os
 import tensorflow as tf
 import numpy as np
-import pathlib
-import os
 from Data import CLASS_NUM, INPUT_LENGTH, CHANNEL_NUM, BATCH_NUM
 
 NOISE_LENGTH = 32
-HIDDEN_UNIT_NUM = 1000
-ALPHA = 0.2
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 

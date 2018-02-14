@@ -1,16 +1,8 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-import matplotlib
-
-matplotlib.use('Agg')
-
 import pretty_midi as pm
 import numpy as np
-import pathlib
-import matplotlib.pyplot as plt
-import librosa.display
-from tqdm import tqdm
 
 def get_instrument(piano_roll, program_num, is_drum, velocity=100, tempo=120.0, beat_resolution=24):
     tpp = 60.0 / tempo / float(beat_resolution)
@@ -24,7 +16,7 @@ def get_instrument(piano_roll, program_num, is_drum, velocity=100, tempo=120.0, 
         end_idxs = (piano_roll_search[:, note_num] < 0).nonzero()
         end_times = tpp * (end_idxs[0].astype(float))
         for idx, start_time in enumerate(start_times):
-            note = pretty_midi.Note(velocity=velocity, pitch=note_num, start=start_times[idx], end=end_times[idx])
+            note = pm.Note(velocity=velocity, pitch=note_num, start=start_times[idx], end=end_times[idx])
             instrument.notes.append(note)
     instrument.notes.sort(key=lambda note: note.start)
     return instrument
