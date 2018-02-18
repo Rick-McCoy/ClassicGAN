@@ -15,10 +15,10 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 TOTAL_TRAIN_EPOCH = 100
 LAMBDA = 10
-LAMBDA1 = 1
-LAMBDA2 = 5
+LAMBDA1 = 2
+LAMBDA2 = 10
 TRAIN_RATIO_DIS = 5
-TRAIN_RATIO_GEN = 2
+TRAIN_RATIO_GEN = 1
 
 def gradient_penalty(real, gen, encode, discriminator, train):
     alpha = tf.random_uniform(shape=[BATCH_NUM] + [1] * (gen.shape.ndims - 1), minval=0., maxval=1.)
@@ -46,7 +46,7 @@ def main():
         noise1 = tf.tile(input=input_noise1, multiples=[CHANNEL_NUM, BATCH_NUM, 1], name='noise1')
         noise2 = tf.tile(noise_generator(noise=input_noise2), multiples=[CHANNEL_NUM, 1, 1], name='noise2')
         noise3 = tf.tile(input_noise3, multiples=[1, BATCH_NUM, 1], name='noise3')
-        noise4 = tf.concat(values=[time_seq_noise_generator(noise=input_noise4[i:i+1], num=i) for i in range(CHANNEL_NUM)], axis=0, name='noise4')
+        noise4 = tf.concat(values=[time_seq_noise_generator(noise=input_noise4[i:i + 1], num=i) for i in range(CHANNEL_NUM)], axis=0, name='noise4')
         real_input_3 = tf.placeholder(dtype=tf.float32, shape=[BATCH_NUM, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH], name='real_input_3')
         real_input_2 = tf.layers.average_pooling2d(inputs=real_input_3, pool_size=[2, 2], strides=2, padding='same', data_format='channels_first', name='real_input_2')
         real_input_1 = tf.layers.average_pooling2d(inputs=real_input_2, pool_size=[2, 2], strides=2, padding='same', data_format='channels_first', name='real_input_1')
@@ -74,18 +74,24 @@ def main():
         dis3_gen = discriminator3_conditional(inputs=input_gen3, encode=encode, train=train)
     print('Discriminators set')
     with tf.name_scope('loss'):
-        loss_dis1 = tf.reduce_mean(dis1_gen - dis1_real) + gradient_penalty(real=real_input_1, gen=input_gen1, encode=encode, discriminator=discriminator1_conditional, train=train)
+        #loss_dis1 = tf.reduce_mean(dis1_gen - dis1_real) + gradient_penalty(real=real_input_1, gen=input_gen1, encode=encode, discriminator=discriminator1_conditional, train=train)
+        loss_dis1 = tf.reduce_mean(tf.log(dis1_gen + 1e-8) - tf.log(dis1_real + 1e-8))
         mean_gen1 = tf.reduce_mean(input_gen1, keep_dims=True, axis=list(range(2, input_gen1.shape.ndims)))
         dev_gen1 = tf.reduce_mean(tf.square(input_gen1 - mean_gen1), axis=list(range(2, input_gen1.shape.ndims)))
-        loss_gen1 = -tf.reduce_mean(dis1_gen)
-        loss_dis2 = tf.reduce_mean(dis2_gen - dis2_real) + gradient_penalty(real=real_input_2, gen=input_gen2, encode=encode, discriminator=discriminator2_conditional, train=train)
+        #loss_gen1 = -tf.reduce_mean(dis1_gen)
+        loss_gen1 = -tf.reduce_mean(tf.log(dis1_gen + 1e-8))
+        #loss_dis2 = tf.reduce_mean(dis2_gen - dis2_real) + gradient_penalty(real=real_input_2, gen=input_gen2, encode=encode, discriminator=discriminator2_conditional, train=train)
+        loss_dis2 = tf.reduce_mean(tf.log(dis2_gen + 1e-8) - tf.log(dis2_real + 1e-8))
         mean_gen2 = tf.reduce_mean(input_gen2, keep_dims=True, axis=list(range(2, input_gen2.shape.ndims)))
         dev_gen2 = tf.reduce_mean(tf.square(input_gen2 - mean_gen2), axis=list(range(2, input_gen2.shape.ndims)))
-        loss_gen2 = -tf.reduce_mean(dis2_gen) + LAMBDA1 * tf.reduce_mean(tf.squared_difference(mean_gen1, mean_gen2)) + LAMBDA2 * tf.reduce_mean(tf.squared_difference(dev_gen1, dev_gen2))
-        loss_dis3 = tf.reduce_mean(dis3_gen - dis3_real) + gradient_penalty(real=real_input_3, gen=input_gen3, encode=encode, discriminator=discriminator3_conditional, train=train)
+        #loss_gen2 = -tf.reduce_mean(dis2_gen) + LAMBDA1 * tf.reduce_mean(tf.squared_difference(mean_gen1, mean_gen2)) + LAMBDA2 * tf.reduce_mean(tf.squared_difference(dev_gen1, dev_gen2))
+        loss_gen2 = -tf.reduce_mean(tf.log(dis2_gen + 1e-8)) + LAMBDA1 * tf.reduce_mean(tf.squared_difference(mean_gen1, mean_gen2)) + LAMBDA2 * tf.reduce_mean(tf.squared_difference(dev_gen1, dev_gen2))
+        #loss_dis3 = tf.reduce_mean(dis3_gen - dis3_real) + gradient_penalty(real=real_input_3, gen=input_gen3, encode=encode, discriminator=discriminator3_conditional, train=train)
+        loss_dis3 = tf.reduce_mean(tf.log(dis3_gen + 1e-8) - tf.log(dis3_real + 1e-8))
         mean_gen3 = tf.reduce_mean(input_gen3, keep_dims=True, axis=list(range(2, input_gen3.shape.ndims)))
         dev_gen3 = tf.reduce_mean(tf.square(input_gen3 - mean_gen3), axis=list(range(2, input_gen3.shape.ndims)))
-        loss_gen3 = -tf.reduce_mean(dis3_gen) + LAMBDA1 * tf.reduce_mean(tf.squared_difference(mean_gen2, mean_gen3)) + LAMBDA2 * tf.reduce_mean(tf.squared_difference(dev_gen2, dev_gen3))
+        #loss_gen3 = -tf.reduce_mean(dis3_gen) + LAMBDA1 * tf.reduce_mean(tf.squared_difference(mean_gen2, mean_gen3)) + LAMBDA2 * tf.reduce_mean(tf.squared_difference(dev_gen2, dev_gen3))
+        loss_gen3 = -tf.reduce_mean(tf.log(dis3_gen + 1e-8)) + LAMBDA1 * tf.reduce_mean(tf.squared_difference(mean_gen2, mean_gen3)) + LAMBDA2 * tf.reduce_mean(tf.squared_difference(dev_gen2, dev_gen3))
         loss_gen = (loss_gen1 + loss_gen2 + loss_gen3) / 3.0
         tf.summary.scalar('loss_dis1', loss_dis1)
         tf.summary.scalar('loss_gen1', loss_gen1)
