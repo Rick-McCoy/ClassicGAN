@@ -187,7 +187,7 @@ def discriminator1_conditional(inputs, encode, train):
         # shape: [BATCH_NUM, CHANNEL_NUM , CLASS_NUM // 36, INPUT_LENGTH // 12]
         encode = tf.tile(input=encode, multiples=(1, 1, 9, 3))
         # shape: [BATCH_NUM, CHANNEL_NUM, CLASS_NUM // 4, INPUT_LENGTH // 4]
-        output = (discriminator1(inputs=inputs, train=train, name='Discriminator1_Uncond') + discriminator1(inputs=tf.concat(values=[inputs, encode], axis=1), train=train, name='Discriminator1_Cond')) / 2.0
+        output = (tf.log(discriminator1(inputs=inputs, train=train, name='Discriminator1_Uncond') + 1e-5) + tf.log(discriminator1(inputs=tf.concat(values=[inputs, encode], axis=1), train=train, name='Discriminator1_Cond') + 1e-5)) / 2.0
     return output
 
 def discriminator2(inputs, train, name):
@@ -214,7 +214,7 @@ def discriminator2_conditional(inputs, encode, train):
         # shape: [BATCH_NUM, CHANNEL_NUM , CLASS_NUM // 18, INPUT_LENGTH // 12]
         encode = tf.tile(input=encode, multiples=(1, 1, 9, 6))
         # shape: [BATCH_NUM, CHANNEL_NUM, CLASS_NUM // 2, INPUT_LENGTH // 2]
-        output = (discriminator2(inputs=inputs, train=train, name='Discriminator2_Uncond') + discriminator2(inputs=tf.concat(values=[inputs, encode], axis=1), train=train, name='Discriminator2_Cond')) / 2.0
+        output = (tf.log(discriminator2(inputs=inputs, train=train, name='Discriminator2_Uncond') + 1e-5) + tf.log(discriminator2(inputs=tf.concat(values=[inputs, encode], axis=1), train=train, name='Discriminator2_Cond') + 1e-5)) / 2.0
     return output
 
 def discriminator3(inputs, train, name):
@@ -242,7 +242,7 @@ def discriminator3_conditional(inputs, encode, train):
         # shape: [BATCH_NUM, CHANNEL_NUM , CLASS_NUM // 18, INPUT_LENGTH // 12]
         encode = tf.tile(input=encode, multiples=(1, 1, 18, 12))
         # shape: [BATCH_NUM, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH]
-        output = (discriminator3(inputs=inputs, train=train, name='Discriminator3_Uncond') + discriminator3(inputs=tf.concat(values=[inputs, encode], axis=1), train=train, name='Discriminator3_Cond')) / 2.0
+        output = (tf.log(discriminator3(inputs=inputs, train=train, name='Discriminator3_Uncond') + 1e-5) + tf.log(discriminator3(inputs=tf.concat(values=[inputs, encode], axis=1), train=train, name='Discriminator3_Cond') + 1e-5)) / 2.0
     return output
 
 def get_noise(size):
