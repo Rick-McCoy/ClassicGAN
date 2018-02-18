@@ -171,6 +171,11 @@ def main():
                 writer.add_summary(summary, train_count)
                 train_count += 1
                 tqdm.write('%06d' % train_count + ' Discriminator1 loss: {:.7}'.format(loss_val_dis1) + ' Discriminator2 loss: {:.7}'.format(loss_val_dis2) + ' Discriminator3 loss: {:.7}'.format(loss_val_dis3) + ' Generator loss: {:.7}'.format(loss_val_gen))
+                if train_count % 100 == 0:
+                    run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
+                    run_metadata = tf.RunMetadata()
+                    summary, _1, _2, _3, _4 = sess.run([merged, dis1_train, dis2_train, dis3_train, gen_train], feed_dict=feed_dict, options=run_options, run_metadata=run_metadata)
+                    writer.add_run_metadata(run_metadata, 'step%d' % train_count)
                 if train_count % 1000 == 0:
                     feed_dict[input_noise1] = get_noise([1, 1, NOISE_LENGTH])
                     feed_dict[input_noise2] = get_noise([1, 1, NOISE_LENGTH])
