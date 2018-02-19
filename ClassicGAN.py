@@ -44,9 +44,9 @@ def main():
         input_noise4 = tf.placeholder(dtype=tf.float32, shape=[CHANNEL_NUM, 1, NOISE_LENGTH], name='input_noise4')
         train = tf.placeholder(dtype=tf.bool, name='traintest')
         noise1 = tf.tile(input=input_noise1, multiples=[CHANNEL_NUM, BATCH_NUM, 1], name='noise1')
-        noise2 = tf.tile(noise_generator(noise=input_noise2), multiples=[CHANNEL_NUM, 1, 1], name='noise2')
+        noise2 = tf.tile(noise_generator(noise=input_noise2, train=train), multiples=[CHANNEL_NUM, 1, 1], name='noise2')
         noise3 = tf.tile(input_noise3, multiples=[1, BATCH_NUM, 1], name='noise3')
-        noise4 = tf.concat(values=[time_seq_noise_generator(noise=input_noise4[i:i + 1], num=i) for i in range(CHANNEL_NUM)], axis=0, name='noise4')
+        noise4 = tf.concat(values=[time_seq_noise_generator(noise=input_noise4[i:i + 1], num=i, train=train) for i in range(CHANNEL_NUM)], axis=0, name='noise4')
         real_input_3 = tf.placeholder(dtype=tf.float32, shape=[BATCH_NUM, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH], name='real_input_3')
         real_input_2 = tf.layers.average_pooling2d(inputs=real_input_3, pool_size=[2, 2], strides=2, padding='same', data_format='channels_first', name='real_input_2')
         real_input_1 = tf.layers.average_pooling2d(inputs=real_input_2, pool_size=[2, 2], strides=2, padding='same', data_format='channels_first', name='real_input_1')
@@ -139,6 +139,7 @@ def main():
         writer = tf.summary.FileWriter('train', sess.graph)
         sess.run(tf.global_variables_initializer())
         if tf.train.latest_checkpoint('Checkpoints') is not None:
+            tqdm.write('Restoring...')
             saver.restore(sess, tf.train.latest_checkpoint('Checkpoints'))
         pathlist = list(pathlib.Path('Classics').glob('**/*.mid')) + list(pathlib.Path('TPD').glob('**/*.mid'))# + list(pathlib.Path('Lakh').glob('**/*.mid'))
         train_count = 0

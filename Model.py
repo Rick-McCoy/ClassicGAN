@@ -11,75 +11,90 @@ NOISE_LENGTH = 32
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
-def conv2d(inputs, filters, training, kernel_size=[3, 3], strides=(1, 1), use_batch_norm=True, name=''):
+def conv2d(inputs, filters, kernel_size=[3, 3], strides=(1, 1), training=True, regularization=None, name=''):
     with tf.variable_scope(name):
-        conv = tf.layers.conv2d(inputs=inputs, filters=filters, kernel_size=kernel_size, strides=strides, padding='same', data_format='channels_first', activation=tf.nn.leaky_relu, use_bias=not use_batch_norm, name='conv')
-        if use_batch_norm:
+        if regularization == 'selu':
+            output = tf.layers.conv2d(inputs=inputs, filters=filters, kernel_size=kernel_size, strides=strides, padding='same', data_format='channels_first', activation=tf.nn.selu, name='conv')
+        elif regularization == 'batch_norm':
+            conv = tf.layers.conv2d(inputs=inputs, filters=filters, kernel_size=kernel_size, strides=strides, padding='same', data_format='channels_first', activation=tf.nn.leaky_relu, use_bias=False, name='conv')
             output = tf.layers.batch_normalization(inputs=conv, axis=1, training=training, name='batch_norm', fused=True)
         else:
-            output = conv
+            output = tf.layers.conv2d(inputs=inputs, filters=filters, kernel_size=kernel_size, strides=strides, padding='same', data_format='channels_first', activation=tf.nn.leaky_relu, name='conv')
         return output
 
-def conv2d_transpose(inputs, filters, strides, training, use_batch_norm=True, name=''):
+def conv2d_transpose(inputs, filters, strides, training, regularization=None, name=''):
     with tf.variable_scope(name):
-        deconv = tf.layers.conv2d_transpose(inputs=inputs, filters=filters, kernel_size=list(strides), strides=strides, padding='same', data_format='channels_first', activation=tf.nn.leaky_relu, use_bias=not use_batch_norm, name='deconv')
-        if use_batch_norm:
+        if regularization == 'selu':
+            output = tf.layers.conv2d_transpose(inputs=inputs, filters=filters, kernel_size=list(strides), strides=strides, padding='same', data_format='channels_first', activation=tf.nn.selu, name='deconv')
+        elif regularization == 'batch_norm':
+            deconv = tf.layers.conv2d_transpose(inputs=inputs, filters=filters, kernel_size=list(strides), strides=strides, padding='same', data_format='channels_first', activation=tf.nn.leaky_relu, use_bias=False, name='deconv')
             output = tf.layers.batch_normalization(inputs=deconv, axis=1, training=training, name='batch_norm', fused=True)
         else:
-            output = deconv
+            output = tf.layers.conv2d_transpose(inputs=inputs, filters=filters, kernel_size=list(strides), strides=strides, padding='same', data_format='channels_first', activation=tf.nn.leaky_relu, name='deconv')
         return output
 
-def residual_block(inputs, filters, training, use_batch_norm=True, name=''):
+def conv1d(inputs, filters, kernel_size, strides, training, regularization=None, name=''):
+    with tf.variable_scope(name):
+        if regularization == 'selu':
+            output = tf.layers.conv1d(inputs=inputs, filters=filters, kernel_size=kernel_size, strides=strides, padding='same', data_format='channels_first', activation=tf.nn.selu, name='conv')
+        elif regularization == 'batch_norm':
+            conv = tf.layers.conv1d(inputs=inputs, filters=filters, kernel_size=kernel_size, strides=strides, padding='same', data_format='channels_first', activation=tf.nn.selu, name='conv')
+            output = tf.layers.batch_normalization(inputs=inputs, axis=1, training=training, name='batch_norm', fused=True)
+        else:
+            output = tf.layers.conv1d(inputs=inputs, filters=filters, kernel_size=kernel_size, strides=strides, padding='same', data_format='channels_first', activation=tf.nn.leaky_relu, name='conv')
+        return None
+
+def residual_block(inputs, filters, training, regularization=None, name=''):
     with tf.variable_scope(name):
         if inputs.get_shape()[1] != filters:
-            inputs = conv2d(inputs=inputs, filters=filters, training=training, use_batch_norm=use_batch_norm, name='inputs')
-        conv1 = conv2d(inputs=inputs, filters=filters, training=training, use_batch_norm=use_batch_norm, name='conv1')
-        conv2 = conv2d(inputs=conv1, filters=filters, training=training, use_batch_norm=use_batch_norm, name='conv2')
+            inputs = conv2d(inputs=inputs, filters=filters, training=training, regularization=regularization, name='inputs')
+        conv1 = conv2d(inputs=inputs, filters=filters, training=training, regularization=regularization, name='conv1')
+        conv2 = conv2d(inputs=conv1, filters=filters, training=training, regularization=regularization, name='conv2')
         output = inputs + conv2
         return output
 
-def noise_generator(noise):
+def noise_generator(noise, train):
     with tf.variable_scope('Noise_generator'):
         # shape: [1, 1, NOISE_LENGTH]
-        conv1 = tf.layers.conv1d(inputs=noise, filters=2, kernel_size=5, strides=1, padding='same', data_format='channels_first', activation=tf.nn.leaky_relu, name='conv1')
+        conv1 = conv1d(inputs=noise, filters=2, kernel_size=5, strides=1, training=train, regularization='batch_norm', name='conv1')
         # shape: [1, 2, NOISE_LENGTH]
-        conv2 = tf.layers.conv1d(inputs=conv1, filters=4, kernel_size=5, strides=1, padding='same', data_format='channels_first', activation=tf.nn.leaky_relu, name='conv2')
+        conv2 = conv1d(inputs=conv1, filters=4, kernel_size=5, strides=1, training=train, regularization='batch_norm', name='conv2')
         # shape: [1, 4, NOISE_LENGTH]
-        conv3 = tf.layers.conv1d(inputs=conv2, filters=16, kernel_size=5, strides=1, padding='same', data_format='channels_first', activation=tf.nn.leaky_relu, name='conv3')
+        conv3 = conv1d(inputs=conv2, filters=8, kernel_size=5, strides=1, training=train, regularization='batch_norm', name='conv3')
+        # shape: [1, 8, NOISE_LENGTH]
+        conv4 = conv1d(inputs=conv3, filters=16, kernel_size=5, strides=1, training=train, regularization='batch_norm', name='conv4')
         # shape: [1, 16, NOISE_LENGTH]
-        conv4 = tf.layers.conv1d(inputs=conv3, filters=32, kernel_size=5, strides=1, padding='same', data_format='channels_first', activation=tf.nn.leaky_relu, name='conv4')
-        # shape: [1, 32, NOISE_LENGTH]
-        conv5 = tf.layers.conv1d(inputs=conv4, filters=BATCH_NUM, kernel_size=5, strides=1, padding='same', data_format='channels_first', activation=None, name='conv5')
+        conv5 = conv1d(inputs=conv4, filters=BATCH_NUM, kernel_size=5, strides=1, training=train, regularization='batch_norm', name='conv5')
         # shape: [1, BATCH_NUM, NOISE_LENGTH]
         return conv5
 
-def time_seq_noise_generator(noise, num):
+def time_seq_noise_generator(noise, num, train):
     with tf.variable_scope('Time_seq_noise_generator' + str(num)):
         # shape: [1, 1, NOISE_LENGTH]
-        conv1 = tf.layers.conv1d(inputs=noise, filters=2, kernel_size=5, strides=1, padding='same', data_format='channels_first', activation=tf.nn.leaky_relu, name='conv1')
+        conv1 = conv1d(inputs=noise, filters=2, kernel_size=5, strides=1, training=train, regularization='batch_norm', name='conv1')
         # shape: [1, 2, NOISE_LENGTH]
-        conv2 = tf.layers.conv1d(inputs=conv1, filters=4, kernel_size=5, strides=1, padding='same', data_format='channels_first', activation=tf.nn.leaky_relu, name='conv2')
+        conv2 = conv1d(inputs=conv1, filters=4, kernel_size=5, strides=1, training=train, regularization='batch_norm', name='conv2')
         # shape: [1, 4, NOISE_LENGTH]
-        conv3 = tf.layers.conv1d(inputs=conv2, filters=16, kernel_size=5, strides=1, padding='same', data_format='channels_first', activation=tf.nn.leaky_relu, name='conv3')
+        conv3 = conv1d(inputs=conv2, filters=8, kernel_size=5, strides=1, training=train, regularization='batch_norm', name='conv3')
+        # shape: [1, 8, NOISE_LENGTH]
+        conv4 = conv1d(inputs=conv3, filters=16, kernel_size=5, strides=1, training=train, regularization='batch_norm', name='conv4')
         # shape: [1, 16, NOISE_LENGTH]
-        conv4 = tf.layers.conv1d(inputs=conv3, filters=32, kernel_size=5, strides=1, padding='same', data_format='channels_first', activation=tf.nn.leaky_relu, name='conv4')
-        # shape: [1, 32, NOISE_LENGTH]
-        conv5 = tf.layers.conv1d(inputs=conv4, filters=BATCH_NUM, kernel_size=5, strides=1, padding='same', data_format='channels_first', activation=None, name='conv5')
+        conv5 = conv1d(inputs=conv4, filters=BATCH_NUM, kernel_size=5, strides=1, training=train, regularization='batch_norm', name='conv5')
         # shape: [1, BATCH_NUM, NOISE_LENGTH]
         return conv5
 
 def encoder(inputs, train):
     with tf.variable_scope('Encoder'):
         # shape: [BATCH_NUM, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH]
-        conv1 = conv2d(inputs=inputs, filters=16, training=train, kernel_size=[2, 1], strides=(2, 1), name='conv1')
+        conv1 = conv2d(inputs=inputs, filters=CHANNEL_NUM, training=train, kernel_size=[2, 1], strides=(2, 1), regularization='batch_norm', name='conv1')
         # shape: [BATCH_NUM, CHANNEL_NUM, CLASS_NUM // 2, INPUT_LENGTH]
-        conv2 = conv2d(inputs=conv1, filters=16, training=train, kernel_size=[3, 1], strides=(3, 1), name='conv2')
+        conv2 = conv2d(inputs=conv1, filters=CHANNEL_NUM, training=train, kernel_size=[3, 1], strides=(3, 1), regularization='batch_norm', name='conv2')
         # shape: [BATCH_NUM, CHANNEL_NUM, CLASS_NUM // 6, INPUT_LENGTH]
-        conv3 = conv2d(inputs=conv2, filters=16, training=train, kernel_size=[3, 1], strides=(3, 1), name='conv3')
+        conv3 = conv2d(inputs=conv2, filters=CHANNEL_NUM, training=train, kernel_size=[3, 1], strides=(3, 1), regularization='batch_norm', name='conv3')
         # shape: [BATCH_NUM, CHANNEL_NUM, CLASS_NUM // 18, INPUT_LENGTH]
-        conv4 = conv2d(inputs=conv3, filters=16, training=train, kernel_size=[1, 3], strides=(1, 3), name='conv4')
+        conv4 = conv2d(inputs=conv3, filters=CHANNEL_NUM, training=train, kernel_size=[1, 3], strides=(1, 3), regularization='batch_norm', name='conv4')
         # shape: [BATCH_NUM, CHANNEL_NUM, CLASS_NUM // 18, INPUT_LENGTH // 3]
-        conv5 = conv2d(inputs=conv4, filters=CHANNEL_NUM, training=train, kernel_size=[1, 4], strides=(1, 4), name='conv5')
+        conv5 = conv2d(inputs=conv4, filters=CHANNEL_NUM, training=train, kernel_size=[1, 4], strides=(1, 4), regularization='batch_norm', name='conv5')
         # shape: [BATCH_NUM, CHANNEL_NUM, CLASS_NUM // 18, INPUT_LENGTH // 12]
         output = tf.transpose(tf.reshape(conv5, [BATCH_NUM, CHANNEL_NUM, NOISE_LENGTH * 4]), [1, 0, 2])
         # shape: [CHANNEL_NUM, BATCH_NUM, NOISE_LENGTH * 4]
@@ -88,23 +103,23 @@ def encoder(inputs, train):
 def generator1(noise, encode, num, train):
     with tf.variable_scope('Generator1_' + str(num)):
         noise = tf.concat([noise, encode], axis=1)
-        noise = tf.reshape(tensor=noise, shape=[-1, NOISE_LENGTH * 8, 1, 1])
+        noise = tf.reshape(tensor=noise, shape=[BATCH_NUM, NOISE_LENGTH * 8, 1, 1])
         # shape: [BATCH_NUM, NOISE_LENGTH * 8, 1, 1]
-        deconv1 = conv2d_transpose(inputs=noise, filters=NOISE_LENGTH * 64, strides=(1, 2), training=train, name='deconv1')
+        deconv1 = conv2d_transpose(inputs=noise, filters=NOISE_LENGTH * 64, strides=(1, 2), training=train, regularization='batch_norm', name='deconv1')
         # shape: [BATCH_NUM, NOISE_LENGTH * 64, 1, 2]
-        deconv2 = conv2d_transpose(inputs=deconv1, filters=NOISE_LENGTH * 32, strides=(1, 3), training=train, name='deconv2')
+        deconv2 = conv2d_transpose(inputs=deconv1, filters=NOISE_LENGTH * 32, strides=(1, 3), training=train, regularization='batch_norm', name='deconv2')
         # shape: [BATCH_NUM, NOISE_LENGTH * 32, 1, 6]
-        deconv3 = conv2d_transpose(inputs=deconv2, filters=NOISE_LENGTH * 16, strides=(1, 4), training=train, name='deconv3')
+        deconv3 = conv2d_transpose(inputs=deconv2, filters=NOISE_LENGTH * 16, strides=(1, 4), training=train, regularization='batch_norm', name='deconv3')
         # shape: [BATCH_NUM, NOISE_LENGTH * 16, 1, 24]
-        deconv4 = conv2d_transpose(inputs=deconv3, filters=NOISE_LENGTH * 8, strides=(1, 4), training=train, name='deconv4')
+        deconv4 = conv2d_transpose(inputs=deconv3, filters=NOISE_LENGTH * 8, strides=(1, 4), training=train, regularization='batch_norm', name='deconv4')
         # shape: [BATCH_NUM, NOISE_LENGTH * 8, 1, 96]
-        deconv5 = conv2d_transpose(inputs=deconv4, filters=NOISE_LENGTH * 4, strides=(2, 1), training=train, name='deconv5')
+        deconv5 = conv2d_transpose(inputs=deconv4, filters=NOISE_LENGTH * 4, strides=(2, 1), training=train, regularization='batch_norm', name='deconv5')
         # shape: [BATCH_NUM, NOISE_LENGTH * 4, 2, 96]
-        deconv6 = conv2d_transpose(inputs=deconv5, filters=NOISE_LENGTH * 2, strides=(3, 1), training=train, name='deconv6')
+        deconv6 = conv2d_transpose(inputs=deconv5, filters=NOISE_LENGTH * 2, strides=(3, 1), training=train, regularization='batch_norm', name='deconv6')
         # shape: [BATCH_NUM, NOISE_LENGTH * 2, 6, 96]
-        deconv7 = conv2d_transpose(inputs=deconv6, filters=NOISE_LENGTH, strides=(3, 1), training=train, name='deconv7')
+        deconv7 = conv2d_transpose(inputs=deconv6, filters=NOISE_LENGTH, strides=(3, 1), training=train, regularization='batch_norm', name='deconv7')
         # shape: [BATCH_NUM, NOISE_LENGTH, CLASS_NUM // 4, INPUT_LENGTH // 4]
-        conv1 = conv2d(inputs=deconv7, filters=1, training=train, use_batch_norm=False, name='conv1')
+        conv1 = conv2d(inputs=deconv7, filters=1, training=train, regularization='batch_norm', name='conv1')
         # shape: [BATCH_NUM, 1, CLASS_NUM // 4, INPUT_LENGTH // 4]
         output = tf.tanh(tf.squeeze(input=conv1, axis=1))
         # shape: [BATCH_NUM, CLASS_NUM // 4, INPUT_LENGTH // 4]
@@ -121,15 +136,15 @@ def generator2(inputs, encode, num, train):
         # shape: [BATCH_NUM, 32, CLASS_NUM // 4, INPUT_LENGTH // 4]
         inputs = tf.concat([inputs, encode], axis=1)
         # shape: [BATCH_NUM, 64, CLASS_NUM // 4, INPUT_LENGTH // 4]
-        res1 = residual_block(inputs=inputs, filters=64, training=train, name='res1')
+        res1 = residual_block(inputs=inputs, filters=64, training=train, regularization='batch_norm', name='res1')
         # shape: [BATCH_NUM, 64, CLASS_NUM // 4, INPUT_LENGTH // 4]
-        res2 = residual_block(inputs=res1, filters=64, training=train, name='res2')
+        res2 = residual_block(inputs=res1, filters=64, training=train, regularization='batch_norm', name='res2')
         # shape: [BATCH_NUM, 64, CLASS_NUM // 4, INPUT_LENGTH // 4]
-        deconv1 = conv2d_transpose(inputs=res2, filters=32, strides=(2, 1), training=train, name='deconv1')
+        deconv1 = conv2d_transpose(inputs=res2, filters=32, strides=(2, 1), training=train, regularization='batch_norm', name='deconv1')
         # shape: [BATCH_NUM, 32, CLASS_NUM // 2, INPUT_LENGTH // 4]
-        deconv2 = conv2d_transpose(inputs=deconv1, filters=32, strides=(1, 2), training=train, name='deconv2')
+        deconv2 = conv2d_transpose(inputs=deconv1, filters=32, strides=(1, 2), training=train, regularization='batch_norm', name='deconv2')
         # shape: [BATCH_NUM, 32, CLASS_NUM // 2, INPUT_LENGTH // 2]
-        conv1 = conv2d(inputs=deconv2, filters=1, training=train, use_batch_norm=False, name='conv1')
+        conv1 = conv2d(inputs=deconv2, filters=1, training=train, regularization='batch_norm', name='conv1')
         # shape: [BATCH_NUM, 1, CLASS_NUM // 2, INPUT_LENGTH // 2]
         output = tf.tanh(tf.squeeze(input=conv1, axis=1))
         # shape: [BATCH_NUM, CLASS_NUM // 2, INPUT_LENGTH // 2]
@@ -146,15 +161,15 @@ def generator3(inputs, encode, num, train):
         # shape: [BATCH_NUM, 32, CLASS_NUM // 2, INPUT_LENGTH // 2]
         inputs = tf.concat([inputs, encode], axis=1)
         # shape: [BATCH_NUM, 64, CLASS_NUM // 2, INPUT_LENGTH // 2]
-        res1 = residual_block(inputs=inputs, filters=32, training=train, name='res1')
+        res1 = residual_block(inputs=inputs, filters=32, training=train, regularization='batch_norm', name='res1')
         # shape: [BATCH_NUM, 32, CLASS_NUM // 2, INPUT_LENGTH // 2]
-        res2 = residual_block(inputs=res1, filters=32, training=train, name='res2')
+        res2 = residual_block(inputs=res1, filters=32, training=train, regularization='batch_norm', name='res2')
         # shape: [BATCH_NUM, 32, CLASS_NUM // 2, INPUT_LENGTH // 2]
-        deconv1 = conv2d_transpose(inputs=res2, filters=16, strides=(2, 1), training=train, name='deconv1')
+        deconv1 = conv2d_transpose(inputs=res2, filters=16, strides=(2, 1), training=train, regularization='batch_norm', name='deconv1')
         # shape: [BATCH_NUM, 16, CLASS_NUM, INPUT_LENGTH // 2]
-        deconv2 = conv2d_transpose(inputs=deconv1, filters=4, strides=(1, 2), training=train, name='deconv2')
+        deconv2 = conv2d_transpose(inputs=deconv1, filters=4, strides=(1, 2), training=train, regularization='batch_norm', name='deconv2')
         # shape: [BATCH_NUM, 4, CLASS_NUM, INPUT_LENGTH]
-        conv1 = conv2d(inputs=deconv2, filters=1, training=train, use_batch_norm=False, name='conv1')
+        conv1 = conv2d(inputs=deconv2, filters=1, training=train, regularization='batch_norm', name='conv1')
         # shape: [BATCH_NUM, 1, CLASS_NUM, INPUT_LENGTH]
         output = tf.tanh(tf.squeeze(input=conv1, axis=1))
         # shape: [BATCH_NUM, CLASS_NUM, INPUT_LENGTH]
@@ -163,7 +178,6 @@ def generator3(inputs, encode, num, train):
 
 def discriminator1(inputs, train, name):
     with tf.variable_scope(name, reuse=tf.AUTO_REUSE):
-        inputs = tf.layers.batch_normalization(inputs=inputs, axis=1, training=train, fused=True)
         # shape: [BATCH_NUM, CHANNEL_NUM, CLASS_NUM // 4, INPUT_LENGTH // 4]
         conv1 = conv2d(inputs=inputs, filters=8, kernel_size=[2, 1], training=train, strides=(2, 1), name='conv1')
         # shape: [BATCH_NUM, 8, CLASS_NUM // 8, INPUT_LENGTH // 4]
@@ -192,7 +206,6 @@ def discriminator1_conditional(inputs, encode, train):
 
 def discriminator2(inputs, train, name):
     with tf.variable_scope(name, reuse=tf.AUTO_REUSE):
-        inputs = tf.layers.batch_normalization(inputs=inputs, axis=1, training=train, fused=True)
         # shape: [BATCH_NUM, CHANNEL_NUM, CLASS_NUM // 2, INPUT_LENGTH // 2]
         conv1 = conv2d(inputs=inputs, filters=8, kernel_size=[2, 1], training=train, strides=(2, 1), name='conv1')
         # shape: [BATCH_NUM, 8, CLASS_NUM // 4, INPUT_LENGTH // 2]
@@ -219,7 +232,6 @@ def discriminator2_conditional(inputs, encode, train):
 
 def discriminator3(inputs, train, name):
     with tf.variable_scope(name, reuse=tf.AUTO_REUSE):
-        inputs = tf.layers.batch_normalization(inputs=inputs, axis=1, training=train, fused=True)
         # shape: [BATCH_NUM, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH]
         conv1 = conv2d(inputs=inputs, filters=8, kernel_size=[4, 1], training=train, strides=(4, 1), name='conv1')
         # shape: [BATCH_NUM, 8, CLASS_NUM // 4, INPUT_LENGTH]
