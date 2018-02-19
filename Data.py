@@ -62,7 +62,10 @@ def roll(path, std):
         np.concatenate((data, data), axis=-1)
         length *= 2
     data = np.stack([data[:, :, i * INPUT_LENGTH:(i + 1) * INPUT_LENGTH] for i in range(BATCH_NUM)], axis=0)
+    div = [np.max(data[:, i]) > 0 for i in range(CHANNEL_NUM)]
     data = data + np.random.normal(loc=0.0, scale=std, size=data.shape)
     data = data - np.min(data)
-    data = data / np.max(data)
+    for i in range(CHANNEL_NUM):
+        if div[i]:
+            data[:, i] = data[:, i] / np.max(data[:, i])
     return data
