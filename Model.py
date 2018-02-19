@@ -39,10 +39,10 @@ def conv1d(inputs, filters, kernel_size, strides, training, regularization=None,
             output = tf.layers.conv1d(inputs=inputs, filters=filters, kernel_size=kernel_size, strides=strides, padding='same', data_format='channels_first', activation=tf.nn.selu, name='conv')
         elif regularization == 'batch_norm':
             conv = tf.layers.conv1d(inputs=inputs, filters=filters, kernel_size=kernel_size, strides=strides, padding='same', data_format='channels_first', activation=tf.nn.selu, name='conv')
-            output = tf.layers.batch_normalization(inputs=inputs, axis=1, training=training, name='batch_norm', fused=True)
+            output = tf.layers.batch_normalization(inputs=conv, axis=1, training=training, name='batch_norm', fused=True)
         else:
             output = tf.layers.conv1d(inputs=inputs, filters=filters, kernel_size=kernel_size, strides=strides, padding='same', data_format='channels_first', activation=tf.nn.leaky_relu, name='conv')
-        return None
+        return output
 
 def residual_block(inputs, filters, training, regularization=None, name=''):
     with tf.variable_scope(name):
