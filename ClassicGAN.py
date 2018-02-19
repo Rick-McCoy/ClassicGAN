@@ -53,9 +53,9 @@ def main():
         encode = encoder(inputs=real_input_3, train=train)
         input_noise = tf.concat(values=[noise1, noise2, noise3, noise4], axis=2, name='input_noise')
         for i in range(CHANNEL_NUM):
-            tf.summary.image('input_real' + str(i), tf.transpose(real_input_3[:BATCH_NUM // 10, i:i + 1, :, :], [0, 2, 3, 1]))
-            tf.summary.image('input_real_1_' + str(i), tf.transpose(real_input_1[:BATCH_NUM // 10, i:i + 1, :, :], [0, 2, 3, 1]))
-            tf.summary.image('input_real_2_' + str(i), tf.transpose(real_input_2[:BATCH_NUM // 10, i:i + 1, :, :], [0, 2, 3, 1]))
+            tf.summary.image('real_input_3_' + str(i), tf.transpose(real_input_3[:BATCH_NUM // 10, i:i + 1, :, :], [0, 2, 3, 1]))
+            tf.summary.image('real_input_2_' + str(i), tf.transpose(real_input_2[:BATCH_NUM // 10, i:i + 1, :, :], [0, 2, 3, 1]))
+            tf.summary.image('real_input_1_' + str(i), tf.transpose(real_input_1[:BATCH_NUM // 10, i:i + 1, :, :], [0, 2, 3, 1]))
     print('Inputs set')
     with tf.name_scope('generator'):
         input_gen1, gen1 = zip(*[generator1(noise=input_noise[i], encode=encode[i], num=i, train=train) for i in range(CHANNEL_NUM)])

@@ -66,7 +66,8 @@ def noise_generator(noise, train):
         # shape: [1, 16, NOISE_LENGTH]
         conv5 = conv1d(inputs=conv4, filters=BATCH_NUM, kernel_size=5, strides=1, training=train, regularization='batch_norm', name='conv5')
         # shape: [1, BATCH_NUM, NOISE_LENGTH]
-        return conv5
+        output = tf.tanh(conv5, name='tanh')
+        return output
 
 def time_seq_noise_generator(noise, num, train):
     with tf.variable_scope('Time_seq_noise_generator' + str(num)):
@@ -81,7 +82,8 @@ def time_seq_noise_generator(noise, num, train):
         # shape: [1, 16, NOISE_LENGTH]
         conv5 = conv1d(inputs=conv4, filters=BATCH_NUM, kernel_size=5, strides=1, training=train, regularization='batch_norm', name='conv5')
         # shape: [1, BATCH_NUM, NOISE_LENGTH]
-        return conv5
+        output = tf.tanh(conv5, name='tanh')
+        return output
 
 def encoder(inputs, train):
     with tf.variable_scope('Encoder'):
@@ -96,7 +98,7 @@ def encoder(inputs, train):
         # shape: [BATCH_NUM, CHANNEL_NUM, CLASS_NUM // 18, INPUT_LENGTH // 3]
         conv5 = conv2d(inputs=conv4, filters=CHANNEL_NUM, training=train, kernel_size=[1, 4], strides=(1, 4), regularization='batch_norm', name='conv5')
         # shape: [BATCH_NUM, CHANNEL_NUM, CLASS_NUM // 18, INPUT_LENGTH // 12]
-        output = tf.transpose(tf.reshape(conv5, [BATCH_NUM, CHANNEL_NUM, NOISE_LENGTH * 4]), [1, 0, 2])
+        output = tf.tanh(tf.transpose(tf.reshape(conv5, [BATCH_NUM, CHANNEL_NUM, NOISE_LENGTH * 4]), [1, 0, 2]), name='tanh')
         # shape: [CHANNEL_NUM, BATCH_NUM, NOISE_LENGTH * 4]
         return output
 
@@ -189,7 +191,7 @@ def discriminator1(inputs, train, name):
         # shape: [BATCH_NUM, 64, CLASS_NUM // 16, INPUT_LENGTH // 16]
         dense1 = tf.layers.dense(inputs=tf.layers.flatten(inputs=conv4), units=1024, activation=tf.nn.leaky_relu, name='dense1')
         output = tf.layers.dense(inputs=dense1, units=1, activation=tf.sigmoid, name='output')
-    return output
+        return output
 
 def discriminator1_conditional(inputs, encode, train):
     with tf.variable_scope('Discriminator1_Conditional', reuse=tf.AUTO_REUSE):
@@ -202,7 +204,7 @@ def discriminator1_conditional(inputs, encode, train):
         encode = tf.tile(input=encode, multiples=(1, 1, 9, 3))
         # shape: [BATCH_NUM, CHANNEL_NUM, CLASS_NUM // 4, INPUT_LENGTH // 4]
         output = (tf.log(discriminator1(inputs=inputs, train=train, name='Discriminator1_Uncond') + 1e-5) + tf.log(discriminator1(inputs=tf.concat(values=[inputs, encode], axis=1), train=train, name='Discriminator1_Cond') + 1e-5)) / 2.0
-    return output
+        return output
 
 def discriminator2(inputs, train, name):
     with tf.variable_scope(name, reuse=tf.AUTO_REUSE):
@@ -217,7 +219,7 @@ def discriminator2(inputs, train, name):
         # shape: [BATCH_NUM, 64, CLASS_NUM // 16, INPUT_LENGTH // 16]
         dense1 = tf.layers.dense(inputs=tf.layers.flatten(inputs=conv4), units=1024, activation=tf.nn.leaky_relu, name='dense1')
         output = tf.layers.dense(inputs=dense1, units=1, activation=tf.sigmoid, name='output')
-    return output
+        return output
 
 def discriminator2_conditional(inputs, encode, train):
     with tf.variable_scope('Discriminator2_Conditional', reuse=tf.AUTO_REUSE):
@@ -228,7 +230,7 @@ def discriminator2_conditional(inputs, encode, train):
         encode = tf.tile(input=encode, multiples=(1, 1, 9, 6))
         # shape: [BATCH_NUM, CHANNEL_NUM, CLASS_NUM // 2, INPUT_LENGTH // 2]
         output = (tf.log(discriminator2(inputs=inputs, train=train, name='Discriminator2_Uncond') + 1e-5) + tf.log(discriminator2(inputs=tf.concat(values=[inputs, encode], axis=1), train=train, name='Discriminator2_Cond') + 1e-5)) / 2.0
-    return output
+        return output
 
 def discriminator3(inputs, train, name):
     with tf.variable_scope(name, reuse=tf.AUTO_REUSE):
@@ -243,7 +245,7 @@ def discriminator3(inputs, train, name):
         # shape: [BATCH_NUM, 64, CLASS_NUM // 16, INPUT_LENGTH // 16]
         dense1 = tf.layers.dense(inputs=tf.layers.flatten(inputs=conv4), units=1024, activation=tf.nn.leaky_relu, name='dense1')
         output = tf.layers.dense(inputs=dense1, units=1, activation=tf.sigmoid, name='output')
-    return output
+        return output
 
 
 def discriminator3_conditional(inputs, encode, train):
@@ -255,7 +257,7 @@ def discriminator3_conditional(inputs, encode, train):
         encode = tf.tile(input=encode, multiples=(1, 1, 18, 12))
         # shape: [BATCH_NUM, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH]
         output = (tf.log(discriminator3(inputs=inputs, train=train, name='Discriminator3_Uncond') + 1e-5) + tf.log(discriminator3(inputs=tf.concat(values=[inputs, encode], axis=1), train=train, name='Discriminator3_Cond') + 1e-5)) / 2.0
-    return output
+        return output
 
 def get_noise(size):
     return np.random.normal(loc=0.0, scale=1.0, size=size)
