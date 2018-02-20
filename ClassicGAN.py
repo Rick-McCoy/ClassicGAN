@@ -74,18 +74,15 @@ def main():
         dis3_gen = discriminator3_conditional(inputs=input_gen3, encode=encode, train=train)
     print('Discriminators set')
     with tf.name_scope('loss'):
-        #loss_dis1 = tf.reduce_mean(dis1_gen - dis1_real) + gradient_penalty(real=real_input_1, gen=input_gen1, encode=encode, discriminator=discriminator1_conditional, train=train)
-        loss_dis1 = tf.reduce_mean(dis1_gen - dis1_real)
+        loss_dis1 = tf.reduce_mean(dis1_gen - dis1_real)# + gradient_penalty(real=real_input_1, gen=input_gen1, encode=encode, discriminator=discriminator1_conditional, train=train)
         mean_gen1 = tf.reduce_mean(input_gen1, keep_dims=True, axis=list(range(2, input_gen1.shape.ndims)))
         dev_gen1 = tf.reduce_mean(tf.square(input_gen1 - mean_gen1), axis=list(range(2, input_gen1.shape.ndims)))
         loss_gen1 = -tf.reduce_mean(dis1_gen)
-        #loss_dis2 = tf.reduce_mean(dis2_gen - dis2_real) + gradient_penalty(real=real_input_2, gen=input_gen2, encode=encode, discriminator=discriminator2_conditional, train=train)
-        loss_dis2 = tf.reduce_mean(dis2_gen - dis2_real)
+        loss_dis2 = tf.reduce_mean(dis2_gen - dis2_real)# + gradient_penalty(real=real_input_2, gen=input_gen2, encode=encode, discriminator=discriminator2_conditional, train=train)
         mean_gen2 = tf.reduce_mean(input_gen2, keep_dims=True, axis=list(range(2, input_gen2.shape.ndims)))
         dev_gen2 = tf.reduce_mean(tf.square(input_gen2 - mean_gen2), axis=list(range(2, input_gen2.shape.ndims)))
         loss_gen2 = -tf.reduce_mean(dis2_gen) + LAMBDA1 * tf.reduce_mean(tf.squared_difference(mean_gen1, mean_gen2)) + LAMBDA2 * tf.reduce_mean(tf.squared_difference(dev_gen1, dev_gen2))
-        #loss_dis3 = tf.reduce_mean(dis3_gen - dis3_real) + gradient_penalty(real=real_input_3, gen=input_gen3, encode=encode, discriminator=discriminator3_conditional, train=train)
-        loss_dis3 = tf.reduce_mean(dis3_gen - dis3_real)
+        loss_dis3 = tf.reduce_mean(dis3_gen - dis3_real)# + gradient_penalty(real=real_input_3, gen=input_gen3, encode=encode, discriminator=discriminator3_conditional, train=train)
         mean_gen3 = tf.reduce_mean(input_gen3, keep_dims=True, axis=list(range(2, input_gen3.shape.ndims)))
         dev_gen3 = tf.reduce_mean(tf.square(input_gen3 - mean_gen3), axis=list(range(2, input_gen3.shape.ndims)))
         loss_gen3 = -tf.reduce_mean(dis3_gen) + LAMBDA1 * tf.reduce_mean(tf.squared_difference(mean_gen2, mean_gen3)) + LAMBDA2 * tf.reduce_mean(tf.squared_difference(dev_gen2, dev_gen3))
@@ -173,7 +170,9 @@ def main():
                 writer.add_summary(summary, train_count)
                 train_count += 1
                 tqdm.write('%06d' % train_count + ' Discriminator1 loss: {:.7}'.format(loss_val_dis1) + ' Discriminator2 loss: {:.7}'.format(loss_val_dis2) + ' Discriminator3 loss: {:.7}'.format(loss_val_dis3) + ' Generator loss: {:.7}'.format(loss_val_gen))
-                if train_count % 10 == 0:
+                if std < 1e-10:
+                    std = 0
+                elif train_count % 20 == 0:
                     std = std * 0.99
                 if train_count % 1000 == 0:
                     feed_dict[input_noise1] = get_noise([1, 1, NOISE_LENGTH])
