@@ -79,10 +79,10 @@ def main():
         loss_gen1 = -tf.reduce_mean(dis1_gen)
         loss_dis2 = tf.reduce_mean(dis2_gen - dis2_real)# + gradient_penalty(real=real_input_2, gen=input_gen2, encode=encode, discriminator=discriminator2_conditional, train=train)
         mean_gen2, dev_gen2 = tf.nn.moments(input_gen2, axes=list(range(2, input_gen2.shape.ndims)))
-        loss_gen2 = -tf.reduce_mean(dis2_gen) + LAMBDA1 * tf.reduce_mean(tf.squared_difference(mean_gen1, mean_gen2)) + LAMBDA2 * tf.reduce_mean(tf.squared_difference(dev_gen1, 4 * dev_gen2))
+        loss_gen2 = -tf.reduce_mean(dis2_gen) + LAMBDA1 * tf.reduce_mean(tf.squared_difference(mean_gen1, mean_gen2)) + LAMBDA2 * tf.reduce_mean(tf.squared_difference(4 * dev_gen1, dev_gen2))
         loss_dis3 = tf.reduce_mean(dis3_gen - dis3_real)# + gradient_penalty(real=real_input_3, gen=input_gen3, encode=encode, discriminator=discriminator3_conditional, train=train)
         mean_gen3, dev_gen3 = tf.nn.moments(input_gen3, axes=list(range(2, input_gen3.shape.ndims)))
-        loss_gen3 = -tf.reduce_mean(dis3_gen) + LAMBDA1 * tf.reduce_mean(tf.squared_difference(mean_gen2, mean_gen3)) + LAMBDA2 * tf.reduce_mean(tf.squared_difference(dev_gen2, 4 * dev_gen3))
+        loss_gen3 = -tf.reduce_mean(dis3_gen) + LAMBDA1 * tf.reduce_mean(tf.squared_difference(mean_gen2, mean_gen3)) + LAMBDA2 * tf.reduce_mean(tf.squared_difference(4 * dev_gen2, dev_gen3))
         loss_gen = (loss_gen1 + loss_gen2 + loss_gen3) / 3.0
         tf.summary.scalar('loss_dis1', loss_dis1)
         tf.summary.scalar('loss_gen1', loss_gen1)
