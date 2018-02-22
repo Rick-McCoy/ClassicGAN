@@ -66,7 +66,7 @@ def noise_generator(noise, train):
         # shape: [1, 16, NOISE_LENGTH]
         conv5 = conv1d(inputs=conv4, filters=BATCH_NUM, kernel_size=5, strides=1, training=train, regularization='batch_norm', name='conv5')
         # shape: [1, BATCH_NUM, NOISE_LENGTH]
-        output = tf.tanh(conv5, name='tanh')
+        output = tf.sigmoid(conv5, name='sigmoid')
         return output
 
 def time_seq_noise_generator(noise, num, train):
@@ -82,31 +82,32 @@ def time_seq_noise_generator(noise, num, train):
         # shape: [1, 16, NOISE_LENGTH]
         conv5 = conv1d(inputs=conv4, filters=BATCH_NUM, kernel_size=5, strides=1, training=train, regularization='batch_norm', name='conv5')
         # shape: [1, BATCH_NUM, NOISE_LENGTH]
-        output = tf.tanh(conv5, name='tanh')
+        output = tf.sigmoid(conv5, name='sigmoid')
         return output
 
-def encoder(inputs, train):
-    with tf.variable_scope('Encoder'):
-        # shape: [BATCH_NUM, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH]
-        conv1 = conv2d(inputs=inputs, filters=CHANNEL_NUM, training=train, kernel_size=[2, 1], strides=(2, 1), regularization='batch_norm', name='conv1')
-        # shape: [BATCH_NUM, CHANNEL_NUM, CLASS_NUM // 2, INPUT_LENGTH]
-        conv2 = conv2d(inputs=conv1, filters=CHANNEL_NUM, training=train, kernel_size=[3, 1], strides=(3, 1), regularization='batch_norm', name='conv2')
-        # shape: [BATCH_NUM, CHANNEL_NUM, CLASS_NUM // 6, INPUT_LENGTH]
-        conv3 = conv2d(inputs=conv2, filters=CHANNEL_NUM, training=train, kernel_size=[3, 1], strides=(3, 1), regularization='batch_norm', name='conv3')
-        # shape: [BATCH_NUM, CHANNEL_NUM, CLASS_NUM // 18, INPUT_LENGTH]
-        conv4 = conv2d(inputs=conv3, filters=CHANNEL_NUM, training=train, kernel_size=[1, 3], strides=(1, 3), regularization='batch_norm', name='conv4')
-        # shape: [BATCH_NUM, CHANNEL_NUM, CLASS_NUM // 18, INPUT_LENGTH // 3]
-        conv5 = conv2d(inputs=conv4, filters=CHANNEL_NUM, training=train, kernel_size=[1, 4], strides=(1, 4), regularization='batch_norm', name='conv5')
-        # shape: [BATCH_NUM, CHANNEL_NUM, CLASS_NUM // 18, INPUT_LENGTH // 12]
-        output = tf.tanh(tf.transpose(tf.reshape(conv5, [BATCH_NUM, CHANNEL_NUM, NOISE_LENGTH * 4]), [1, 0, 2]), name='tanh')
-        # shape: [CHANNEL_NUM, BATCH_NUM, NOISE_LENGTH * 4]
+def encoder(inputs, num, train):
+    with tf.variable_scope('Encoder' + str(num)):
+        # shape: [BATCH_NUM, 1, CLASS_NUM, INPUT_LENGTH]
+        conv1 = conv2d(inputs=inputs, filters=16, training=train, kernel_size=[3, 1], strides=(3, 1), regularization='batch_norm', name='conv1')
+        # shape: [BATCH_NUM, 16, CLASS_NUM // 3, INPUT_LENGTH]
+        conv2 = conv2d(inputs=conv1, filters=16, training=train, kernel_size=[4, 1], strides=(4, 1), regularization='batch_norm', name='conv2')
+        # shape: [BATCH_NUM, 16, CLASS_NUM // 12, INPUT_LENGTH]
+        conv3 = conv2d(inputs=conv2, filters=16, training=train, kernel_size=[1, 3], strides=(1, 3), regularization='batch_norm', name='conv3')
+        # shape: [BATCH_NUM, 16, CLASS_NUM // 12, INPUT_LENGTH // 3]
+        conv4 = conv2d(inputs=conv3, filters=16, training=train, kernel_size=[1, 4], strides=(1, 4), regularization='batch_norm', name='conv4')
+        # shape: [BATCH_NUM, 16, CLASS_NUM // 12, INPUT_LENGTH // 12]
+        conv5 = conv2d(inputs=conv4, filters=1, training=train, kernel_size=[1, 4], strides=(1, 4), regularization='batch_norm', name='conv5')
+        # shape: [BATCH_NUM, 1, CLASS_NUM // 12, INPUT_LENGTH // 48]
+        output = tf.sigmoid(tf.transpose(tf.reshape(conv5, [BATCH_NUM, 1, 48]), perm=[1, 0, 2]), name='sigmoid')
+        # shape: [1, BATCH_NUM, 96]
         return output
 
 def generator1(noise, encode, num, train):
     with tf.variable_scope('Generator1_' + str(num)):
         noise = tf.concat([noise, encode], axis=1)
-        noise = tf.reshape(tensor=noise, shape=[BATCH_NUM, NOISE_LENGTH * 8, 1, 1])
-        # shape: [BATCH_NUM, NOISE_LENGTH * 8, 1, 1]
+        # shape: [BATCH_NUM, NOISE_LENGTH * 4 + 48]
+        noise = tf.expand_dims(tf.expand_dims(noise, axis=-1), axis=-1)
+        # shape: [BATCH_NUM, NOISE_LENGTH * 4 + 48, 1, 1]
         deconv1 = conv2d_transpose(inputs=noise, filters=NOISE_LENGTH * 64, strides=(1, 2), training=train, regularization='batch_norm', name='deconv1')
         # shape: [BATCH_NUM, NOISE_LENGTH * 64, 1, 2]
         deconv2 = conv2d_transpose(inputs=deconv1, filters=NOISE_LENGTH * 32, strides=(1, 3), training=train, regularization='batch_norm', name='deconv2')
@@ -130,11 +131,9 @@ def generator1(noise, encode, num, train):
 
 def generator2(inputs, encode, num, train):
     with tf.variable_scope('Generator2_' + str(num)):
-        encode = tf.expand_dims(input=encode, axis=1)
-        # shape: [BATCH_NUM, 1, NOISE_LENGTH * 4]
-        encode = tf.reshape(encode, [BATCH_NUM, 2, CLASS_NUM // 36, INPUT_LENGTH // 12])
-        # shape: [BATCH_NUM, 2, CLASS_NUM // 36, INPUT_LENGTH // 12]
-        encode = tf.tile(input=encode, multiples=(1, 16, 9, 3))
+        encode = tf.reshape(encode, [BATCH_NUM, 1, CLASS_NUM // 12, INPUT_LENGTH // 48])
+        # shape: [BATCH_NUM, 1, CLASS_NUM // 12, INPUT_LENGTH // 48]
+        encode = tf.tile(input=encode, multiples=(1, 32, 3, 12))
         # shape: [BATCH_NUM, 32, CLASS_NUM // 4, INPUT_LENGTH // 4]
         inputs = tf.concat([inputs, encode], axis=1)
         # shape: [BATCH_NUM, 64, CLASS_NUM // 4, INPUT_LENGTH // 4]
@@ -155,11 +154,9 @@ def generator2(inputs, encode, num, train):
 
 def generator3(inputs, encode, num, train):
     with tf.variable_scope('Generator3_' + str(num)):
-        encode = tf.expand_dims(input=encode, axis=1)
-        # shape: [BATCH_NUM, 1, NOISE_LENGTH * 4]
-        encode = tf.reshape(encode, [BATCH_NUM, 1, CLASS_NUM // 18, INPUT_LENGTH // 12])
-        # shape: [BATCH_NUM, 1, CLASS_NUM // 18, INPUT_LENGTH // 12]
-        encode = tf.tile(input=encode, multiples=(1, 32, 9, 6))
+        encode = tf.reshape(encode, [BATCH_NUM, 1, CLASS_NUM // 12, INPUT_LENGTH // 48])
+        # shape: [BATCH_NUM, 1, CLASS_NUM // 12, INPUT_LENGTH // 48]
+        encode = tf.tile(input=encode, multiples=(1, 32, 6, 24))
         # shape: [BATCH_NUM, 32, CLASS_NUM // 2, INPUT_LENGTH // 2]
         inputs = tf.concat([inputs, encode], axis=1)
         # shape: [BATCH_NUM, 64, CLASS_NUM // 2, INPUT_LENGTH // 2]
@@ -195,13 +192,9 @@ def discriminator1(inputs, train, name):
 
 def discriminator1_conditional(inputs, encode, train):
     with tf.variable_scope('Discriminator1_Conditional', reuse=tf.AUTO_REUSE):
-        encode = tf.transpose(encode, [1, 0, 2])
-        # shape: [BATCH_NUM, CHANNEL_NUM, NOISE_LENGTH * 4]
-        encode = tf.layers.max_pooling1d(inputs=encode, pool_size=2, strides=2, padding='same', data_format='channels_first')
-        # shape: [BATCH_NUM, CHANNEL_NUM, NOISE_LENGTH * 2]
-        encode = tf.reshape(encode, [BATCH_NUM, CHANNEL_NUM, CLASS_NUM // 36, INPUT_LENGTH // 12])
-        # shape: [BATCH_NUM, CHANNEL_NUM , CLASS_NUM // 36, INPUT_LENGTH // 12]
-        encode = tf.tile(input=encode, multiples=(1, 1, 9, 3))
+        encode = tf.reshape(encode, [BATCH_NUM, CHANNEL_NUM, CLASS_NUM // 12, INPUT_LENGTH // 48])
+        # shape: [BATCH_NUM, CHANNEL_NUM, CLASS_NUM // 12, INPUT_LENGTH // 48]
+        encode = tf.tile(input=encode, multiples=(1, 1, 3, 12))
         # shape: [BATCH_NUM, CHANNEL_NUM, CLASS_NUM // 4, INPUT_LENGTH // 4]
         output = (tf.log(discriminator1(inputs=inputs, train=train, name='Discriminator1_Uncond') + 1e-5) + tf.log(discriminator1(inputs=tf.concat(values=[inputs, encode], axis=1), train=train, name='Discriminator1_Cond') + 1e-5)) / 2.0
         return output
@@ -223,11 +216,9 @@ def discriminator2(inputs, train, name):
 
 def discriminator2_conditional(inputs, encode, train):
     with tf.variable_scope('Discriminator2_Conditional', reuse=tf.AUTO_REUSE):
-        encode = tf.transpose(encode, [1, 0, 2])
-        # shape: [BATCH_NUM, CHANNEL_NUM, NOISE_LENGTH * 4]
-        encode = tf.reshape(encode, [BATCH_NUM, CHANNEL_NUM, CLASS_NUM // 18, INPUT_LENGTH // 12])
-        # shape: [BATCH_NUM, CHANNEL_NUM , CLASS_NUM // 18, INPUT_LENGTH // 12]
-        encode = tf.tile(input=encode, multiples=(1, 1, 9, 6))
+        encode = tf.reshape(encode, [BATCH_NUM, CHANNEL_NUM, CLASS_NUM // 12, INPUT_LENGTH // 48])
+        # shape: [BATCH_NUM, CHANNEL_NUM, CLASS_NUM // 12, INPUT_LENGTH // 48]
+        encode = tf.tile(input=encode, multiples=(1, 1, 6, 24))
         # shape: [BATCH_NUM, CHANNEL_NUM, CLASS_NUM // 2, INPUT_LENGTH // 2]
         output = (tf.log(discriminator2(inputs=inputs, train=train, name='Discriminator2_Uncond') + 1e-5) + tf.log(discriminator2(inputs=tf.concat(values=[inputs, encode], axis=1), train=train, name='Discriminator2_Cond') + 1e-5)) / 2.0
         return output
@@ -250,11 +241,9 @@ def discriminator3(inputs, train, name):
 
 def discriminator3_conditional(inputs, encode, train):
     with tf.variable_scope('Discriminator3_Conditional', reuse=tf.AUTO_REUSE):
-        encode = tf.transpose(encode, [1, 0, 2])
-        # shape: [BATCH_NUM, CHANNEL_NUM, NOISE_LENGTH * 4]
-        encode = tf.reshape(encode, [BATCH_NUM, CHANNEL_NUM, CLASS_NUM // 18, INPUT_LENGTH // 12])
-        # shape: [BATCH_NUM, CHANNEL_NUM , CLASS_NUM // 18, INPUT_LENGTH // 12]
-        encode = tf.tile(input=encode, multiples=(1, 1, 18, 12))
+        encode = tf.reshape(encode, [BATCH_NUM, CHANNEL_NUM, CLASS_NUM // 12, INPUT_LENGTH // 48])
+        # shape: [BATCH_NUM, CHANNEL_NUM, CLASS_NUM // 12, INPUT_LENGTH // 48]
+        encode = tf.tile(input=encode, multiples=(1, 1, 12, 48))
         # shape: [BATCH_NUM, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH]
         output = (tf.log(discriminator3(inputs=inputs, train=train, name='Discriminator3_Uncond') + 1e-5) + tf.log(discriminator3(inputs=tf.concat(values=[inputs, encode], axis=1), train=train, name='Discriminator3_Cond') + 1e-5)) / 2.0
         return output

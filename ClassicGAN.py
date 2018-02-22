@@ -50,7 +50,7 @@ def main():
         real_input_3 = tf.placeholder(dtype=tf.float32, shape=[BATCH_NUM, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH], name='real_input_3')
         real_input_2 = tf.layers.average_pooling2d(inputs=real_input_3, pool_size=[2, 2], strides=2, padding='same', data_format='channels_first', name='real_input_2')
         real_input_1 = tf.layers.average_pooling2d(inputs=real_input_2, pool_size=[2, 2], strides=2, padding='same', data_format='channels_first', name='real_input_1')
-        encode = encoder(inputs=real_input_3, train=train)
+        encode = tf.concat(values=[encoder(inputs=real_input_3[:, i:i + 1], num=i, train=train) for i in range(CHANNEL_NUM)], axis=0, name='encode')
         input_noise = tf.concat(values=[noise1, noise2, noise3, noise4], axis=2, name='input_noise')
         for i in range(CHANNEL_NUM):
             tf.summary.image('real_input_3_' + str(i), tf.transpose(real_input_3[:BATCH_NUM // 10, i:i + 1, :, :], [0, 2, 3, 1]))
