@@ -39,7 +39,7 @@ def conv1d(inputs, filters, kernel_size, strides, training, regularization=None,
         if regularization == 'selu':
             output = tf.layers.conv1d(inputs=inputs, filters=filters, kernel_size=kernel_size, strides=strides, padding='same', data_format='channels_first', activation=tf.nn.selu, name='conv')
         elif regularization == 'batch_norm':
-            conv = tf.layers.conv1d(inputs=inputs, filters=filters, kernel_size=kernel_size, strides=strides, padding='same', data_format='channels_first', activation=tf.nn.selu, name='conv')
+            conv = tf.layers.conv1d(inputs=inputs, filters=filters, kernel_size=kernel_size, strides=strides, padding='same', data_format='channels_first', activation=tf.nn.leaky_relu, use_bias=False, name='conv')
             output = tf.layers.batch_normalization(inputs=conv, axis=1, training=training, name='batch_norm', fused=True)
         else:
             output = tf.layers.conv1d(inputs=inputs, filters=filters, kernel_size=kernel_size, strides=strides, padding='same', data_format='channels_first', activation=tf.nn.leaky_relu, name='conv')
@@ -67,8 +67,7 @@ def noise_generator(noise, train):
         # shape: [1, 16, NOISE_LENGTH]
         conv5 = conv1d(inputs=conv4, filters=BATCH_NUM, kernel_size=5, strides=1, training=train, regularization='batch_norm', name='conv5')
         # shape: [1, BATCH_NUM, NOISE_LENGTH]
-        output = tf.sigmoid(conv5, name='sigmoid')
-        return output
+        return conv5
 
 def time_seq_noise_generator(noise, num, train):
     with tf.variable_scope('Time_seq_noise_generator' + str(num)):
@@ -83,8 +82,7 @@ def time_seq_noise_generator(noise, num, train):
         # shape: [1, 16, NOISE_LENGTH]
         conv5 = conv1d(inputs=conv4, filters=BATCH_NUM, kernel_size=5, strides=1, training=train, regularization='batch_norm', name='conv5')
         # shape: [1, BATCH_NUM, NOISE_LENGTH]
-        output = tf.sigmoid(conv5, name='sigmoid')
-        return output
+        return conv5
 
 def encoder(inputs, num, train):
     with tf.variable_scope('Encoder' + str(num)):
@@ -99,8 +97,8 @@ def encoder(inputs, num, train):
         # shape: [BATCH_NUM, 16, CLASS_NUM // 12, INPUT_LENGTH // 12]
         conv5 = conv2d(inputs=conv4, filters=1, training=train, kernel_size=[1, 4], strides=(1, 4), regularization='batch_norm', name='conv5')
         # shape: [BATCH_NUM, 1, CLASS_NUM // 12, INPUT_LENGTH // 48]
-        output = tf.sigmoid(tf.transpose(tf.reshape(conv5, [BATCH_NUM, 1, 48]), perm=[1, 0, 2]), name='sigmoid')
-        # shape: [1, BATCH_NUM, 96]
+        output = tf.transpose(tf.reshape(conv5, [BATCH_NUM, 1, 48]), perm=[1, 0, 2], name='output')
+        # shape: [1, BATCH_NUM, 48]
         return output
 
 def generator1(noise, encode, num, train):
@@ -250,4 +248,4 @@ def discriminator3_conditional(inputs, encode, train):
         return output
 
 def get_noise(size):
-    return scipy.stats.truncnorm(-0.5, 0.5, loc=0.5, scale=1.0).rvs(size=size)
+    return np.random.normal(loc=0.0, scale=1.0, size=size)
