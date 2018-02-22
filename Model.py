@@ -5,6 +5,7 @@ from __future__ import print_function
 import os
 import tensorflow as tf
 import numpy as np
+import scipy
 from Data import CLASS_NUM, INPUT_LENGTH, CHANNEL_NUM, BATCH_NUM
 
 NOISE_LENGTH = 32
@@ -249,4 +250,4 @@ def discriminator3_conditional(inputs, encode, train):
         return output
 
 def get_noise(size):
-    return np.random.normal(loc=0.0, scale=1.0, size=size)
+    return scipy.stats.truncnorm(-0.5, 0.5, loc=0.5, scale=1.0).rvs(size=size)
