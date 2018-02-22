@@ -5,7 +5,7 @@ from __future__ import print_function
 import os
 import tensorflow as tf
 import numpy as np
-import scipy
+import scipy.stats
 from Data import CLASS_NUM, INPUT_LENGTH, CHANNEL_NUM, BATCH_NUM
 
 NOISE_LENGTH = 32
