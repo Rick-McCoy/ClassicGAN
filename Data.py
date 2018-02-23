@@ -69,4 +69,5 @@ def roll(path, std):
         for i in range(CHANNEL_NUM):
             if div[i]:
                 data[:, i] = data[:, i] / np.max(data[:, i])
+    data = np.stack([data[:, :, :, i * INPUT_LENGTH // 4:(i + 1) * INPUT_LENGTH // 4] for i in range(4)], axis=2)
     return data

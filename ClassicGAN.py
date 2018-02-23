@@ -4,6 +4,7 @@ from __future__ import print_function
 import pathlib
 import os
 import random
+import warnings
 import tensorflow as tf
 import numpy as np
 from tqdm import tqdm
@@ -38,31 +39,34 @@ def main():
         os.makedirs('Samples')
 
     with tf.name_scope('inputs'):
-        input_noise1 = tf.placeholder(dtype=tf.float32, shape=[1, 1, NOISE_LENGTH], name='input_noise1')
-        input_noise2 = tf.placeholder(dtype=tf.float32, shape=[1, 1, NOISE_LENGTH], name='input_noise2')
-        input_noise3 = tf.placeholder(dtype=tf.float32, shape=[CHANNEL_NUM, 1, NOISE_LENGTH], name='input_noise3')
-        input_noise4 = tf.placeholder(dtype=tf.float32, shape=[CHANNEL_NUM, 1, NOISE_LENGTH], name='input_noise4')
+        input_noise1 = tf.placeholder(dtype=tf.float32, shape=[None, 1, 1, NOISE_LENGTH], name='input_noise1')
+        input_noise2 = tf.placeholder(dtype=tf.float32, shape=[None, 1, 1, NOISE_LENGTH], name='input_noise2')
+        input_noise3 = tf.placeholder(dtype=tf.float32, shape=[None, CHANNEL_NUM, 1, NOISE_LENGTH], name='input_noise3')
+        input_noise4 = tf.placeholder(dtype=tf.float32, shape=[None, CHANNEL_NUM, 1, NOISE_LENGTH], name='input_noise4')
         train = tf.placeholder(dtype=tf.bool, name='traintest')
-        noise1 = tf.tile(input=input_noise1, multiples=[CHANNEL_NUM, BATCH_NUM, 1], name='noise1')
-        noise2 = tf.tile(noise_generator(noise=input_noise2, train=train), multiples=[CHANNEL_NUM, 1, 1], name='noise2')
-        noise3 = tf.tile(input_noise3, multiples=[1, BATCH_NUM, 1], name='noise3')
-        noise4 = tf.concat(values=[time_seq_noise_generator(noise=input_noise4[i:i + 1], num=i, train=train) for i in range(CHANNEL_NUM)], axis=0, name='noise4')
-        real_input_3 = tf.placeholder(dtype=tf.float32, shape=[BATCH_NUM, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH], name='real_input_3')
-        real_input_2 = tf.layers.average_pooling2d(inputs=real_input_3, pool_size=[2, 2], strides=2, padding='same', data_format='channels_first', name='real_input_2')
-        real_input_1 = tf.layers.average_pooling2d(inputs=real_input_2, pool_size=[2, 2], strides=2, padding='same', data_format='channels_first', name='real_input_1')
-        encode = tf.concat(values=[encoder(inputs=real_input_3[:, i:i + 1], num=i, train=train) for i in range(CHANNEL_NUM)], axis=0, name='encode')
-        input_noise = tf.concat(values=[noise1, noise2, noise3, noise4], axis=2, name='input_noise')
+        noise1 = tf.tile(input=input_noise1, multiples=[1, CHANNEL_NUM, 4, 1], name='noise1')
+        noise2 = tf.tile(input=noise_generator(noise=input_noise2, train=train), multiples=[1, CHANNEL_NUM, 1, 1], name='noise2')
+        noise3 = tf.tile(input=input_noise3, multiples=[1, 1, 4, 1], name='noise3')
+        noise4 = tf.concat(values=[time_seq_noise_generator(noise=input_noise4[:, i:i + 1], num=i, train=train) for i in range(CHANNEL_NUM)], axis=1, name='noise4')
+        real_input_3 = tf.placeholder(dtype=tf.float32, shape=[None, CHANNEL_NUM, 4, CLASS_NUM, INPUT_LENGTH // 4], name='real_input_3')
+        real_input_2 = tf.layers.average_pooling3d(inputs=real_input_3, pool_size=[1, 2, 2], strides=(1, 2, 2), padding='same', data_format='channels_first', name='real_input_2')
+        real_input_1 = tf.layers.average_pooling3d(inputs=real_input_2, pool_size=[1, 2, 2], strides=(1, 2, 2), padding='same', data_format='channels_first', name='real_input_1')
+        encode = tf.concat(values=[encoder(inputs=real_input_3[:, i:i + 1], num=i, train=train) for i in range(CHANNEL_NUM)], axis=1, name='encode')
+        input_noise = tf.concat(values=[noise1, noise2, noise3, noise4], axis=3, name='input_noise')
         for i in range(CHANNEL_NUM):
-            tf.summary.image('real_input_3_' + str(i), tf.transpose(real_input_3[:BATCH_NUM // 10, i:i + 1, :, :], [0, 2, 3, 1]))
-            tf.summary.image('real_input_2_' + str(i), tf.transpose(real_input_2[:BATCH_NUM // 10, i:i + 1, :, :], [0, 2, 3, 1]))
-            tf.summary.image('real_input_1_' + str(i), tf.transpose(real_input_1[:BATCH_NUM // 10, i:i + 1, :, :], [0, 2, 3, 1]))
+            real_image_3 = tf.transpose(tf.concat([real_input_3[:, :, j] for j in range(4)], axis=1), perm=[0, 2, 3, 1])
+            real_image_2 = tf.transpose(tf.concat([real_input_2[:, :, j] for j in range(4)], axis=1), perm=[0, 2, 3, 1])
+            real_image_1 = tf.transpose(tf.concat([real_input_1[:, :, j] for j in range(4)], axis=1), perm=[0, 2, 3, 1])
+            tf.summary.image('real_input_3_' + str(i), real_image_3)
+            tf.summary.image('real_input_2_' + str(i), real_image_2)
+            tf.summary.image('real_input_1_' + str(i), real_image_1)
     print('Inputs set')
     with tf.name_scope('generator'):
-        input_gen1, gen1 = zip(*[generator1(noise=input_noise[i], encode=encode[i], num=i, train=train) for i in range(CHANNEL_NUM)])
+        input_gen1, gen1 = zip(*[generator1(noise=input_noise[:, i], encode=encode[:, i], num=i, train=train) for i in range(CHANNEL_NUM)])
         input_gen1 = tf.stack(input_gen1, axis=1, name='input_gen1_stack')
-        input_gen2, gen2 = zip(*[generator2(inputs=gen1[i], encode=encode[i], num=i, train=train) for i in range(CHANNEL_NUM)])
+        input_gen2, gen2 = zip(*[generator2(inputs=gen1[i], encode=encode[:, i], num=i, train=train) for i in range(CHANNEL_NUM)])
         input_gen2 = tf.stack(input_gen2, axis=1, name='input_gen2_stack')
-        input_gen3 = [generator3(inputs=gen2[i], encode=encode[i], num=i, train=train) for i in range(CHANNEL_NUM)]
+        input_gen3 = [generator3(inputs=gen2[i], encode=encode[:, i], num=i, train=train) for i in range(CHANNEL_NUM)]
         input_gen3 = tf.stack(input_gen3, axis=1, name='input_gen3_stack')
     print('Generators set')
     with tf.name_scope('discriminator'):
@@ -95,8 +99,9 @@ def main():
         tf.summary.scalar('dis3_real', tf.reduce_mean(dis3_real))
         tf.summary.scalar('loss_gen', loss_gen)
     print('Losses set')
-    gen_var = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Noise_generator') + tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Encoder')
+    gen_var = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Noise_generator')
     for i in range(CHANNEL_NUM):
+        gen_var += tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Encoder' + str(i))
         gen_var += tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Time_seq_noise_generator' + str(i))
         gen_var += tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Generator1_' + str(i))
         gen_var += tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Generator2_' + str(i))
@@ -104,8 +109,9 @@ def main():
     dis1_var = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Discriminator1_Conditional')
     dis2_var = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Discriminator2_Conditional')
     dis3_var = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Discriminator3_Conditional')
-    gen_extra_update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Noise_generator') + tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Encoder')
+    gen_extra_update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Noise_generator')
     for i in range(CHANNEL_NUM):
+        gen_extra_update_ops += tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Encoder' + str(i))
         gen_extra_update_ops += tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Time_seq_noise_generator' + str(i))
         gen_extra_update_ops += tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Generator1_' + str(i))
         gen_extra_update_ops += tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Generator2_' + str(i))
@@ -186,4 +192,6 @@ def main():
                     tqdm.write('Model Saved: %s' % save_path)
         writer.close()
 if __name__ == '__main__':
-    main()
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        main()
