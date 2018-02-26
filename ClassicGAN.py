@@ -160,18 +160,18 @@ def main():
                 feed_dict[real_input_3] = batch_input
                 feed_dict[train] = True
                 for i in range(TRAIN_RATIO_DIS):
-                    feed_dict[input_noise1] = get_noise([1, 1, NOISE_LENGTH])
-                    feed_dict[input_noise2] = get_noise([1, 1, NOISE_LENGTH])
-                    feed_dict[input_noise3] = get_noise([CHANNEL_NUM, 1, NOISE_LENGTH])
-                    feed_dict[input_noise4] = get_noise([CHANNEL_NUM, 1, NOISE_LENGTH])
+                    feed_dict[input_noise1] = get_noise([BATCH_NUM, 1, 1, NOISE_LENGTH])
+                    feed_dict[input_noise2] = get_noise([BATCH_NUM, 1, 1, NOISE_LENGTH])
+                    feed_dict[input_noise3] = get_noise([BATCH_NUM, CHANNEL_NUM, 1, NOISE_LENGTH])
+                    feed_dict[input_noise4] = get_noise([BATCH_NUM, CHANNEL_NUM, 1, NOISE_LENGTH])
                     _, loss_val_dis1 = sess.run([dis1_train, loss_dis1], feed_dict=feed_dict)
                     _, loss_val_dis2 = sess.run([dis2_train, loss_dis2], feed_dict=feed_dict)
                     _, loss_val_dis3 = sess.run([dis3_train, loss_dis3], feed_dict=feed_dict)
                 for i in range(TRAIN_RATIO_GEN):
-                    feed_dict[input_noise1] = get_noise([1, 1, NOISE_LENGTH])
-                    feed_dict[input_noise2] = get_noise([1, 1, NOISE_LENGTH])
-                    feed_dict[input_noise3] = get_noise([CHANNEL_NUM, 1, NOISE_LENGTH])
-                    feed_dict[input_noise4] = get_noise([CHANNEL_NUM, 1, NOISE_LENGTH])
+                    feed_dict[input_noise1] = get_noise([BATCH_NUM, 1, 1, NOISE_LENGTH])
+                    feed_dict[input_noise2] = get_noise([BATCH_NUM, 1, 1, NOISE_LENGTH])
+                    feed_dict[input_noise3] = get_noise([BATCH_NUM, CHANNEL_NUM, 1, NOISE_LENGTH])
+                    feed_dict[input_noise4] = get_noise([BATCH_NUM, CHANNEL_NUM, 1, NOISE_LENGTH])
                     summary, _, loss_val_gen = sess.run([merged, gen_train, loss_gen], feed_dict=feed_dict)
                 writer.add_summary(summary, train_count)
                 train_count += 1
@@ -181,10 +181,10 @@ def main():
                 elif train_count % 20 == 0:
                     std = std * 0.99
                 if train_count % 1000 == 0:
-                    feed_dict[input_noise1] = get_noise([1, 1, NOISE_LENGTH])
-                    feed_dict[input_noise2] = get_noise([1, 1, NOISE_LENGTH])
-                    feed_dict[input_noise3] = get_noise([CHANNEL_NUM, 1, NOISE_LENGTH])
-                    feed_dict[input_noise4] = get_noise([CHANNEL_NUM, 1, NOISE_LENGTH])
+                    feed_dict[input_noise1] = get_noise([BATCH_NUM, 1, 1, NOISE_LENGTH])
+                    feed_dict[input_noise2] = get_noise([BATCH_NUM, 1, 1, NOISE_LENGTH])
+                    feed_dict[input_noise3] = get_noise([BATCH_NUM, CHANNEL_NUM, 1, NOISE_LENGTH])
+                    feed_dict[input_noise4] = get_noise([BATCH_NUM, CHANNEL_NUM, 1, NOISE_LENGTH])
                     feed_dict[train] = False
                     samples = sess.run([input_gen3], feed_dict=feed_dict)
                     np.save(file='Samples/song_%06d' % train_count, arr=samples)
