@@ -5,31 +5,31 @@ from __future__ import print_function
 import os
 import tensorflow as tf
 import numpy as np
-import scipy.stats
-from Data import CLASS_NUM, INPUT_LENGTH, CHANNEL_NUM, BATCH_NUM
+from Data import CLASS_NUM, INPUT_LENGTH, BATCH_NUM
 
 NOISE_LENGTH = 32
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
-def conv2d(inputs, filters, kernel_size=[3, 3], strides=(1, 1), training=True, regularization=None, name=''):
+def conv2d(inputs, filters, kernel_size=[3, 3], strides=(1, 1), training=True, regularization='', name=''):
     with tf.variable_scope(name):
         if regularization == 'selu':
-            output = tf.layers.conv2d(inputs=inputs, filters=filters, kernel_size=kernel_size, strides=strides, padding='same', data_format='channels_first', activation=tf.nn.selu, name='conv')
-        elif regularization == 'batch_norm':
-            conv = tf.layers.conv2d(inputs=inputs, filters=filters, kernel_size=kernel_size, strides=strides, padding='same', data_format='channels_first', activation=tf.nn.leaky_relu, use_bias=False, name='conv')
-            output = tf.layers.batch_normalization(inputs=conv, axis=1, training=training, name='batch_norm', fused=True)
+            activation_function = tf.nn.selu
         else:
-            output = tf.layers.conv2d(inputs=inputs, filters=filters, kernel_size=kernel_size, strides=strides, padding='same', data_format='channels_first', activation=tf.nn.leaky_relu, name='conv')
+            activation_function = tf.nn.leaky_relu
+        use_bias = regularization != 'batch_norm'
+        output = tf.layers.conv2d(inputs=inputs, filters=filters, kernel_size=kernel_size, strides=strides, padding='same', data_format='channels_first', activation=activation_function, use_bias=use_bias, name='conv')
+        if not use_bias:
+            output = tf.layers.batch_normalization(inputs=output, axis=1, training=training, name='batch_norm', fused=True)
         return output
 
-def convolution(inputs, filters, kernel_size=[1, 3, 3], strides=(1, 1, 1), training=True, regularization=None, transpose=False, name=''):
+def convolution(inputs, filters, kernel_size=[1, 3, 3], strides=(1, 1, 1), training=True, regularization='', transpose=False, name=''):
     with tf.variable_scope(name, reuse=tf.AUTO_REUSE):
         if regularization == 'selu':
-            regularization_fuction = tf.nn.selu
+            activation_function = tf.nn.selu
         else:
-            regularization_function = tf.nn.leaky_relu
-        use_bias = not regularization == 'batch_norm'
+            activation_function = tf.nn.leaky_relu
+        use_bias = regularization != 'batch_norm'
         if transpose:
             conv_func = tf.layers.conv2d_transpose
         else:
@@ -43,13 +43,13 @@ def convolution(inputs, filters, kernel_size=[1, 3, 3], strides=(1, 1, 1), train
             kernel_size = kernel_size[1:]
             strides = strides[1:]
         inputs = tf.unstack(inputs, axis=axis, name='unstack')
-        output = [conv_func(inputs=i, filters=filters, kernel_size=kernel_size, strides=strides, padding='same', data_format='channels_first', activation=regularization_function, use_bias=use_bias, name='conv') for i in inputs]
+        output = [conv_func(inputs=i, filters=filters, kernel_size=kernel_size, strides=strides, padding='same', data_format='channels_first', activation=activation_function, use_bias=use_bias, name='conv') for i in inputs]
         output = tf.stack(output, axis=axis, name='stack')
-        if regularization == 'batch_norm':
+        if not use_bias:
             output = tf.layers.batch_normalization(inputs=output, axis=1, training=training, name='batch_norm', fused=True)
         return output
 
-def residual_block(inputs, filters, training, regularization=None, name=''):
+def residual_block(inputs, filters, training, regularization='', name=''):
     with tf.variable_scope(name):
         if inputs.get_shape()[1] != filters:
             inputs = convolution(inputs=inputs, filters=filters, training=training, regularization=regularization, name='inputs')
