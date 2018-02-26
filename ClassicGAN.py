@@ -54,12 +54,9 @@ def main():
         encode = tf.concat(values=[encoder(inputs=real_input_3[:, i:i + 1], num=i, train=train) for i in range(CHANNEL_NUM)], axis=1, name='encode')
         input_noise = tf.concat(values=[noise1, noise2, noise3, noise4], axis=3, name='input_noise')
         for i in range(CHANNEL_NUM):
-            real_image_3 = tf.transpose(tf.concat([real_input_3[:, :, j] for j in range(4)], axis=1), perm=[0, 2, 3, 1])
-            real_image_2 = tf.transpose(tf.concat([real_input_2[:, :, j] for j in range(4)], axis=1), perm=[0, 2, 3, 1])
-            real_image_1 = tf.transpose(tf.concat([real_input_1[:, :, j] for j in range(4)], axis=1), perm=[0, 2, 3, 1])
-            tf.summary.image('real_input_3_' + str(i), real_image_3)
-            tf.summary.image('real_input_2_' + str(i), real_image_2)
-            tf.summary.image('real_input_1_' + str(i), real_image_1)
+            tf.summary.image('real_input_3_' + str(i), tf.expand_dims(tf.concat([real_input_3[:BATCH_NUM // 10, i, j] for j in range(4)], axis=-1), axis=-1))
+            tf.summary.image('real_input_2_' + str(i), tf.expand_dims(tf.concat([real_input_2[:BATCH_NUM // 10, i, j] for j in range(4)], axis=-1), axis=-1))
+            tf.summary.image('real_input_1_' + str(i), tf.expand_dims(tf.concat([real_input_1[:BATCH_NUM // 10, i, j] for j in range(4)], axis=-1), axis=-1))
     print('Inputs set')
     with tf.name_scope('generator'):
         input_gen1, gen1 = zip(*[generator1(noise=input_noise[:, i], encode=encode[:, i], num=i, train=train) for i in range(CHANNEL_NUM)])
@@ -142,7 +139,7 @@ def main():
         writer = tf.summary.FileWriter('train', sess.graph)
         sess.run(tf.global_variables_initializer())
         if tf.train.latest_checkpoint('Checkpoints') is not None:
-            tqdm.write('Restoring...')
+            print('Restoring...')
             saver.restore(sess, tf.train.latest_checkpoint('Checkpoints'))
         pathlist = list(pathlib.Path('Classics').glob('**/*.mid')) + list(pathlib.Path('TPD').glob('**/*.mid'))# + list(pathlib.Path('Lakh').glob('**/*.mid'))
         train_count = 0
