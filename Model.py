@@ -210,7 +210,7 @@ def discriminator1_conditional(inputs, encode, train):
         # shape: [None, CHANNEL_NUM, 4, CLASS_NUM // 4, INPUT_LENGTH // 16]
         uncond = discriminator1(inputs=inputs, train=train, name='Discriminator1_Uncond')
         cond = discriminator1(inputs=tf.concat(values=[inputs, encode], axis=1), train=train, name='Discriminator1_Cond')
-        output = (tf.log(uncond + 1e-5) + tf.log(cond + 1e-5)) / 2.0
+        output = (uncond + cond) / 2.0
         return output
 
 def discriminator2(inputs, train, name):
@@ -245,7 +245,7 @@ def discriminator2_conditional(inputs, encode, train):
         # shape: [None, CHANNEL_NUM, 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
         uncond = discriminator2(inputs=inputs, train=train, name='Discriminator2_Uncond')
         cond = discriminator2(inputs=tf.concat(values=[inputs, encode], axis=1), train=train, name='Discriminator2_Cond')
-        output = (tf.log(uncond + 1e-5) + tf.log(cond + 1e-5)) / 2.0
+        output = (uncond + cond) / 2.0
         return output
 
 def discriminator3(inputs, train, name):
@@ -281,7 +281,7 @@ def discriminator3_conditional(inputs, encode, train):
         # shape: [None, CHANNEL_NUM, 4, CLASS_NUM, INPUT_LENGTH // 4]
         uncond = discriminator3(inputs=inputs, train=train, name='Discriminator3_Uncond')
         cond = discriminator3(inputs=tf.concat(values=[inputs, encode], axis=1), train=train, name='Discriminator3_Cond')
-        output = (tf.log(uncond + 1e-5) + tf.log(cond + 1e-5)) / 2.0
+        output = (uncond + cond) / 2.0
         return output
 
 def get_noise(size):
