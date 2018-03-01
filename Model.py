@@ -30,21 +30,26 @@ def convolution(inputs, filters, kernel_size=[1, 3, 3], strides=(1, 1, 1), train
         else:
             activation_function = tf.nn.leaky_relu
         use_bias = regularization != 'batch_norm'
-        if transpose:
-            conv_func = tf.layers.conv2d_transpose
-        else:
-            conv_func = tf.layers.conv2d
-        if kernel_size[1] == 1 and kernel_size[2] == 1:
+        if kernel_size[0] != 1:
+            if transpose:
+                conv_func = tf.layers.conv3d_transpose
+            else:
+                conv_func = tf.layers.conv3d
             axis = 4
             kernel_size = kernel_size[:2]
             strides = strides[:2]
+            output = conv_func(inputs=inputs, filters=filters, kernel_size=kernel_size, strides=strides, padding='same', data_format='channels_first', activation=activation_function, use_bias=use_bias, name='conv')
         else:
+            if transpose:
+                conv_func = tf.layers.conv2d_transpose
+            else:
+                conv_func = tf.layers.conv2d
             axis = 2
             kernel_size = kernel_size[1:]
             strides = strides[1:]
-        inputs = tf.unstack(inputs, axis=axis, name='unstack')
-        output = [conv_func(inputs=i, filters=filters, kernel_size=kernel_size, strides=strides, padding='same', data_format='channels_first', activation=activation_function, use_bias=use_bias, name='conv') for i in inputs]
-        output = tf.stack(output, axis=axis, name='stack')
+            inputs = tf.unstack(inputs, axis=axis, name='unstack')
+            output = [conv_func(inputs=i, filters=filters, kernel_size=kernel_size, strides=strides, padding='same', data_format='channels_first', activation=activation_function, use_bias=use_bias, name='conv') for i in inputs]
+            output = tf.stack(output, axis=axis, name='stack')
         if not use_bias:
             output = tf.layers.batch_normalization(inputs=output, axis=1, training=training, name='batch_norm', fused=True)
         return output
