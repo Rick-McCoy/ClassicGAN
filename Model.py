@@ -35,9 +35,6 @@ def convolution(inputs, filters, kernel_size=[1, 3, 3], strides=(1, 1, 1), train
                 conv_func = tf.layers.conv3d_transpose
             else:
                 conv_func = tf.layers.conv3d
-            axis = 4
-            kernel_size = kernel_size[:2]
-            strides = strides[:2]
             output = conv_func(inputs=inputs, filters=filters, kernel_size=kernel_size, strides=strides, padding='same', data_format='channels_first', activation=activation_function, use_bias=use_bias, name='conv')
         else:
             if transpose:
