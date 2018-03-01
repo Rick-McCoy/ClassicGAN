@@ -234,7 +234,7 @@ def discriminator2(inputs, train, name):
         # shape: [None, 512, 1, 1, INPUT_LENGTH // 128]
         dense1 = tf.layers.dense(inputs=tf.layers.flatten(inputs=conv7), units=1024, activation=tf.nn.leaky_relu, name='dense1')
         # shape: [None, 1024]
-        output = tf.layers.dense(inputs=dense1, units=1, activation=tf.sigmoid, name='output')
+        output = tf.layers.dense(inputs=dense1, units=1, name='output')
         # shape: [None, 1]
         return output
 
@@ -269,7 +269,7 @@ def discriminator3(inputs, train, name):
         # shape: [None, 512, 1, 1, INPUT_LENGTH // 128]
         dense1 = tf.layers.dense(inputs=tf.layers.flatten(inputs=conv7), units=1024, activation=tf.nn.leaky_relu, name='dense1')
         # shape: [None, 1024]
-        output = tf.layers.dense(inputs=dense1, units=1, activation=tf.sigmoid, name='output')
+        output = tf.layers.dense(inputs=dense1, units=1, name='output')
         # shape: [None, 1]
         return output
 
