@@ -143,14 +143,14 @@ def main():
             saver.restore(sess, tf.train.latest_checkpoint('Checkpoints'))
         pathlist = list(pathlib.Path('Classics').glob('**/*.mid')) + list(pathlib.Path('TPD').glob('**/*.mid'))# + list(pathlib.Path('Lakh').glob('**/*.mid'))
         train_count = 0
-        std = 0.2
         feed_dict = {input_noise1: None, input_noise2: None, input_noise3: None, input_noise4: None, real_input_3: None, train: True}
+        test_dict = {input_noise1: None, input_noise2: None, input_noise3: None, input_noise4: None, encode: None, train: False}
         print('preparing complete')
         for __ in tqdm(range(TOTAL_TRAIN_EPOCH)):
             random.shuffle(pathlist)
             for path in tqdm(pathlist):
                 try:
-                    batch_input = roll(path, std)
+                    batch_input = roll(path)
                 except Exception:
                     continue
                 tqdm.write(str(path))
@@ -173,17 +173,13 @@ def main():
                 writer.add_summary(summary, train_count)
                 train_count += 1
                 tqdm.write('%06d' % train_count + ' Discriminator1 loss: {:.7}'.format(loss_val_dis1) + ' Discriminator2 loss: {:.7}'.format(loss_val_dis2) + ' Discriminator3 loss: {:.7}'.format(loss_val_dis3) + ' Generator loss: {:.7}'.format(loss_val_gen))
-                if std < 1e-10:
-                    std = 0
-                elif train_count % 20 == 0:
-                    std = std * 0.99
                 if train_count % 1000 == 0:
-                    feed_dict[input_noise1] = get_noise([BATCH_NUM, 1, 1, NOISE_LENGTH])
-                    feed_dict[input_noise2] = get_noise([BATCH_NUM, 1, 1, NOISE_LENGTH])
-                    feed_dict[input_noise3] = get_noise([BATCH_NUM, CHANNEL_NUM, 1, NOISE_LENGTH])
-                    feed_dict[input_noise4] = get_noise([BATCH_NUM, CHANNEL_NUM, 1, NOISE_LENGTH])
-                    feed_dict[train] = False
-                    samples = sess.run([input_gen3], feed_dict=feed_dict)
+                    test_dict[input_noise1] = get_noise([BATCH_NUM, 1, 1, NOISE_LENGTH])
+                    test_dict[input_noise2] = get_noise([BATCH_NUM, 1, 1, NOISE_LENGTH])
+                    test_dict[input_noise3] = get_noise([BATCH_NUM, CHANNEL_NUM, 1, NOISE_LENGTH])
+                    test_dict[input_noise4] = get_noise([BATCH_NUM, CHANNEL_NUM, 1, NOISE_LENGTH])
+                    test_dict[encode] = get_noise([BATCH_NUM, CHANNEL_NUM, 4, 16])
+                    samples = sess.run(input_gen3, feed_dict=test_dict)
                     np.save(file='Samples/song_%06d' % train_count, arr=samples)
                     save_path = saver.save(sess, 'Checkpoints/song_%06d' % train_count + '.ckpt')
                     tqdm.write('Model Saved: %s' % save_path)

@@ -17,7 +17,7 @@ setattr(tf.GraphKeys, "VARIABLES", "variables")
 from tensorflow.python.ops import gradients as tf_gradients_lib
 tf_gradients = tf_gradients_lib.gradients
 
-MIN_CHECKPOINT_NODE_SIZE=1024    # use lower value during testing
+MIN_CHECKPOINT_NODE_SIZE = 1024    # use lower value during testing
 
 # specific versions we can use to do process-wide replacement of tf.gradients
 def gradients_speed(ys, xs, grad_ys=None, **kwargs):
@@ -128,12 +128,12 @@ def gradients(ys, xs, grad_ys=None, checkpoints='collection', **kwargs):
                     # check that there are not shortcuts
                     b_inp = set([inp for op in b for inp in op.inputs]).intersection(ts_all)
                     f_inp = set([inp for op in f for inp in op.inputs]).intersection(ts_all)
-                    if not set(b_inp).intersection(f_inp) and len(b_inp)+len(f_inp) >= len(ts_all):
+                    if not set(b_inp).intersection(f_inp) and len(b_inp) + len(f_inp) >= len(ts_all):
                         bottleneck_ts.append(t)  # we have a bottleneck!
                     else:
                         debug_print("Rejected bottleneck candidate and ops %s", [t] + list(set(ts_all) - set(b_inp) - set(f_inp)))
 
-                # success? or try again without filtering?
+                # success?  or try again without filtering?
                 if len(bottleneck_ts) >= np.sqrt(len(ts_filtered)): # yes, enough bottlenecks found!
                     break
 
@@ -157,7 +157,8 @@ def gradients(ys, xs, grad_ys=None, checkpoints='collection', **kwargs):
 
     checkpoints = list(set(checkpoints).intersection(ts_all))
 
-    # at this point automatic selection happened and checkpoints is list of nodes
+    # at this point automatic selection happened and checkpoints is list of
+    # nodes
     assert isinstance(checkpoints, list)
 
     debug_print("Checkpoint nodes used: %s", checkpoints)
@@ -187,7 +188,7 @@ def gradients(ys, xs, grad_ys=None, checkpoints='collection', **kwargs):
     checkpoints_disconnected = {}
     for x in checkpoints:
         if x.op and x.op.name is not None:
-            grad_node = tf.stop_gradient(x, name=x.op.name+"_sg")
+            grad_node = tf.stop_gradient(x, name=x.op.name + "_sg")
         else:
             grad_node = tf.stop_gradient(x)
         checkpoints_disconnected[x] = grad_node
@@ -209,10 +210,10 @@ def gradients(ys, xs, grad_ys=None, checkpoints='collection', **kwargs):
     # get gradients with respect to current boundary + original x's
     copied_ys = [info._transformed_ops[y.op]._outputs[0] for y in ys]
     boundary = list(checkpoints_disconnected.values())
-    dv = tf_gradients(ys=copied_ys, xs=boundary+xs, grad_ys=grad_ys, **kwargs)
+    dv = tf_gradients(ys=copied_ys, xs=boundary + xs, grad_ys=grad_ys, **kwargs)
     debug_print("Got gradients %s", dv)
     debug_print("for %s", copied_ys)
-    debug_print("with respect to %s", boundary+xs)
+    debug_print("with respect to %s", boundary + xs)
 
     inputs_to_do_before = [y.op for y in ys]
     if grad_ys is not None:
@@ -254,11 +255,11 @@ def gradients(ys, xs, grad_ys=None, checkpoints='collection', **kwargs):
         boundary = [info._transformed_ops[r.op]._outputs[0] for r in ts]
         substitute_backprops = [d_checkpoints[r] for r in ts]
         dv = tf_gradients(boundary,
-                          checkpoints_disconnected_other+xs,
+                          checkpoints_disconnected_other + xs,
                           grad_ys=substitute_backprops, **kwargs)
         debug_print("Got gradients %s", dv)
         debug_print("for %s", boundary)
-        debug_print("with respect to %s", checkpoints_disconnected_other+xs)
+        debug_print("with respect to %s", checkpoints_disconnected_other + xs)
         debug_print("with boundary backprop substitutions %s", substitute_backprops)
 
         inputs_to_do_before = [d_checkpoints[r].op for r in ts]
@@ -315,14 +316,14 @@ def capture_ops():
   print(ops) # => prints ops created.
   """
 
-  micros = int(time.time()*10**6)
+  micros = int(time.time() * 10 ** 6)
   scope_name = str(micros)
   op_list = []
   with tf.name_scope(scope_name):
     yield op_list
 
   g = tf.get_default_graph()
-  op_list.extend(ge.select_ops(scope_name+"/.*", graph=g))
+  op_list.extend(ge.select_ops(scope_name + "/.*", graph=g))
 
 def _to_op(tensor_or_op):
   if hasattr(tensor_or_op, "op"):
@@ -341,7 +342,7 @@ def _is_iterable(o):
     return False
   return True
 
-DEBUG_LOGGING=False
+DEBUG_LOGGING = False
 def debug_print(s, *args):
   """Like logger.log, but also replaces all TensorFlow ops/tensors with their
   names. Sensitive to value of DEBUG_LOGGING, see enable_debug/disable_debug
@@ -352,7 +353,7 @@ def debug_print(s, *args):
 
   if DEBUG_LOGGING:
     formatted_args = [format_ops(arg) for arg in args]
-    print("DEBUG "+s % tuple(formatted_args))
+    print("DEBUG " + s % tuple(formatted_args))
 
 def format_ops(ops, sort_outputs=True):
   """Helper method for printing ops. Converts Tensor/Operation op to op.name,

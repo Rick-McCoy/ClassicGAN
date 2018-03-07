@@ -26,7 +26,7 @@ BATCH_NUM = 32
 #14 Percussive: 56
 #15 Sound Effects: 36
 #16 Drums: 411
-def roll(path, std):
+def roll(path):
     try:
         song = pm.PrettyMIDI(midi_file=str(path), resolution=96)
     except:
