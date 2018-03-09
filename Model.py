@@ -197,12 +197,12 @@ def generator4(inputs, encode, num, train):
 def discriminator1(inputs, train, name):
     with tf.variable_scope(name, reuse=tf.AUTO_REUSE):
         # shape: [None, CHANNEL_NUM * (2 or 1), 4, CLASS_NUM // 4, INPUT_LENGTH // 16]
-        conv1 = convolution(inputs=inputs, filters=128, kernel_size=[2, 1, 1], strides=(2, 1, 1), training=train, name='conv1')
-        # shape: [None, 128, 2, CLASS_NUM // 4, INPUT_LENGTH // 16]
-        conv2 = convolution(inputs=conv1, filters=128, kernel_size=[2, 1, 1], strides=(2, 1, 1), training=train, name='conv2')
-        # shape: [None, 128, 1, CLASS_NUM // 4, INPUT_LENGTH // 16]
-        conv3 = convolution(inputs=conv2, filters=128, kernel_size=[1, 3, 1], strides=(1, 3, 1), training=train, name='conv3')
-        # shape: [None, 128, 1, CLASS_NUM // 12, INPUT_LENGTH // 16]
+        conv1 = convolution(inputs=inputs, filters=16, kernel_size=[2, 1, 1], strides=(2, 1, 1), training=train, name='conv1')
+        # shape: [None, 16, 2, CLASS_NUM // 4, INPUT_LENGTH // 16]
+        conv2 = convolution(inputs=conv1, filters=32, kernel_size=[2, 1, 1], strides=(2, 1, 1), training=train, name='conv2')
+        # shape: [None, 32, 1, CLASS_NUM // 4, INPUT_LENGTH // 16]
+        conv3 = convolution(inputs=conv2, filters=64, kernel_size=[1, 3, 1], strides=(1, 3, 1), training=train, name='conv3')
+        # shape: [None, 64, 1, CLASS_NUM // 12, INPUT_LENGTH // 16]
         conv4 = convolution(inputs=conv3, filters=128, kernel_size=[1, 1, 6], strides=(1, 6, 1), training=train, name='conv4')
         # shape: [None, 128, 1, 1, INPUT_LENGTH // 16]
         conv5 = convolution(inputs=conv4, filters=128, kernel_size=[1, 1, 2], strides=(1, 1, 2), training=train, name='conv5')
@@ -232,12 +232,12 @@ def discriminator1_conditional(inputs, encode, train):
 def discriminator2(inputs, train, name):
     with tf.variable_scope(name, reuse=tf.AUTO_REUSE):
         # shape: [None, CHANNEL_NUM * (2 or 1), 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
-        conv1 = convolution(inputs=inputs, filters=128, kernel_size=[2, 1, 1], strides=(2, 1, 1), training=train, name='conv1')
-        # shape: [None, 128, 2, CLASS_NUM // 2, INPUT_LENGTH // 8]
-        conv2 = convolution(inputs=conv1, filters=128, kernel_size=[2, 1, 1], strides=(2, 1, 1), training=train, name='conv2')
-        # shape: [None, 128, 1, CLASS_NUM // 2, INPUT_LENGTH // 8]
-        conv3 = convolution(inputs=conv2, filters=128, kernel_size=[1, 6, 1], strides=(1, 6, 1), training=train, name='conv3')
-        # shape: [None, 128, 1, CLASS_NUM // 12, INPUT_LENGTH // 8]
+        conv1 = convolution(inputs=inputs, filters=16, kernel_size=[2, 1, 1], strides=(2, 1, 1), training=train, name='conv1')
+        # shape: [None, 16, 2, CLASS_NUM // 2, INPUT_LENGTH // 8]
+        conv2 = convolution(inputs=conv1, filters=32, kernel_size=[2, 1, 1], strides=(2, 1, 1), training=train, name='conv2')
+        # shape: [None, 32, 1, CLASS_NUM // 2, INPUT_LENGTH // 8]
+        conv3 = convolution(inputs=conv2, filters=64, kernel_size=[1, 6, 1], strides=(1, 6, 1), training=train, name='conv3')
+        # shape: [None, 64, 1, CLASS_NUM // 12, INPUT_LENGTH // 8]
         conv4 = convolution(inputs=conv3, filters=128, kernel_size=[1, 6, 1], strides=(1, 6, 1), training=train, name='conv4')
         # shape: [None, 128, 1, 1, INPUT_LENGTH // 8]
         conv5 = convolution(inputs=conv4, filters=128, kernel_size=[1, 1, 2], strides=(1, 1, 2), training=train, name='conv5')
@@ -267,12 +267,12 @@ def discriminator2_conditional(inputs, encode, train):
 def discriminator3(inputs, train, name):
     with tf.variable_scope(name, reuse=tf.AUTO_REUSE):
         # shape: [None, CHANNEL_NUM * (2 or 1), 4, CLASS_NUM, INPUT_LENGTH // 4]
-        conv1 = convolution(inputs=inputs, filters=128, kernel_size=[2, 1, 1], training=train, strides=(2, 1, 1), name='conv1')
-        # shape: [None, 128, 2, CLASS_NUM, INPUT_LENGTH // 4]
-        conv2 = convolution(inputs=conv1, filters=128, kernel_size=[2, 1, 1], training=train, strides=(2, 1, 1), name='conv2')
-        # shape: [None, 128, 1, CLASS_NUM, INPUT_LENGTH // 4]
-        conv3 = convolution(inputs=conv2, filters=128, kernel_size=[1, 6, 1], training=train, strides=(1, 6, 1), name='conv3')
-        # shape: [None, 128, 1, CLASS_NUM // 6, INPUT_LENGTH // 4]
+        conv1 = convolution(inputs=inputs, filters=16, kernel_size=[2, 1, 1], training=train, strides=(2, 1, 1), name='conv1')
+        # shape: [None, 16, 2, CLASS_NUM, INPUT_LENGTH // 4]
+        conv2 = convolution(inputs=conv1, filters=32, kernel_size=[2, 1, 1], training=train, strides=(2, 1, 1), name='conv2')
+        # shape: [None, 32, 1, CLASS_NUM, INPUT_LENGTH // 4]
+        conv3 = convolution(inputs=conv2, filters=64, kernel_size=[1, 6, 1], training=train, strides=(1, 6, 1), name='conv3')
+        # shape: [None, 64, 1, CLASS_NUM // 6, INPUT_LENGTH // 4]
         conv4 = convolution(inputs=conv3, filters=128, kernel_size=[1, 12, 1], training=train, strides=(1, 12, 1), name='conv4')
         # shape: [None, 128, 1, 1, INPUT_LENGTH // 4]
         conv5 = convolution(inputs=conv4, filters=128, kernel_size=[1, 1, 2], training=train, strides=(1, 1, 2), name='conv5')
