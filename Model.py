@@ -27,7 +27,7 @@ def convolution(inputs, filters, kernel_size=[1, 3, 3], strides=(1, 1, 1), train
                 kernel_size = kernel_size[1:]
                 strides = strides[1:]
             if inputs.get_shape().ndims == 4:
-                output = conv_func(inputs=inputs, filters=filters, kernel_size=kernel_size, padding='same', data_format='channels_first', activation=activation_function, use_bias=use_bias, name='conv')
+                output = conv_func(inputs=inputs, filters=filters, kernel_size=kernel_size, strides=strides, padding='same', data_format='channels_first', activation=activation_function, use_bias=use_bias, name='conv')
             else:
                 inputs = tf.unstack(inputs, axis=2, name='unstack')
                 output = [conv_func(inputs=i, filters=filters, kernel_size=kernel_size, strides=strides, padding='same', data_format='channels_first', activation=activation_function, use_bias=use_bias, name='conv') for i in inputs]

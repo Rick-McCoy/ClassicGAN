@@ -116,7 +116,7 @@ def main():
                                                                             discriminator=discriminator4_conditional, train=train)
         mean_gen4, dev_gen4 = tf.nn.moments(input_gen4, axes=list(range(2, input_gen4.shape.ndims)))
         loss_gen4 = -tf.reduce_mean(dis4_gen) + LAMBDA1 * tf.reduce_mean(tf.squared_difference(mean_gen3, mean_gen4)) \
-                                                + LAMBDA2 * tf.reduce_mean(tf.squared_difference(4 * dev_gen3, dev_gen4))
+                                                + LAMBDA2 * tf.reduce_mean(tf.squared_difference(dev_gen3, dev_gen4))
         loss_gen = (loss_gen1 + loss_gen2 + loss_gen3 + loss_gen4) / 4.0
         tf.summary.scalar('loss_dis1', loss_dis1)
         tf.summary.scalar('loss_gen1', loss_gen1)
