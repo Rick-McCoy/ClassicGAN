@@ -71,7 +71,7 @@ def main():
         input_noise = tf.concat(values=[noise1, noise2, noise3, noise4], axis=3, name='input_noise')
 
         for i in range(CHANNEL_NUM):
-            tf.summary.image('real_input_4_' + str(i), tf.expand_dims(real_input_3[:, i], axis=-1))
+            tf.summary.image('real_input_4_' + str(i), tf.expand_dims(real_input_4[:, i], axis=-1))
             tf.summary.image('real_input_3_' + str(i), tf.expand_dims(tf.concat([real_input_3[:BATCH_NUM // 10, i, j] for j in range(4)], axis=-1), axis=-1))
             tf.summary.image('real_input_2_' + str(i), tf.expand_dims(tf.concat([real_input_2[:BATCH_NUM // 10, i, j] for j in range(4)], axis=-1), axis=-1))
             tf.summary.image('real_input_1_' + str(i), tf.expand_dims(tf.concat([real_input_1[:BATCH_NUM // 10, i, j] for j in range(4)], axis=-1), axis=-1))
