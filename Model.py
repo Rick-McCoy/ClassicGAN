@@ -182,10 +182,10 @@ def generator4(inputs, encode, num, train):
         inputs = tf.concat([inputs[:, :, i] for i in range(4)], axis=-1)
         # shape: [None, 32, CLASS_NUM, INPUT_LENGTH]
         res1 = residual_block(inputs=inputs, filters=16, training=train, regularization='batch_norm', name='res1')
-        # shape: [None, 32, CLASS_NUM, INPUT_LENGTH]
+        # shape: [None, 16, CLASS_NUM, INPUT_LENGTH]
         res2 = residual_block(inputs=res1, filters=16, training=train, regularization='batch_norm', name='res2')
-        # shape: [None, 32, CLASS_NUM, INPUT_LENGTH]
-        conv1 = convolution(inputs=res1, filters=1, training=train, regularization='batch_norm', name='conv1')
+        # shape: [None, 16, CLASS_NUM, INPUT_LENGTH]
+        conv1 = convolution(inputs=res2, filters=1, training=train, regularization='batch_norm', name='conv1')
         # shape: [None, 1, CLASS_NUM, INPUT_LENGTH]
         output = tf.tanh(tf.transpose(conv1, perm=[0, 2, 3, 1]))
         # shape: [None, CLASS_NUM, INPUT_LENGTH, 1]
