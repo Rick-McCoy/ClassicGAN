@@ -117,7 +117,7 @@ def main():
         #mean_gen4, dev_gen4 = tf.nn.moments(input_gen4, axes=list(range(2, input_gen4.shape.ndims)))
         #loss_gen4 = -tf.reduce_mean(dis4_gen) + LAMBDA1 * tf.reduce_mean(tf.squared_difference(mean_gen3, mean_gen4)) \
         #                                        + LAMBDA2 * tf.reduce_mean(tf.squared_difference(4 * dev_gen3, dev_gen4))
-        loss_gen = (loss_gen1 + loss_gen2 + loss_gen3 + loss_gen4) / 4.0
+        loss_gen = (loss_gen1 + loss_gen2 + loss_gen3) / 3.0# + loss_gen4) / 4.0
         tf.summary.scalar('loss_dis1', loss_dis1)
         tf.summary.scalar('loss_gen1', loss_gen1)
         tf.summary.scalar('dis1_real', tf.reduce_mean(dis1_real))
@@ -228,7 +228,7 @@ def main():
                     test_dict[input_noise3] = get_noise([BATCH_NUM, CHANNEL_NUM, 1, NOISE_LENGTH])
                     test_dict[input_noise4] = get_noise([BATCH_NUM, CHANNEL_NUM, 1, NOISE_LENGTH])
                     test_dict[encode] = get_noise([BATCH_NUM, CHANNEL_NUM, 4, 16])
-                    samples = sess.run(input_gen4, feed_dict=test_dict)
+                    samples = sess.run(input_gen3, feed_dict=test_dict)
                     np.save(file='Samples/song_%06d' % train_count, arr=samples)
                     save_path = saver.save(sess, 'Checkpoints/song_%06d' % train_count + '.ckpt')
                     tqdm.write('Model Saved: %s' % save_path)
