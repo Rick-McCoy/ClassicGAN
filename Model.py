@@ -30,22 +30,31 @@ def convolution(inputs, filters, kernel_size=[1, 3, 3], strides=(1, 1, 1), train
         else:
             activation_function = tf.nn.leaky_relu
         use_bias = regularization != 'batch_norm'
-        if kernel_size[0] != 1:
+        if inputs.get_shape().ndims == 4:
+            if transpose:
+                conv_func = tf.layers.conv2d_transpose
+            else:
+                conv_func = tf.layers.conv2d
+            if len(kernel_size) == 3:
+                kernel_size = kernel_size[1:]
+                strides = strides[1:]
+            output = conv_func(inputs=inputs, filters=filters, kernel_size=kernel_size, padding='same', data_format='channels_first', activation=activation_function, use_bias=use_bias, name='conv')
+        else:
             if transpose:
                 conv_func = tf.layers.conv3d_transpose
             else:
                 conv_func = tf.layers.conv3d
             output = conv_func(inputs=inputs, filters=filters, kernel_size=kernel_size, strides=strides, padding='same', data_format='channels_first', activation=activation_function, use_bias=use_bias, name='conv')
-        else:
-            if transpose:
-                conv_func = tf.layers.conv2d_transpose
-            else:
-                conv_func = tf.layers.conv2d
-            kernel_size = kernel_size[1:]
-            strides = strides[1:]
-            inputs = tf.unstack(inputs, axis=2, name='unstack')
-            output = [conv_func(inputs=i, filters=filters, kernel_size=kernel_size, strides=strides, padding='same', data_format='channels_first', activation=activation_function, use_bias=use_bias, name='conv') for i in inputs]
-            output = tf.stack(output, axis=2, name='stack')
+        #else:
+        #    if transpose:
+        #        conv_func = tf.layers.conv2d_transpose
+        #    else:
+        #        conv_func = tf.layers.conv2d
+        #    kernel_size = kernel_size[1:]
+        #    strides = strides[1:]
+        #    inputs = tf.unstack(inputs, axis=2, name='unstack')
+        #    output = [conv_func(inputs=i, filters=filters, kernel_size=kernel_size, strides=strides, padding='same', data_format='channels_first', activation=activation_function, use_bias=use_bias, name='conv') for i in inputs]
+        #    output = tf.stack(output, axis=2, name='stack')
         if not use_bias:
             output = tf.layers.batch_normalization(inputs=output, axis=1, training=training, name='batch_norm', fused=True)
         return output
@@ -168,8 +177,8 @@ def generator3(inputs, encode, num, train):
         # shape: [None, 32, 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
         deconv1 = convolution(inputs=res2, filters=16, kernel_size=[1, 2, 1], strides=(1, 2, 1), training=train, regularization='batch_norm', transpose=True, name='deconv1')
         # shape: [None, 16, 4, CLASS_NUM, INPUT_LENGTH // 8]
-        deconv2 = convolution(inputs=deconv1, filters=4, kernel_size=[1, 1, 2], strides=(1, 1, 2), training=train, regularization='batch_norm', transpose=True, name='deconv2')
-        # shape: [None, 4, 4, CLASS_NUM, INPUT_LENGTH // 4]
+        deconv2 = convolution(inputs=deconv1, filters=16, kernel_size=[1, 1, 2], strides=(1, 1, 2), training=train, regularization='batch_norm', transpose=True, name='deconv2')
+        # shape: [None, 16, 4, CLASS_NUM, INPUT_LENGTH // 4]
         conv1 = convolution(inputs=deconv2, filters=1, training=train, regularization='batch_norm', name='conv1')
         # shape: [None, 1, 4, CLASS_NUM, INPUT_LENGTH // 4]
         output = tf.tanh(tf.transpose(conv1, perm=[0, 2, 3, 4, 1]))
@@ -177,6 +186,29 @@ def generator3(inputs, encode, num, train):
         tf.summary.image(name='piano_roll', tensor=tf.concat([output[:BATCH_NUM // 10, i] for i in range(4)], axis=2))
         output = tf.squeeze(output, axis=-1)
         # shape: [None, 4, CLASS_NUM, INPUT_LENGTH // 4]
+        return output, deconv2
+
+def generator4(inputs, encode, num, train):
+    with tf.variable_scope('Generator4_' + str(num)):
+        encode = tf.expand_dims(tf.expand_dims(tf.transpose(encode, perm=[0, 2, 1]), axis=-1), axis=-1)
+        # shape: [None, 16, 4, 1, 1]
+        encode = tf.tile(input=encode, multiples=(1, 1, 1, CLASS_NUM, INPUT_LENGTH // 4))
+        # shape: [None, 16, 4, CLASS_NUM, INPUT_LENGTH // 4]
+        inputs = tf.concat([inputs, encode], axis=1)
+        # shape: [None, 32, 4, CLASS_NUM, INPUT_LENGTH // 4]
+        inputs = tf.concat([inputs[:, :, i] for i in range(4)], axis=-1)
+        # shape: [None, 32, CLASS_NUM, INPUT_LENGTH]
+        res1 = residual_block(inputs=inputs, filters=16, training=train, regularization='batch_norm', name='res1')
+        # shape: [None, 32, CLASS_NUM, INPUT_LENGTH]
+        res2 = residual_block(inputs=inputs, filters=16, training=train, regularization='batch_norm', name='res1')
+        # shape: [None, 32, CLASS_NUM, INPUT_LENGTH]
+        conv1 = convolution(inputs=res1, filters=1, training=train, regularization='batch_norm', name='conv1')
+        # shape: [None, 1, CLASS_NUM, INPUT_LENGTH]
+        output = tf.tanh(tf.transpose(conv1, perm=[0, 2, 3, 1]))
+        # shape: [None, CLASS_NUM, INPUT_LENGTH, 1]
+        tf.summary.image(name='piano_roll', tensor=output[:BATCH_NUM // 10])
+        output = tf.squeeze(output, axis=-1)
+        # shape: [None, CLASS_NUM, INPUT_LENGTH]
         return output
 
 def discriminator1(inputs, train, name):
@@ -282,6 +314,39 @@ def discriminator3_conditional(inputs, encode, train):
         # shape: [None, CHANNEL_NUM, 4, CLASS_NUM, INPUT_LENGTH // 4]
         uncond = discriminator3(inputs=inputs, train=train, name='Discriminator3_Uncond')
         cond = discriminator3(inputs=tf.concat(values=[inputs, encode], axis=1), train=train, name='Discriminator3_Cond')
+        output = (uncond + cond) / 2.0
+        return output
+    
+def discriminator4(inputs, train, name):
+    with tf.variable_scope(name, reuse=tf.AUTO_REUSE):
+        # shape: [None, CHANNEL_NUM * (2 or 1), CLASS_NUM, INPUT_LENGTH]
+        conv1 = convolution(inputs=inputs, filters=128, kernel_size=[6, 1], training=train, strides=(6, 1), name='conv1')
+        # shape: [None, 128, CLASS_NUM // 6, INPUT_LENGTH]
+        conv2 = convolution(inputs=conv1, filters=128, kernel_size=[12, 1], training=train, strides=(12, 1), name='conv2')
+        # shape: [None, 128, 1, INPUT_LENGTH]
+        conv3 = convolution(inputs=conv2, filters=128, kernel_size=[1, 2], training=train, strides=(1, 2), name='conv3')
+        # shape: [None, 128, 1, INPUT_LENGTH // 2]
+        conv4 = convolution(inputs=conv3, filters=128, kernel_size=[1, 2], training=train, strides=(1, 2), name='conv4')
+        # shape: [None, 128, 1, INPUT_LENGTH // 4]
+        conv5 = convolution(inputs=conv4, filters=128, kernel_size=[1, 2], training=train, strides=(1, 2), name='conv5')
+        # shape: [None, 128, 1, INPUT_LENGTH // 8]
+        conv6 = convolution(inputs=conv5, filters=256, kernel_size=[1, 4], training=train, strides=(1, 4), name='conv6')
+        # shape: [None, 256, 1, INPUT_LENGTH // 32]
+        conv7 = convolution(inputs=conv6, filters=512, kernel_size=[1, 4], training=train, strides=(1, 4), name='conv7')
+        # shape: [None, 512, 1, INPUT_LENGTH // 128]
+        dense1 = tf.layers.dense(inputs=tf.layers.flatten(inputs=conv7), units=1024, activation=tf.nn.leaky_relu, name='dense1')
+        # shape: [None, 1024]
+        output = tf.layers.dense(inputs=dense1, units=1, name='output')
+        # shape: [None, 1]
+        return output
+
+def discriminator4_conditional(inputs, encode, train):
+    with tf.variable_scope('Discriminator4_Conditional', reuse=tf.AUTO_REUSE):
+        # shape: [None, CHANNEL_NUM, 4, 16]
+        encode = tf.tile(input=encode, multiples=(1, 1, CLASS_NUM // 4, INPUT_LENGTH // 16))
+        # shape: [None, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH]
+        uncond = discriminator4(inputs=inputs, train=train, name='Discriminator4_Uncond')
+        cond = discriminator4(inputs=tf.concat(values=[inputs, encode], axis=1), train=train, name='Discriminator4_Cond')
         output = (uncond + cond) / 2.0
         return output
 

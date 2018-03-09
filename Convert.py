@@ -52,7 +52,6 @@ def write_piano_rolls_to_midi(piano_rolls, program_nums=None, is_drum=None, file
 def main():
     pathlist = list(pathlib.Path('Samples').glob('**/*.npy'))
     samples = np.load(pathlist[-1])
-    samples = np.concatenate([samples[:, :-1, i] for i in range(4)], axis=-1)
     # shape: [32, 6, 72, 384]
     #samples = np.concatenate([samples[i] for i in range(32)], axis=-1)
     program_nums = [0, 24, 40, 56, 64, 72]

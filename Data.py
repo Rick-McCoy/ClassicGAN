@@ -4,8 +4,11 @@ from __future__ import print_function
 
 import pretty_midi as pm
 import numpy as np
+import pathlib
+import random
+from tqdm import tqdm
 
-CHANNEL_NUM = 7
+CHANNEL_NUM = 6
 CLASS_NUM = 72
 INPUT_LENGTH = 384
 BATCH_NUM = 32
@@ -30,35 +33,49 @@ def roll(path):
     try:
         song = pm.PrettyMIDI(midi_file=str(path), resolution=96)
     except:
+        print('Error while opening')
         raise Exception
-    length = np.min([i.get_piano_roll().shape[1] for i in song.instruments])
-    if length == 0:
+    index = [0, 3, 5, 7, 8, 9]
+    piano_rolls = [i.get_piano_roll()[24:96] for i in song.instruments]
+    length = np.min([i.shape[1] for i in piano_rolls])
+    if length < INPUT_LENGTH:
+        print('Too short')
         raise Exception
-    length = length if length < INPUT_LENGTH * BATCH_NUM else INPUT_LENGTH * BATCH_NUM
     data = np.zeros(shape=(CHANNEL_NUM, CLASS_NUM, length))
-    for i in song.instruments:
-        if not i.is_drum:
-            if i.program // 8 == 0:
-                data[0] = np.add(data[0], i.get_piano_roll()[24:96, :length])
-            elif i.program // 8 == 3:
-                data[1] = np.add(data[1], i.get_piano_roll()[24:96, :length])
-            elif i.program // 8 == 5:
-                data[2] = np.add(data[2], i.get_piano_roll()[24:96, :length])
-            elif i.program // 8 == 7:
-                data[3] = np.add(data[3], i.get_piano_roll()[24:96, :length])
-            elif i.program // 8 == 8:
-                data[4] = np.add(data[4], i.get_piano_roll()[24:96, :length])
-            elif i.program // 8 == 9:
-                data[5] = np.add(data[5], i.get_piano_roll()[24:96, :length])
-            else:
-                data[6] = np.add(data[6], i.get_piano_roll()[24:96, :length])
+    for piano_roll, instrument in zip(piano_rolls, song.instruments):
+        if not instrument.is_drum:
+            try:
+                id = index.index(instrument.program // 8)
+            except:
+                continue
+            data[id] = np.add(data[id], piano_roll[:, :length])
     if np.max(data) == 0:
+        print('No notes')
         raise Exception
     data = data > 0
     data = (data - 0.5) * 2.0
     while length < INPUT_LENGTH * BATCH_NUM:
         np.concatenate((data, data), axis=-1)
         length *= 2
-    data = np.stack([data[:, :, i * INPUT_LENGTH:(i + 1) * INPUT_LENGTH] for i in range(BATCH_NUM)], axis=0)
+    data = np.stack([data[:, :, i * INPUT_LENGTH:(i + 1) * INPUT_LENGTH] for i in range(length // INPUT_LENGTH)], axis=0)
     data = np.stack([data[:, :, :, i * INPUT_LENGTH // 4:(i + 1) * INPUT_LENGTH // 4] for i in range(4)], axis=2)
     return data
+
+def build_dataset():
+    pathlist = list(pathlib.Path('Classics').glob('**/*.mid')) + list(pathlib.Path('TPD').glob('**/*.mid'))
+    random.shuffle(pathlist)
+    dataset = []
+    for path in tqdm(pathlist):
+        try:
+            dataset += [roll(str(path))]
+        except:
+            print(str(len(dataset)))
+            continue
+    dataset = np.concatenate(dataset, axis=0)
+    np.save('dataset', dataset)
+
+def main():
+    build_dataset()
+
+if __name__ == '__main__':
+    main()
