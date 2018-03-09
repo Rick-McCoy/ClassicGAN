@@ -11,18 +11,6 @@ NOISE_LENGTH = 32
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
-def conv2d(inputs, filters, kernel_size=[3, 3], strides=(1, 1), training=True, regularization='', name=''):
-    with tf.variable_scope(name):
-        if regularization == 'selu':
-            activation_function = tf.nn.selu
-        else:
-            activation_function = tf.nn.leaky_relu
-        use_bias = regularization != 'batch_norm'
-        output = tf.layers.conv2d(inputs=inputs, filters=filters, kernel_size=kernel_size, strides=strides, padding='same', data_format='channels_first', activation=activation_function, use_bias=use_bias, name='conv')
-        if not use_bias:
-            output = tf.layers.batch_normalization(inputs=output, axis=1, training=training, name='batch_norm', fused=True)
-        return output
-
 def convolution(inputs, filters, kernel_size=[1, 3, 3], strides=(1, 1, 1), training=True, regularization='', transpose=False, name=''):
     with tf.variable_scope(name, reuse=tf.AUTO_REUSE):
         if regularization == 'selu':
@@ -66,9 +54,9 @@ def residual_block(inputs, filters, training, regularization='', name=''):
 def noise_generator(noise, train):
     with tf.variable_scope('Noise_generator'):
         # shape: [None, 1, 1, NOISE_LENGTH]
-        conv1 = conv2d(inputs=noise, filters=64, kernel_size=[1, 3], strides=(1, 1), training=train, regularization='batch_norm', name='conv1')
+        conv1 = convolution(inputs=noise, filters=64, kernel_size=[1, 3], strides=(1, 1), training=train, regularization='batch_norm', name='conv1')
         # shape: [None, 64, 1, NOISE_LENGTH]
-        conv2 = conv2d(inputs=conv1, filters=4, kernel_size=[1, 3], strides=(1, 1), training=train, regularization='batch_norm', name='conv2')
+        conv2 = convolution(inputs=conv1, filters=4, kernel_size=[1, 3], strides=(1, 1), training=train, regularization='batch_norm', name='conv2')
         # shape: [None, 4, 1, NOISE_LENGTH]
         output = tf.transpose(conv2, perm=[0, 2, 1, 3], name='output')
         # shape: [None, 1, 4, NOISE_LENGTH]
@@ -77,9 +65,9 @@ def noise_generator(noise, train):
 def time_seq_noise_generator(noise, num, train):
     with tf.variable_scope('Time_seq_noise_generator' + str(num)):
         # shape: [None, 1, 1, NOISE_LENGTH]
-        conv1 = conv2d(inputs=noise, filters=64, kernel_size=[1, 3], strides=(1, 1), training=train, regularization='batch_norm', name='conv1')
+        conv1 = convolution(inputs=noise, filters=64, kernel_size=[1, 3], strides=(1, 1), training=train, regularization='batch_norm', name='conv1')
         # shape: [None, 64, 1, NOISE_LENGTH]
-        conv2 = conv2d(inputs=conv1, filters=4, kernel_size=[1, 3], strides=(1, 1), training=train, regularization='batch_norm', name='conv2')
+        conv2 = convolution(inputs=conv1, filters=4, kernel_size=[1, 3], strides=(1, 1), training=train, regularization='batch_norm', name='conv2')
         # shape: [None, 4, 1, NOISE_LENGTH]
         output = tf.transpose(conv2, perm=[0, 2, 1, 3], name='output')
         # shape: [None, 1, 4, NOISE_LENGTH]
