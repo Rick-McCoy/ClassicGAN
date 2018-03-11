@@ -58,7 +58,6 @@ def roll(path):
         np.concatenate((data, data), axis=-1)
         length *= 2
     data = np.stack([data[:, :, i * INPUT_LENGTH:(i + 1) * INPUT_LENGTH] for i in range(BATCH_NUM)], axis=0)
-    data = np.stack([data[:, :, :, i * INPUT_LENGTH // 4:(i + 1) * INPUT_LENGTH // 4] for i in range(4)], axis=2)
     return data
 
 def build_dataset():

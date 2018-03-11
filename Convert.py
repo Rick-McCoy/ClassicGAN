@@ -57,8 +57,8 @@ def main():
     program_nums = [0, 24, 40, 56, 64, 72]
     is_drum = [False] * (CHANNEL_NUM - 1)
     for id, sample in enumerate(samples):
-        #write_piano_rolls_to_midi(sample, program_nums=program_nums, is_drum=is_drum, filename=str(pathlist[-1]) + '-' + str(id) + '.mid')
-        #print(str(pathlist[-1]) + '-' + str(id) + '.mid')
+        write_piano_rolls_to_midi(sample, program_nums=program_nums, is_drum=is_drum, filename=str(pathlist[-1]) + '-' + str(id) + '.mid')
+        print(str(pathlist[-1]) + '-' + str(id) + '.mid')
         for i, piano_roll in enumerate(sample):
             fig = plt.figure(figsize=(12, 4))
             librosa.display.specshow(piano_roll, x_axis='time', y_axis='cqt_note', hop_length=1, sr=96, fmin=pm.note_number_to_hz(12))

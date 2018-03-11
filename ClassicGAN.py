@@ -59,13 +59,13 @@ def main():
         noise3 = tf.tile(input=input_noise3, multiples=[1, 1, 4, 1], name='noise3')
         noise4 = tf.concat(values=[time_seq_noise_generator(noise=input_noise4[:, i:i + 1], num=i, train=train) for i in range(CHANNEL_NUM)], \
                             axis=1, name='noise4')
-
-        real_input_3 = tf.placeholder(dtype=tf.float32, shape=[None, CHANNEL_NUM, 4, CLASS_NUM, INPUT_LENGTH // 4], name='real_input_3')
+        real_input_4 = tf.placeholder(dtype=tf.float32, shape=[None, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH], name='real_input_4')
+        real_input_3 = tf.layers.average_pooling3d(inputs=real_input_4, pool_size=[1, 2, 2], strides=(1, 2, 2), padding='same', \
+                                                    data_format='channels_first', name='real_input_3')
         real_input_2 = tf.layers.average_pooling3d(inputs=real_input_3, pool_size=[1, 2, 2], strides=(1, 2, 2), padding='same', \
                                                     data_format='channels_first', name='real_input_2')
         real_input_1 = tf.layers.average_pooling3d(inputs=real_input_2, pool_size=[1, 2, 2], strides=(1, 2, 2), padding='same', \
                                                     data_format='channels_first', name='real_input_1')
-        real_input_4 = tf.concat([real_input_3[:, :, i] for i in range(4)], axis=-1, name='real_input_4')
 
         encode = tf.concat(values=[encoder(inputs=real_input_3[:, i:i + 1], num=i, train=train) for i in range(CHANNEL_NUM)], axis=1, name='encode')
         input_noise = tf.concat(values=[noise1, noise2, noise3, noise4], axis=3, name='input_noise')
@@ -186,8 +186,8 @@ def main():
             saver.restore(sess, tf.train.latest_checkpoint('Checkpoints'))
         pathlist = list(pathlib.Path('Classics').glob('**/*.mid')) + list(pathlib.Path('TPD').glob('**/*.mid'))# + list(pathlib.Path('Lakh').glob('**/*.mid'))
         train_count = 0
-        feed_dict = {input_noise1: None, input_noise2: None, input_noise3: None, input_noise4: None, real_input_3: None, train: True}
-        test_dict = {input_noise1: None, input_noise2: None, input_noise3: None, input_noise4: None, encode: None, train: False}
+        feed_dict = {input_noise1: None, input_noise2: None, input_noise3: None, input_noise4: None, real_input_4: None, train: True}
+        test_dict = {input_noise1: None, input_noise2: None, input_noise3: None, input_noise4: None, real_input_4: None, train: False}
         print('preparing complete')
         for __ in tqdm(range(TOTAL_TRAIN_EPOCH)):
             random.shuffle(pathlist)
@@ -197,7 +197,7 @@ def main():
                 except Exception:
                     continue
                 tqdm.write(str(path))
-                feed_dict[real_input_3] = batch_input
+                feed_dict[real_input_4] = batch_input
                 feed_dict[train] = True
                 for i in range(TRAIN_RATIO_DIS):
                     feed_dict[input_noise1] = get_noise([BATCH_NUM, 1, 1, NOISE_LENGTH])
@@ -227,8 +227,8 @@ def main():
                     test_dict[input_noise2] = get_noise([BATCH_NUM, 1, 1, NOISE_LENGTH])
                     test_dict[input_noise3] = get_noise([BATCH_NUM, CHANNEL_NUM, 1, NOISE_LENGTH])
                     test_dict[input_noise4] = get_noise([BATCH_NUM, CHANNEL_NUM, 1, NOISE_LENGTH])
-                    test_dict[encode] = get_noise([BATCH_NUM, CHANNEL_NUM, 4, 16])
-                    samples = sess.run(input_gen3, feed_dict=test_dict)
+                    test_dict[real_input_4] = batch_input
+                    samples = sess.run(input_gen4, feed_dict=test_dict)
                     np.save(file='Samples/song_%06d' % train_count, arr=samples)
                     save_path = saver.save(sess, 'Checkpoints/song_%06d' % train_count + '.ckpt')
                     tqdm.write('Model Saved: %s' % save_path)

@@ -203,7 +203,7 @@ def discriminator1(inputs, train, name):
         # shape: [None, 32, 1, CLASS_NUM // 4, INPUT_LENGTH // 16]
         conv3 = conv(inputs=conv2, filters=64, kernel_size=[1, 3, 1], strides=(1, 3, 1), training=train, name='conv3')
         # shape: [None, 64, 1, CLASS_NUM // 12, INPUT_LENGTH // 16]
-        conv4 = conv(inputs=conv3, filters=128, kernel_size=[1, 1, 6], strides=(1, 6, 1), training=train, name='conv4')
+        conv4 = conv(inputs=conv3, filters=128, kernel_size=[1, 6, 1], strides=(1, 6, 1), training=train, name='conv4')
         # shape: [None, 128, 1, 1, INPUT_LENGTH // 16]
         conv5 = conv(inputs=conv4, filters=128, kernel_size=[1, 1, 2], strides=(1, 1, 2), training=train, name='conv5')
         # shape: [None, 128, 1, 1, INPUT_LENGTH // 32]
