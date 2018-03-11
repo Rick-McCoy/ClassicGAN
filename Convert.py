@@ -55,7 +55,7 @@ def main():
     # shape: [32, 6, 72, 384]
     #samples = np.concatenate([samples[i] for i in range(32)], axis=-1)
     program_nums = [0, 24, 40, 56, 64, 72]
-    is_drum = [False] * (CHANNEL_NUM - 1)
+    is_drum = [False] * CHANNEL_NUM
     for id, sample in enumerate(samples):
         write_piano_rolls_to_midi(sample, program_nums=program_nums, is_drum=is_drum, filename=str(pathlist[-1]) + '-' + str(id) + '.mid')
         print(str(pathlist[-1]) + '-' + str(id) + '.mid')

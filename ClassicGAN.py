@@ -186,7 +186,6 @@ def main():
         pathlist = list(pathlib.Path('Classics').glob('**/*.mid')) + list(pathlib.Path('TPD').glob('**/*.mid'))# + list(pathlib.Path('Lakh').glob('**/*.mid'))
         train_count = 0
         feed_dict = {input_noise1: None, input_noise2: None, input_noise3: None, input_noise4: None, real_input_4: None, train: True}
-        test_dict = {input_noise1: None, input_noise2: None, input_noise3: None, input_noise4: None, real_input_4: None, train: False}
         print('preparing complete')
         for __ in tqdm(range(TOTAL_TRAIN_EPOCH)):
             random.shuffle(pathlist)
@@ -222,12 +221,11 @@ def main():
                 tqdm.write('Discriminator4 loss : %.7f' % loss_val_dis4, end=' ')
                 tqdm.write('Generator loss : %.7f' % loss_val_gen)
                 if train_count % 1000 == 0:
-                    test_dict[input_noise1] = get_noise([BATCH_NUM, 1, 1, NOISE_LENGTH])
-                    test_dict[input_noise2] = get_noise([BATCH_NUM, 1, 1, NOISE_LENGTH])
-                    test_dict[input_noise3] = get_noise([BATCH_NUM, CHANNEL_NUM, 1, NOISE_LENGTH])
-                    test_dict[input_noise4] = get_noise([BATCH_NUM, CHANNEL_NUM, 1, NOISE_LENGTH])
-                    test_dict[real_input_4] = batch_input
-                    samples = sess.run(input_gen4, feed_dict=test_dict)
+                    feed_dict[input_noise1] = get_noise([BATCH_NUM, 1, 1, NOISE_LENGTH])
+                    feed_dict[input_noise2] = get_noise([BATCH_NUM, 1, 1, NOISE_LENGTH])
+                    feed_dict[input_noise3] = get_noise([BATCH_NUM, CHANNEL_NUM, 1, NOISE_LENGTH])
+                    feed_dict[input_noise4] = get_noise([BATCH_NUM, CHANNEL_NUM, 1, NOISE_LENGTH])
+                    samples = sess.run(input_gen4, feed_dict=feed_dict)
                     np.save(file='Samples/song_%06d' % train_count, arr=samples)
                     save_path = saver.save(sess, 'Checkpoints/song_%06d' % train_count + '.ckpt')
                     tqdm.write('Model Saved: %s' % save_path)
