@@ -60,8 +60,7 @@ def main():
         noise4 = tf.concat(values=[time_seq_noise_generator(noise=input_noise4[:, i:i + 1], num=i, train=train) for i in range(CHANNEL_NUM)], \
                             axis=1, name='noise4')
         real_input_4 = tf.placeholder(dtype=tf.float32, shape=[None, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH], name='real_input_4')
-        real_input_3 = tf.layers.average_pooling3d(inputs=real_input_4, pool_size=[1, 2, 2], strides=(1, 2, 2), padding='same', \
-                                                    data_format='channels_first', name='real_input_3')
+        real_input_3 = tf.stack([real_input_4[:, :, :, i*INPUT_LENGTH:(i+1)*INPUT_LENGTH] for i in range(4)], axis=2, name='real_input_3')
         real_input_2 = tf.layers.average_pooling3d(inputs=real_input_3, pool_size=[1, 2, 2], strides=(1, 2, 2), padding='same', \
                                                     data_format='channels_first', name='real_input_2')
         real_input_1 = tf.layers.average_pooling3d(inputs=real_input_2, pool_size=[1, 2, 2], strides=(1, 2, 2), padding='same', \
