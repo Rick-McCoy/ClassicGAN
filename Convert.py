@@ -12,7 +12,6 @@ def set_piano_roll_to_instrument(piano_roll, instrument, velocity=100, tempo=120
     # Calculate time per pixel
     time_per_pixel = 60.0 / tempo / float(beat_resolution)
     # Create piano_roll_search that captures note onsets and offsets
-    piano_roll = piano_roll > 0
     piano_roll = np.pad(piano_roll, ((24, 32), (1, 1)), 'constant', constant_values=0)
     # shape: [128, 386]
     piano_roll_search = np.diff(piano_roll.astype(int), axis=1)
@@ -51,7 +50,7 @@ def write_piano_rolls_to_midi(piano_rolls, program_nums=None, is_drum=None, file
 
 def main():
     pathlist = list(pathlib.Path('Samples').glob('**/*.npy'))
-    samples = np.load(pathlist[-1])
+    samples = np.load(pathlist[-1]) > 0
     # shape: [32, 6, 72, 384]
     #samples = np.concatenate([samples[i] for i in range(32)], axis=-1)
     program_nums = [0, 24, 40, 56, 64, 72]
