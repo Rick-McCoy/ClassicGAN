@@ -213,7 +213,6 @@ def main():
                     feed_dict[input_noise4] = get_noise([BATCH_NUM, CHANNEL_NUM, 1, NOISE_LENGTH])
                     summary, _, loss_val_gen = sess.run([merged, gen_train, loss_gen], feed_dict=feed_dict)
                 writer.add_summary(summary, train_count)
-                train_count += 1
                 tqdm.write('%06d' % train_count, end=' ')
                 tqdm.write('Discriminator1 loss : %.7f' % loss_val_dis1, end=' ')
                 tqdm.write('Discriminator2 loss : %.7f' % loss_val_dis2, end=' ')
@@ -229,6 +228,7 @@ def main():
                     np.save(file='Samples/song_%06d' % train_count, arr=samples)
                     save_path = saver.save(sess, 'Checkpoints/song_%06d' % train_count + '.ckpt')
                     tqdm.write('Model Saved: %s' % save_path)
+                train_count += 1
         writer.close()
 if __name__ == '__main__':
     with warnings.catch_warnings():
