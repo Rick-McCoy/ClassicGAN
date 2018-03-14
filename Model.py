@@ -4,7 +4,7 @@ from __future__ import print_function
 
 import os
 import tensorflow as tf
-import numpy as np
+from numpy.random import normal
 from Data import CLASS_NUM, INPUT_LENGTH, BATCH_NUM
 
 NOISE_LENGTH = 32
@@ -334,4 +334,4 @@ def discriminator4_conditional(inputs, encode, train):
         return output
 
 def get_noise(size):
-    return np.random.normal(loc=0.0, scale=1.0, size=size)
+    return normal(loc=0.0, scale=1.0, size=size)
