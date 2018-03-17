@@ -209,8 +209,9 @@ def main():
             feed_dict[real_input_4] = batch_input
             feed_dict[train] = True
             samples = sess.run(input_gen4, feed_dict=feed_dict)
-            np.save(file='Samples/song_%s' % path, arr=samples)
-            unpack_sample(name='Samples/song_%s' % path, concat=args.concat)
+            path = path.split('/')[-1]
+            np.save(file='Samples/sample_%s' % path, arr=samples)
+            unpack_sample(name='Samples/sample_%s' % path, concat=args.concat)
             return
         for __ in tqdm(range(TOTAL_TRAIN_EPOCH)):
             random.shuffle(pathlist)
