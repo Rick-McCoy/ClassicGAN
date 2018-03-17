@@ -245,6 +245,7 @@ def main():
                 tqdm.write('Discriminator3 loss : %.7f' % loss_val_dis3, end='\n')
                 tqdm.write('Discriminator4 loss : %.7f' % loss_val_dis4, end=' ')
                 tqdm.write('Generator loss : %.7f' % loss_val_gen)
+                train_count += 1
                 if train_count % 1000 == 0:
                     feed_dict[input_noise1] = get_noise([BATCH_NUM, 1, 1, NOISE_LENGTH])
                     feed_dict[input_noise2] = get_noise([BATCH_NUM, 1, 1, NOISE_LENGTH])
@@ -254,7 +255,6 @@ def main():
                     np.save(file='Samples/song_%06d' % train_count, arr=samples)
                     save_path = saver.save(sess, 'Checkpoints/song_%06d' % train_count + '.ckpt')
                     tqdm.write('Model Saved: %s' % save_path)
-                train_count += 1
         writer.close()
 if __name__ == '__main__':
     with warnings.catch_warnings():
