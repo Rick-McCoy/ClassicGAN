@@ -276,6 +276,7 @@ __pycache__/
 Samples/
 train/
 Checkpoints/
+Progress/
 *.pyproj
 *.pyc
 
