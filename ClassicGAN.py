@@ -7,12 +7,14 @@ import random
 import warnings
 import tensorflow as tf
 import numpy as np
+import argparse
 from tqdm import tqdm
 from Data import roll, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH, BATCH_NUM
 from Model import get_noise, generator1, generator2, generator3, generator4, \
                     noise_generator, time_seq_noise_generator, discriminator1_conditional, \
                     discriminator2_conditional, discriminator3_conditional, \
                     discriminator4_conditional, encoder, NOISE_LENGTH
+from Convert import unpack_sample
 import memory_saving_gradients
 tf.__dict__["gradients"] = memory_saving_gradients.gradients_speed
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
@@ -35,6 +37,12 @@ def gradient_penalty(real, gen, encode, discriminator, train):
     return LAMBDA * output
 
 def main():
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-s', '--sample', type=str, default='', help='Samples based on input song. Empty string means training.')
+    parser.add_argument('-c', '--concat', type=bool, default=False, help='Enable Concatenation. Defaults to False.')
+    args = parser.parse_args()
+    sampling = args.sample != ''
 
     if not os.path.exists('Checkpoints'):
         os.makedirs('Checkpoints')
@@ -187,6 +195,23 @@ def main():
         train_count = 0
         feed_dict = {input_noise1: None, input_noise2: None, input_noise3: None, input_noise4: None, real_input_4: None, train: True}
         print('preparing complete')
+        if sampling:
+            feed_dict[input_noise1] = get_noise([BATCH_NUM, 1, 1, NOISE_LENGTH])
+            feed_dict[input_noise2] = get_noise([BATCH_NUM, 1, 1, NOISE_LENGTH])
+            feed_dict[input_noise3] = get_noise([BATCH_NUM, CHANNEL_NUM, 1, NOISE_LENGTH])
+            feed_dict[input_noise4] = get_noise([BATCH_NUM, CHANNEL_NUM, 1, NOISE_LENGTH])
+            path = args.sample
+            try:
+                batch_input = roll(path)
+            except:
+                print('Error while Opening File.')
+                return
+            feed_dict[real_input_4] = batch_input
+            feed_dict[train] = True
+            samples = sess.run(input_gen4, feed_dict=feed_dict)
+            np.save(file='Samples/song_%s' % path, arr=samples)
+            unpack_sample(name='Samples/song_%s' % path, concat=args.concat)
+            return
         for __ in tqdm(range(TOTAL_TRAIN_EPOCH)):
             random.shuffle(pathlist)
             for path in tqdm(pathlist):

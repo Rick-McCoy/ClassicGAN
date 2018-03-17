@@ -6,6 +6,7 @@ import numpy as np
 import pathlib
 import matplotlib.pyplot as plt
 import librosa.display
+import argparse
 from Data import INPUT_LENGTH, CHANNEL_NUM
 
 def set_piano_roll_to_instrument(piano_roll, instrument, velocity=100, tempo=120.0, beat_resolution=24):
@@ -48,22 +49,38 @@ def write_piano_rolls_to_midi(piano_rolls, program_nums=None, is_drum=None, file
     # Write out the MIDI data
     midi.write(filename)
 
-def main():
-    pathlist = list(pathlib.Path('Samples').glob('**/*.npy'))
-    samples = np.load(pathlist[-1]) > 0
-    # shape: [32, 6, 72, 384]
-    #samples = np.concatenate([samples[i] for i in range(32)], axis=-1)
+def unpack_sample(name='', concat=False):
+    if name == '':
+        pathlist = list(pathlib.Path('Samples').glob('**/*.npy'))
+        name = pathlist[-1]
+    samples = np.load(name) > 0
     program_nums = [0, 24, 40, 56, 64, 72]
     is_drum = [False] * CHANNEL_NUM
-    for id, sample in enumerate(samples):
-        write_piano_rolls_to_midi(sample, program_nums=program_nums, is_drum=is_drum, filename=str(pathlist[-1]) + '_' + str(id) + '.mid')
-        print(str(pathlist[-1]) + '_' + str(id) + '.mid')
+    if concat:
+        sample = np.concat([i for i in samples], axis=-1)
+        write_piano_rolls_to_midi(sample, program_nums=program_nums, is_drum=is_drum, filename=name + '_' + str(id) + '.mid')
+        print(name + '_' + str(id) + '.mid')
         for i, piano_roll in enumerate(sample):
             fig = plt.figure(figsize=(12, 4))
             librosa.display.specshow(piano_roll, x_axis='time', y_axis='cqt_note', hop_length=1, sr=96, fmin=pm.note_number_to_hz(12))
-            plt.title(str(pathlist[-1]) + '_' + pm.program_to_instrument_name(program_nums[i]))
-            fig.savefig(str(pathlist[-1]) + '_' + str(id) + '_' + str(i) + '.png')
+            plt.title(name + '_' + pm.program_to_instrument_name(program_nums[i]))
+            fig.savefig(name + '_' + str(id) + '_' + str(i) + '.png')
             plt.close(fig)
-
+        return
+    for id, sample in enumerate(samples):
+        write_piano_rolls_to_midi(sample, program_nums=program_nums, is_drum=is_drum, filename=name + '_' + str(id) + '.mid')
+        print(name + '_' + str(id) + '.mid')
+        for i, piano_roll in enumerate(sample):
+            fig = plt.figure(figsize=(12, 4))
+            librosa.display.specshow(piano_roll, x_axis='time', y_axis='cqt_note', hop_length=1, sr=96, fmin=pm.note_number_to_hz(12))
+            plt.title(name + '_' + pm.program_to_instrument_name(program_nums[i]))
+            fig.savefig(name + '_' + str(id) + '_' + str(i) + '.png')
+            plt.close(fig)
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-s', '--sample', type=str, default='', help='Determines which npy file to sample. Defaults to last file.')
+    parser.add_argument('-c', '--concat', type=bool, default=False, help='Enable Concatenation. Defaults to False.')
+    args = parser.parse_args()
+    unpack_sample(name=args.sample, concat=args.concat)
 if __name__ == '__main__':
     main()
