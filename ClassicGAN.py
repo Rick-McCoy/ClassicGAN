@@ -210,7 +210,7 @@ def main():
             samples = sess.run(input_gen4, feed_dict=feed_dict)
             path = path.split('/')[-1]
             np.save(file='Samples/sample_%s' % path, arr=samples)
-            unpack_sample(name='Samples/sample_%s' % path, concat=args.concat)
+            unpack_sample(name='Samples/sample_%s.npy' % path, concat=args.concat)
             return
         writer = tf.summary.FileWriter('train', sess.graph)
         for __ in tqdm(range(TOTAL_TRAIN_EPOCH)):
