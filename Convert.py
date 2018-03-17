@@ -4,6 +4,8 @@ from __future__ import print_function
 import pretty_midi as pm
 import numpy as np
 import pathlib
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import librosa.display
 import argparse
