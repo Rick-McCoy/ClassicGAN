@@ -186,7 +186,6 @@ def main():
     saver = tf.train.Saver()
     with tf.Session(config=config) as sess:
         merged = tf.summary.merge_all()
-        writer = tf.summary.FileWriter('train', sess.graph)
         sess.run(tf.global_variables_initializer())
         if tf.train.latest_checkpoint('Checkpoints') is not None:
             print('Restoring...')
@@ -213,6 +212,7 @@ def main():
             np.save(file='Samples/sample_%s' % path, arr=samples)
             unpack_sample(name='Samples/sample_%s' % path, concat=args.concat)
             return
+        writer = tf.summary.FileWriter('train', sess.graph)
         for __ in tqdm(range(TOTAL_TRAIN_EPOCH)):
             random.shuffle(pathlist)
             for path in tqdm(pathlist):
