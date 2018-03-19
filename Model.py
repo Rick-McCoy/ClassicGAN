@@ -15,7 +15,7 @@ def conv(inputs, filters, kernel_size=[1, 3, 3], strides=(1, 1, 1), training=Tru
     with tf.variable_scope(name, reuse=tf.AUTO_REUSE):
         if regularization == 'batch_norm_relu':
             activation_function = tf.nn.relu
-        else if regularization == 'batch_norm_tanh':
+        elif regularization == 'batch_norm_tanh':
             activation_function = tf.tanh
         else:
             activation_function = tf.nn.leaky_relu
