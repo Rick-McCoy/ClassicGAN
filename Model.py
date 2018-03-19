@@ -203,7 +203,7 @@ def discriminator1(inputs, train, name):
         # shape: [None, 32, 4, CLASS_NUM // 4, INPUT_LENGTH // 16]
         conv3 = conv(inputs=conv2, filters=64, kernel_size=[1, 3, 1], strides=(1, 3, 1), training=train, name='conv3')
         # shape: [None, 64, 4, CLASS_NUM // 12, INPUT_LENGTH // 16]
-        conv4 = conv(inputs=conv3, filters=128, kernel_size=[1, 6, 1], strides=(1, 6, 1), training=train, name='conv4')
+        conv4 = conv(inputs=conv3, filters=64, kernel_size=[1, 6, 1], strides=(1, 6, 1), training=train, name='conv4')
         # shape: [None, 128, 4, 1, INPUT_LENGTH // 16]
         conv5 = conv(inputs=conv4, filters=128, kernel_size=[1, 1, 2], strides=(1, 1, 2), training=train, name='conv5')
         # shape: [None, 128, 4, 1, INPUT_LENGTH // 32]
@@ -238,7 +238,7 @@ def discriminator2(inputs, train, name):
         # shape: [None, 32, 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
         conv3 = conv(inputs=conv2, filters=64, kernel_size=[1, 6, 1], strides=(1, 6, 1), training=train, name='conv3')
         # shape: [None, 64, 4, CLASS_NUM // 12, INPUT_LENGTH // 8]
-        conv4 = conv(inputs=conv3, filters=128, kernel_size=[1, 6, 1], strides=(1, 6, 1), training=train, name='conv4')
+        conv4 = conv(inputs=conv3, filters=64, kernel_size=[1, 6, 1], strides=(1, 6, 1), training=train, name='conv4')
         # shape: [None, 128, 4, 1, INPUT_LENGTH // 8]
         conv5 = conv(inputs=conv4, filters=128, kernel_size=[1, 1, 2], strides=(1, 1, 2), training=train, name='conv5')
         # shape: [None, 128, 4, 1, INPUT_LENGTH // 16]
@@ -273,7 +273,7 @@ def discriminator3(inputs, train, name):
         # shape: [None, 32, 4, CLASS_NUM, INPUT_LENGTH // 4]
         conv3 = conv(inputs=conv2, filters=64, kernel_size=[1, 6, 1], training=train, strides=(1, 6, 1), name='conv3')
         # shape: [None, 64, 4, CLASS_NUM // 6, INPUT_LENGTH // 4]
-        conv4 = conv(inputs=conv3, filters=128, kernel_size=[1, 12, 1], training=train, strides=(1, 12, 1), name='conv4')
+        conv4 = conv(inputs=conv3, filters=64, kernel_size=[1, 12, 1], training=train, strides=(1, 12, 1), name='conv4')
         # shape: [None, 128, 4, 1, INPUT_LENGTH // 4]
         conv5 = conv(inputs=conv4, filters=128, kernel_size=[1, 1, 2], training=train, strides=(1, 1, 2), name='conv5')
         # shape: [None, 128, 4, 1, INPUT_LENGTH // 8]
@@ -309,7 +309,7 @@ def discriminator4(inputs, train, name):
         # shape: [None, 32, CLASS_NUM // 12, INPUT_LENGTH]
         conv3 = conv(inputs=conv2, filters=64, kernel_size=[6, 1], training=train, strides=(6, 1), name='conv3')
         # shape: [None, 64, 1, INPUT_LENGTH]
-        conv4 = conv(inputs=conv3, filters=128, kernel_size=[1, 2], training=train, strides=(1, 2), name='conv4')
+        conv4 = conv(inputs=conv3, filters=64, kernel_size=[1, 2], training=train, strides=(1, 2), name='conv4')
         # shape: [None, 128, 1, INPUT_LENGTH // 2]
         conv5 = conv(inputs=conv4, filters=128, kernel_size=[1, 4], training=train, strides=(1, 4), name='conv5')
         # shape: [None, 128, 1, INPUT_LENGTH // 8]
