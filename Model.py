@@ -56,8 +56,8 @@ def residual_block(inputs, filters, training, regularization='', name=''):
 def noise_generator(noise, train):
     with tf.variable_scope('Noise_generator'):
         # shape: [None, 1, 1, NOISE_LENGTH]
-        conv1 = conv(inputs=noise, filters=64, kernel_size=[1, 3], strides=(1, 1), training=train, regularization='batch_norm_relu', name='conv1')
-        # shape: [None, 64, 1, NOISE_LENGTH]
+        conv1 = conv(inputs=noise, filters=1024, kernel_size=[1, 3], strides=(1, 1), training=train, regularization='batch_norm_relu', name='conv1')
+        # shape: [None, 1024, 1, NOISE_LENGTH]
         conv2 = conv(inputs=conv1, filters=4, kernel_size=[1, 3], strides=(1, 1), training=train, regularization='batch_norm_relu', name='conv2')
         # shape: [None, 4, 1, NOISE_LENGTH]
         output = tf.transpose(conv2, perm=[0, 2, 1, 3], name='output')
@@ -67,8 +67,8 @@ def noise_generator(noise, train):
 def time_seq_noise_generator(noise, num, train):
     with tf.variable_scope('Time_seq_noise_generator' + str(num)):
         # shape: [None, 1, 1, NOISE_LENGTH]
-        conv1 = conv(inputs=noise, filters=64, kernel_size=[1, 3], strides=(1, 1), training=train, regularization='batch_norm_relu', name='conv1')
-        # shape: [None, 64, 1, NOISE_LENGTH]
+        conv1 = conv(inputs=noise, filters=1024, kernel_size=[1, 3], strides=(1, 1), training=train, regularization='batch_norm_relu', name='conv1')
+        # shape: [None, 1024, 1, NOISE_LENGTH]
         conv2 = conv(inputs=conv1, filters=4, kernel_size=[1, 3], strides=(1, 1), training=train, regularization='batch_norm_relu', name='conv2')
         # shape: [None, 4, 1, NOISE_LENGTH]
         output = tf.transpose(conv2, perm=[0, 2, 1, 3], name='output')
@@ -78,19 +78,19 @@ def time_seq_noise_generator(noise, num, train):
 def encoder(inputs, num, train):
     with tf.variable_scope('Encoder' + str(num)):
         # shape: [None, 1, 4, CLASS_NUM, INPUT_LENGTH // 4]
-        conv1 = conv(inputs=inputs, filters=16, training=train, kernel_size=[1, 3, 1], strides=(1, 3, 1), regularization='batch_norm_lrelu', name='conv1')
+        conv1 = conv(inputs=inputs, filters=16, kernel_size=[1, 3, 1], strides=(1, 3, 1), training=train, regularization='batch_norm_lrelu', name='conv1')
         # shape: [None, 16, 4, CLASS_NUM // 3, INPUT_LENGTH // 4]
-        conv2 = conv(inputs=conv1, filters=16, training=train, kernel_size=[1, 4, 1], strides=(1, 4, 1), regularization='batch_norm_lrelu', name='conv2')
+        conv2 = conv(inputs=conv1, filters=16, kernel_size=[1, 4, 1], strides=(1, 4, 1), training=train, regularization='batch_norm_lrelu', name='conv2')
         # shape: [None, 16, 4, CLASS_NUM // 12, INPUT_LENGTH // 4]
-        conv3 = conv(inputs=conv2, filters=16, training=train, kernel_size=[1, 6, 1], strides=(1, 6, 1), regularization='batch_norm_lrelu', name='conv3')
+        conv3 = conv(inputs=conv2, filters=16, kernel_size=[1, 6, 1], strides=(1, 6, 1), training=train, regularization='batch_norm_lrelu', name='conv3')
         # shape: [None, 16, 4, 1, INPUT_LENGTH // 4]
-        conv4 = conv(inputs=conv3, filters=16, training=train, kernel_size=[1, 1, 2], strides=(1, 1, 2), regularization='batch_norm_lrelu', name='conv4')
+        conv4 = conv(inputs=conv3, filters=16, kernel_size=[1, 1, 2], strides=(1, 1, 2), training=train, regularization='batch_norm_lrelu', name='conv4')
         # shape: [None, 16, 4, 1, INPUT_LENGTH // 8]
-        conv5 = conv(inputs=conv4, filters=16, training=train, kernel_size=[1, 1, 3], strides=(1, 1, 3), regularization='batch_norm_lrelu', name='conv5')
+        conv5 = conv(inputs=conv4, filters=16, kernel_size=[1, 1, 3], strides=(1, 1, 3), training=train, regularization='batch_norm_lrelu', name='conv5')
         # shape: [None, 16, 4, 1, INPUT_LENGTH // 24]
-        conv6 = conv(inputs=conv5, filters=16, training=train, kernel_size=[1, 1, 4], strides=(1, 1, 4), regularization='batch_norm_lrelu', name='conv6')
+        conv6 = conv(inputs=conv5, filters=16, kernel_size=[1, 1, 4], strides=(1, 1, 4), training=train, regularization='batch_norm_lrelu', name='conv6')
         # shape: [None, 16, 4, 1, INPUT_LENGTH // 96]
-        conv7 = conv(inputs=conv6, filters=16, training=train, kernel_size=[1, 1, 4], strides=(1, 1, 4), regularization='batch_norm_lrelu', name='conv7')
+        conv7 = conv(inputs=conv6, filters=16, kernel_size=[1, 1, 4], strides=(1, 1, 4), training=train, regularization='batch_norm_lrelu', name='conv7')
         # shape: [None, 16, 4, 1, 1]
         output = tf.transpose(tf.squeeze(conv7, axis=-1), perm=[0, 3, 2, 1])
         # shape: [None, 1, 4, 16]
@@ -189,29 +189,29 @@ def generator4(inputs, encode, num, train):
         # shape: [None, 16, CLASS_NUM, INPUT_LENGTH]
         conv1 = conv(inputs=res2, filters=1, training=train, regularization='batch_norm_tanh', name='conv1')
         # shape: [None, 1, CLASS_NUM, INPUT_LENGTH]
-        output = tf.transpose(conv1, perm=[0, 2, 3, 1])
+        output = tf.transpose(conv1, perm=[0, 2, 3, 1], name='image')
         # shape: [None, CLASS_NUM, INPUT_LENGTH, 1]
         tf.summary.image(name='piano_roll', tensor=output[:BATCH_NUM // 10])
-        output = tf.squeeze(output, axis=-1)
+        output = tf.squeeze(output, axis=-1, name='output')
         # shape: [None, CLASS_NUM, INPUT_LENGTH]
         return output
 
 def discriminator1(inputs, train, name):
     with tf.variable_scope(name, reuse=tf.AUTO_REUSE):
         # shape: [None, CHANNEL_NUM * (2 or 1), 4, CLASS_NUM // 4, INPUT_LENGTH // 16]
-        conv1 = conv(inputs=inputs, filters=16, kernel_size=[2, 1, 1], strides=(2, 1, 1), training=train, name='conv1')
+        conv1 = conv(inputs=inputs, filters=16, kernel_size=[2, 1, 1], strides=(2, 1, 1), name='conv1')
         # shape: [None, 16, 2, CLASS_NUM // 4, INPUT_LENGTH // 16]
-        conv2 = conv(inputs=conv1, filters=32, kernel_size=[2, 1, 1], strides=(2, 1, 1), training=train, name='conv2')
+        conv2 = conv(inputs=conv1, filters=32, kernel_size=[2, 1, 1], strides=(2, 1, 1), name='conv2')
         # shape: [None, 32, 1, CLASS_NUM // 4, INPUT_LENGTH // 16]
-        conv3 = conv(inputs=conv2, filters=64, kernel_size=[1, 3, 1], strides=(1, 3, 1), training=train, name='conv3')
+        conv3 = conv(inputs=conv2, filters=64, kernel_size=[1, 3, 1], strides=(1, 3, 1), name='conv3')
         # shape: [None, 64, 1, CLASS_NUM // 12, INPUT_LENGTH // 16]
-        conv4 = conv(inputs=conv3, filters=64, kernel_size=[1, 6, 1], strides=(1, 6, 1), training=train, name='conv4')
-        # shape: [None, 128, 1, 1, INPUT_LENGTH // 16]
-        conv5 = conv(inputs=conv4, filters=128, kernel_size=[1, 1, 2], strides=(1, 1, 2), training=train, name='conv5')
+        conv4 = conv(inputs=conv3, filters=64, kernel_size=[1, 6, 1], strides=(1, 6, 1), name='conv4')
+        # shape: [None, 64, 1, 1, INPUT_LENGTH // 16]
+        conv5 = conv(inputs=conv4, filters=128, kernel_size=[1, 1, 2], strides=(1, 1, 2), name='conv5')
         # shape: [None, 128, 1, 1, INPUT_LENGTH // 32]
-        conv6 = conv(inputs=conv5, filters=256, kernel_size=[1, 1, 4], strides=(1, 1, 2), training=train, name='conv6')
+        conv6 = conv(inputs=conv5, filters=256, kernel_size=[1, 1, 4], strides=(1, 1, 2), name='conv6')
         # shape: [None, 256, 1, 1, INPUT_LENGTH // 64]
-        conv7 = conv(inputs=conv6, filters=512, kernel_size=[1, 1, 3], strides=(1, 1, 2), training=train, name='conv7')
+        conv7 = conv(inputs=conv6, filters=512, kernel_size=[1, 1, 3], strides=(1, 1, 2), name='conv7')
         # shape: [None, 512, 1, 1, INPUT_LENGTH // 128]
         dense1 = tf.layers.dense(inputs=tf.layers.flatten(inputs=conv7), units=1024, activation=tf.nn.leaky_relu, name='dense1')
         # shape: [None, 1024]
@@ -234,19 +234,19 @@ def discriminator1_conditional(inputs, encode, train):
 def discriminator2(inputs, train, name):
     with tf.variable_scope(name, reuse=tf.AUTO_REUSE):
         # shape: [None, CHANNEL_NUM * (2 or 1), 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
-        conv1 = conv(inputs=inputs, filters=16, kernel_size=[2, 1, 1], strides=(2, 1, 1), training=train, name='conv1')
+        conv1 = conv(inputs=inputs, filters=16, kernel_size=[2, 1, 1], strides=(2, 1, 1), name='conv1')
         # shape: [None, 16, 2, CLASS_NUM // 2, INPUT_LENGTH // 8]
-        conv2 = conv(inputs=conv1, filters=32, kernel_size=[2, 1, 1], strides=(2, 1, 1), training=train, name='conv2')
+        conv2 = conv(inputs=conv1, filters=32, kernel_size=[2, 1, 1], strides=(2, 1, 1), name='conv2')
         # shape: [None, 32, 1, CLASS_NUM // 2, INPUT_LENGTH // 8]
-        conv3 = conv(inputs=conv2, filters=64, kernel_size=[1, 6, 1], strides=(1, 6, 1), training=train, name='conv3')
+        conv3 = conv(inputs=conv2, filters=64, kernel_size=[1, 6, 1], strides=(1, 6, 1), name='conv3')
         # shape: [None, 64, 1, CLASS_NUM // 12, INPUT_LENGTH // 8]
-        conv4 = conv(inputs=conv3, filters=64, kernel_size=[1, 6, 1], strides=(1, 6, 1), training=train, name='conv4')
-        # shape: [None, 128, 1, 1, INPUT_LENGTH // 8]
-        conv5 = conv(inputs=conv4, filters=128, kernel_size=[1, 1, 2], strides=(1, 1, 2), training=train, name='conv5')
+        conv4 = conv(inputs=conv3, filters=64, kernel_size=[1, 6, 1], strides=(1, 6, 1), name='conv4')
+        # shape: [None, 64, 1, 1, INPUT_LENGTH // 8]
+        conv5 = conv(inputs=conv4, filters=128, kernel_size=[1, 1, 2], strides=(1, 1, 2), name='conv5')
         # shape: [None, 128, 1, 1, INPUT_LENGTH // 16]
-        conv6 = conv(inputs=conv5, filters=256, kernel_size=[1, 1, 3], strides=(1, 1, 2), training=train, name='conv6')
+        conv6 = conv(inputs=conv5, filters=256, kernel_size=[1, 1, 3], strides=(1, 1, 2), name='conv6')
         # shape: [None, 256, 1, 1, INPUT_LENGTH // 32]
-        conv7 = conv(inputs=conv6, filters=512, kernel_size=[1, 1, 4], strides=(1, 1, 4), training=train, name='conv7')
+        conv7 = conv(inputs=conv6, filters=512, kernel_size=[1, 1, 4], strides=(1, 1, 4), name='conv7')
         # shape: [None, 512, 1, 1, INPUT_LENGTH // 128]
         dense1 = tf.layers.dense(inputs=tf.layers.flatten(inputs=conv7), units=1024, activation=tf.nn.leaky_relu, name='dense1')
         # shape: [None, 1024]
@@ -269,19 +269,19 @@ def discriminator2_conditional(inputs, encode, train):
 def discriminator3(inputs, train, name):
     with tf.variable_scope(name, reuse=tf.AUTO_REUSE):
         # shape: [None, CHANNEL_NUM * (2 or 1), 4, CLASS_NUM, INPUT_LENGTH // 4]
-        conv1 = conv(inputs=inputs, filters=16, kernel_size=[2, 1, 1], training=train, strides=(2, 1, 1), name='conv1')
+        conv1 = conv(inputs=inputs, filters=16, kernel_size=[2, 1, 1], strides=(2, 1, 1), name='conv1')
         # shape: [None, 16, 2, CLASS_NUM, INPUT_LENGTH // 4]
-        conv2 = conv(inputs=conv1, filters=32, kernel_size=[2, 1, 1], training=train, strides=(2, 1, 1), name='conv2')
+        conv2 = conv(inputs=conv1, filters=32, kernel_size=[2, 1, 1], strides=(2, 1, 1), name='conv2')
         # shape: [None, 32, 1, CLASS_NUM, INPUT_LENGTH // 4]
-        conv3 = conv(inputs=conv2, filters=64, kernel_size=[1, 6, 1], training=train, strides=(1, 6, 1), name='conv3')
+        conv3 = conv(inputs=conv2, filters=64, kernel_size=[1, 6, 1], strides=(1, 6, 1), name='conv3')
         # shape: [None, 64, 1, CLASS_NUM // 6, INPUT_LENGTH // 4]
-        conv4 = conv(inputs=conv3, filters=64, kernel_size=[1, 12, 1], training=train, strides=(1, 12, 1), name='conv4')
-        # shape: [None, 128, 1, 1, INPUT_LENGTH // 4]
-        conv5 = conv(inputs=conv4, filters=128, kernel_size=[1, 1, 2], training=train, strides=(1, 1, 2), name='conv5')
+        conv4 = conv(inputs=conv3, filters=64, kernel_size=[1, 12, 1], strides=(1, 12, 1), name='conv4')
+        # shape: [None, 64, 1, 1, INPUT_LENGTH // 4]
+        conv5 = conv(inputs=conv4, filters=128, kernel_size=[1, 1, 2], strides=(1, 1, 2), name='conv5')
         # shape: [None, 128, 1, 1, INPUT_LENGTH // 8]
-        conv6 = conv(inputs=conv5, filters=256, kernel_size=[1, 1, 4], training=train, strides=(1, 1, 4), name='conv6')
+        conv6 = conv(inputs=conv5, filters=256, kernel_size=[1, 1, 4], strides=(1, 1, 4), name='conv6')
         # shape: [None, 256, 1, 1, INPUT_LENGTH // 32]
-        conv7 = conv(inputs=conv6, filters=512, kernel_size=[1, 1, 4], training=train, strides=(1, 1, 4), name='conv7')
+        conv7 = conv(inputs=conv6, filters=512, kernel_size=[1, 1, 4], strides=(1, 1, 4), name='conv7')
         # shape: [None, 512, 1, 1, INPUT_LENGTH // 128]
         dense1 = tf.layers.dense(inputs=tf.layers.flatten(inputs=conv7), units=1024, activation=tf.nn.leaky_relu, name='dense1')
         # shape: [None, 1024]
@@ -305,19 +305,19 @@ def discriminator3_conditional(inputs, encode, train):
 def discriminator4(inputs, train, name):
     with tf.variable_scope(name, reuse=tf.AUTO_REUSE):
         # shape: [None, CHANNEL_NUM * (2 or 1), CLASS_NUM, INPUT_LENGTH]
-        conv1 = conv(inputs=inputs, filters=16, kernel_size=[3, 1], training=train, strides=(3, 1), name='conv1')
+        conv1 = conv(inputs=inputs, filters=16, kernel_size=[3, 1], strides=(3, 1), name='conv1')
         # shape: [None, 16, CLASS_NUM // 3, INPUT_LENGTH]
-        conv2 = conv(inputs=conv1, filters=32, kernel_size=[4, 1], training=train, strides=(4, 1), name='conv2')
+        conv2 = conv(inputs=conv1, filters=32, kernel_size=[4, 1], strides=(4, 1), name='conv2')
         # shape: [None, 32, CLASS_NUM // 12, INPUT_LENGTH]
-        conv3 = conv(inputs=conv2, filters=64, kernel_size=[6, 1], training=train, strides=(6, 1), name='conv3')
+        conv3 = conv(inputs=conv2, filters=64, kernel_size=[6, 1], strides=(6, 1), name='conv3')
         # shape: [None, 64, 1, INPUT_LENGTH]
-        conv4 = conv(inputs=conv3, filters=64, kernel_size=[1, 2], training=train, strides=(1, 2), name='conv4')
-        # shape: [None, 128, 1, INPUT_LENGTH // 2]
-        conv5 = conv(inputs=conv4, filters=128, kernel_size=[1, 4], training=train, strides=(1, 4), name='conv5')
+        conv4 = conv(inputs=conv3, filters=64, kernel_size=[1, 2], strides=(1, 2), name='conv4')
+        # shape: [None, 64, 1, INPUT_LENGTH // 2]
+        conv5 = conv(inputs=conv4, filters=128, kernel_size=[1, 4], strides=(1, 4), name='conv5')
         # shape: [None, 128, 1, INPUT_LENGTH // 8]
-        conv6 = conv(inputs=conv5, filters=256, kernel_size=[1, 4], training=train, strides=(1, 4), name='conv6')
+        conv6 = conv(inputs=conv5, filters=256, kernel_size=[1, 4], strides=(1, 4), name='conv6')
         # shape: [None, 256, 1, INPUT_LENGTH // 32]
-        conv7 = conv(inputs=conv6, filters=512, kernel_size=[1, 4], training=train, strides=(1, 4), name='conv7')
+        conv7 = conv(inputs=conv6, filters=512, kernel_size=[1, 4], strides=(1, 4), name='conv7')
         # shape: [None, 512, 1, INPUT_LENGTH // 128]
         dense1 = tf.layers.dense(inputs=tf.layers.flatten(inputs=conv7), units=1024, activation=tf.nn.leaky_relu, name='dense1')
         # shape: [None, 1024]
