@@ -88,21 +88,21 @@ def main():
         for i, j in enumerate(real_input_4_image):
             tf.summary.image('real_input_4_' + str(i), j)
         
-        real_input_3_image = tf.unstack([real_input_3[:BATCH_NUM // 10]], axis=2)
+        real_input_3_image = tf.unstack(real_input_3[:BATCH_NUM // 10], axis=2)
         real_input_3_image = tf.concat(real_input_3_image, axis=-1)
         real_input_3_image = tf.expand_dims(real_input_3_image, axis=-1)
         real_input_3_image = tf.unstack(real_input_3_image, axis=1)
         for i, j in enumerate(real_input_3_image):
             tf.summary.image('real_input_3_' + str(i), j)
             
-        real_input_2_image = tf.unstack([real_input_2[:BATCH_NUM // 10]], axis=2)
+        real_input_2_image = tf.unstack(real_input_2[:BATCH_NUM // 10], axis=2)
         real_input_2_image = tf.concat(real_input_2_image, axis=-1)
         real_input_2_image = tf.expand_dims(real_input_2_image, axis=-1)
         real_input_2_image = tf.unstack(real_input_2_image, axis=1)
         for i, j in enumerate(real_input_2_image):
             tf.summary.image('real_input_2_' + str(i), j)
             
-        real_input_1_image = tf.unstack([real_input_1[:BATCH_NUM // 10]], axis=2)
+        real_input_1_image = tf.unstack(real_input_1[:BATCH_NUM // 10], axis=2)
         real_input_1_image = tf.concat(real_input_1_image, axis=-1)
         real_input_1_image = tf.expand_dims(real_input_1_image, axis=-1)
         real_input_1_image = tf.unstack(real_input_1_image, axis=1)
