@@ -63,15 +63,13 @@ def roll(path):
 def build_dataset():
     pathlist = list(pathlib.Path('Classics').glob('**/*.mid')) + list(pathlib.Path('TPD').glob('**/*.mid'))
     random.shuffle(pathlist)
-    dataset = []
     for path in tqdm(pathlist):
         try:
+            np.save(str(path), roll(str(path)))
             dataset += [roll(str(path))]
         except:
-            print(str(len(dataset)))
+            str(path)
             continue
-    dataset = np.concatenate(dataset, axis=0)
-    np.save('dataset', dataset)
 
 def main():
     build_dataset()
