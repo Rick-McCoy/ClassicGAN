@@ -198,7 +198,7 @@ def generator4(inputs, encode, num, train):
         # shape: [None, CLASS_NUM, INPUT_LENGTH]
         return output
 
-def discriminator1(inputs, train, name):
+def discriminator1(inputs, name):
     with tf.variable_scope(name, reuse=tf.AUTO_REUSE):
         # shape: [None, CHANNEL_NUM * (2 or 1), 4, CLASS_NUM // 4, INPUT_LENGTH // 16]
         conv1 = conv(inputs=inputs, filters=16, kernel_size=[2, 1, 1], strides=(2, 1, 1), name='conv1')
@@ -221,19 +221,19 @@ def discriminator1(inputs, train, name):
         # shape: [None, 1]
         return output
 
-def discriminator1_conditional(inputs, encode, train):
+def discriminator1_conditional(inputs, encode):
     with tf.variable_scope('Discriminator1_Conditional', reuse=tf.AUTO_REUSE):
         # shape: [None, CHANNEL_NUM, 4, 16]
         encode = tf.stack([encode[:, :, :, 2 * i:2 * (i + 1)] for i in range(8)], axis=-1)
         # shape: [None, CHANNEL_NUM, 4, 2, 8]
         encode = tf.tile(input=encode, multiples=(1, 1, 1, 9, 3))
         # shape: [None, CHANNEL_NUM, 4, CLASS_NUM // 4, INPUT_LENGTH // 16]
-        uncond = discriminator1(inputs=inputs, train=train, name='Discriminator1_Uncond')
-        cond = discriminator1(inputs=tf.concat(values=[inputs, encode], axis=1), train=train, name='Discriminator1_Cond')
+        uncond = discriminator1(inputs=inputs, name='Discriminator1_Uncond')
+        cond = discriminator1(inputs=tf.concat(values=[inputs, encode], axis=1), name='Discriminator1_Cond')
         output = (uncond + cond) / 2.0
         return output
 
-def discriminator2(inputs, train, name):
+def discriminator2(inputs, name):
     with tf.variable_scope(name, reuse=tf.AUTO_REUSE):
         # shape: [None, CHANNEL_NUM * (2 or 1), 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
         conv1 = conv(inputs=inputs, filters=16, kernel_size=[2, 1, 1], strides=(2, 1, 1), name='conv1')
@@ -256,19 +256,19 @@ def discriminator2(inputs, train, name):
         # shape: [None, 1]
         return output
 
-def discriminator2_conditional(inputs, encode, train):
+def discriminator2_conditional(inputs, encode):
     with tf.variable_scope('Discriminator2_Conditional', reuse=tf.AUTO_REUSE):
         # shape: [None, CHANNEL_NUM, 4, 16]
         encode = tf.stack([encode[:, :, :, 2 * i:2 * (i + 1)] for i in range(8)], axis=-1)
         # shape: [None, CHANNEL_NUM, 4, 2, 8]
         encode = tf.tile(input=encode, multiples=(1, 1, 1, 18, 6))
         # shape: [None, CHANNEL_NUM, 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
-        uncond = discriminator2(inputs=inputs, train=train, name='Discriminator2_Uncond')
-        cond = discriminator2(inputs=tf.concat(values=[inputs, encode], axis=1), train=train, name='Discriminator2_Cond')
+        uncond = discriminator2(inputs=inputs, name='Discriminator2_Uncond')
+        cond = discriminator2(inputs=tf.concat(values=[inputs, encode], axis=1), name='Discriminator2_Cond')
         output = (uncond + cond) / 2.0
         return output
 
-def discriminator3(inputs, train, name):
+def discriminator3(inputs, name):
     with tf.variable_scope(name, reuse=tf.AUTO_REUSE):
         # shape: [None, CHANNEL_NUM * (2 or 1), 4, CLASS_NUM, INPUT_LENGTH // 4]
         conv1 = conv(inputs=inputs, filters=16, kernel_size=[2, 1, 1], strides=(2, 1, 1), name='conv1')
@@ -292,19 +292,19 @@ def discriminator3(inputs, train, name):
         return output
 
 
-def discriminator3_conditional(inputs, encode, train):
+def discriminator3_conditional(inputs, encode):
     with tf.variable_scope('Discriminator3_Conditional', reuse=tf.AUTO_REUSE):
         # shape: [None, CHANNEL_NUM, 4, 16]
         encode = tf.stack([encode[:, :, :, 2 * i:2 * (i + 1)] for i in range(8)], axis=-1)
         # shape: [None, CHANNEL_NUM, 4, 2, 8]
         encode = tf.tile(input=encode, multiples=(1, 1, 1, 36, 12))
         # shape: [None, CHANNEL_NUM, 4, CLASS_NUM, INPUT_LENGTH // 4]
-        uncond = discriminator3(inputs=inputs, train=train, name='Discriminator3_Uncond')
-        cond = discriminator3(inputs=tf.concat(values=[inputs, encode], axis=1), train=train, name='Discriminator3_Cond')
+        uncond = discriminator3(inputs=inputs, name='Discriminator3_Uncond')
+        cond = discriminator3(inputs=tf.concat(values=[inputs, encode], axis=1), name='Discriminator3_Cond')
         output = (uncond + cond) / 2.0
         return output
     
-def discriminator4(inputs, train, name):
+def discriminator4(inputs, name):
     with tf.variable_scope(name, reuse=tf.AUTO_REUSE):
         # shape: [None, CHANNEL_NUM * (2 or 1), CLASS_NUM, INPUT_LENGTH]
         conv1 = conv(inputs=inputs, filters=16, kernel_size=[3, 1], strides=(3, 1), name='conv1')
@@ -327,13 +327,13 @@ def discriminator4(inputs, train, name):
         # shape: [None, 1]
         return output
 
-def discriminator4_conditional(inputs, encode, train):
+def discriminator4_conditional(inputs, encode):
     with tf.variable_scope('Discriminator4_Conditional', reuse=tf.AUTO_REUSE):
         # shape: [None, CHANNEL_NUM, 4, 16]
         encode = tf.tile(input=encode, multiples=(1, 1, CLASS_NUM // 4, INPUT_LENGTH // 16))
         # shape: [None, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH]
-        uncond = discriminator4(inputs=inputs, train=train, name='Discriminator4_Uncond')
-        cond = discriminator4(inputs=tf.concat(values=[inputs, encode], axis=1), train=train, name='Discriminator4_Cond')
+        uncond = discriminator4(inputs=inputs, name='Discriminator4_Uncond')
+        cond = discriminator4(inputs=tf.concat(values=[inputs, encode], axis=1), name='Discriminator4_Cond')
         output = (uncond + cond) / 2.0
         return output
 
