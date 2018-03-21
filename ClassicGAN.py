@@ -72,47 +72,47 @@ def main():
         noise4_split = [time_seq_noise_generator(noise=j, num=i, train=train) for i, j in enumerate(input_noise4_split)]
         noise4 = tf.concat(values=noise4_split, axis=1, name='noise4')
         real_input_4 = tf.placeholder(dtype=tf.float32, shape=[None, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH], name='real_input_4')
-        real_input_4_split = tf.split(real_input_4, num_or_size_splits=4, axis=-1)
+        real_input_4_split = tf.split(real_input_4, num_or_size_splits=4, axis=-1, name='real_input_4_split')
         real_input_3 = tf.stack(real_input_4_split, axis=2, name='real_input_3')
         real_input_2 = tf.layers.average_pooling3d(inputs=real_input_3, pool_size=[1, 2, 2], strides=(1, 2, 2), padding='same', \
                                                     data_format='channels_first', name='real_input_2')
         real_input_1 = tf.layers.average_pooling3d(inputs=real_input_2, pool_size=[1, 2, 2], strides=(1, 2, 2), padding='same', \
                                                     data_format='channels_first', name='real_input_1')
-        real_input_3_split = tf.split(real_input_3, num_or_size_splits=CHANNEL_NUM, axis=1)
+        real_input_3_split = tf.split(real_input_3, num_or_size_splits=CHANNEL_NUM, axis=1, name='real_input_3_split')
         encode_split = [encoder(inputs=j, num=i, train=train) for i, j in enumerate(real_input_3_split)]
         encode = tf.concat(values=encode_split, axis=1, name='encode')
         input_noise = tf.concat(values=[noise1, noise2, noise3, noise4], axis=3, name='input_noise')
 
-        real_input_4_image = tf.expand_dims(real_input_4[:BATCH_NUM // 10], axis=-1)
-        real_input_4_image = tf.unstack(real_input_4_image, axis=1)
+        real_input_4_image = tf.expand_dims(real_input_4[:BATCH_NUM // 10], axis=-1, name='real_input_4_image_expand')
+        real_input_4_image = tf.unstack(real_input_4_image, axis=1, name='real_input_4_image_unstack')
         for i, j in enumerate(real_input_4_image):
             tf.summary.image('real_input_4_' + str(i), j)
         
-        real_input_3_image = tf.unstack(real_input_3[:BATCH_NUM // 10], axis=2)
-        real_input_3_image = tf.concat(real_input_3_image, axis=-1)
-        real_input_3_image = tf.expand_dims(real_input_3_image, axis=-1)
-        real_input_3_image = tf.unstack(real_input_3_image, axis=1)
+        real_input_3_image = tf.unstack(real_input_3[:BATCH_NUM // 10], axis=2, name='real_input_3_image_unstack')
+        real_input_3_image = tf.concat(real_input_3_image, axis=-1, name='real_input_3_image_concat')
+        real_input_3_image = tf.expand_dims(real_input_3_image, axis=-1, name='real_input_3_expand')
+        real_input_3_image = tf.unstack(real_input_3_image, axis=1, name='real_input_3_unstack_1')
         for i, j in enumerate(real_input_3_image):
             tf.summary.image('real_input_3_' + str(i), j)
             
-        real_input_2_image = tf.unstack(real_input_2[:BATCH_NUM // 10], axis=2)
-        real_input_2_image = tf.concat(real_input_2_image, axis=-1)
-        real_input_2_image = tf.expand_dims(real_input_2_image, axis=-1)
-        real_input_2_image = tf.unstack(real_input_2_image, axis=1)
+        real_input_2_image = tf.unstack(real_input_2[:BATCH_NUM // 10], axis=2, name='real_input_2_unstack')
+        real_input_2_image = tf.concat(real_input_2_image, axis=-1, name='real_input_2_concat')
+        real_input_2_image = tf.expand_dims(real_input_2_image, axis=-1, name='real_input_2_expand')
+        real_input_2_image = tf.unstack(real_input_2_image, axis=1, name='real_input_2_unstack_1')
         for i, j in enumerate(real_input_2_image):
             tf.summary.image('real_input_2_' + str(i), j)
             
-        real_input_1_image = tf.unstack(real_input_1[:BATCH_NUM // 10], axis=2)
-        real_input_1_image = tf.concat(real_input_1_image, axis=-1)
-        real_input_1_image = tf.expand_dims(real_input_1_image, axis=-1)
-        real_input_1_image = tf.unstack(real_input_1_image, axis=1)
+        real_input_1_image = tf.unstack(real_input_1[:BATCH_NUM // 10], axis=2, name='real_input_1_unstack')
+        real_input_1_image = tf.concat(real_input_1_image, axis=-1, name='real_input_3_concat')
+        real_input_1_image = tf.expand_dims(real_input_1_image, axis=-1, name='real_input_1_expand')
+        real_input_1_image = tf.unstack(real_input_1_image, axis=1, name='real_input_1_unstack_1')
         for i, j in enumerate(real_input_1_image):
             tf.summary.image('real_input_1_' + str(i), j)
 
     print('Inputs set')
     with tf.name_scope('generator'):
-        input_noise_split = tf.unstack(input_noise, axis=1)
-        encode_unstack = tf.unstack(encode, axis=1)
+        input_noise_split = tf.unstack(input_noise, axis=1, name='input_noise_split')
+        encode_unstack = tf.unstack(encode, axis=1, name='encode_unstack')
         input_gen1, gen1 = zip(*[generator1(noise=input_noise_split[i], encode=encode_unstack[i], num=i, train=train) for i in range(CHANNEL_NUM)])
         input_gen1 = tf.stack(input_gen1, axis=1, name='input_gen1_stack')
         input_gen2, gen2 = zip(*[generator2(inputs=gen1[i], encode=encode_unstack[i], num=i, train=train) for i in range(CHANNEL_NUM)])
