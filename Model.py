@@ -46,7 +46,7 @@ def conv(inputs, filters, kernel_size=[1, 3, 3], strides=(1, 1, 1), training=Tru
 
 def residual_block(inputs, filters, training, regularization='', name=''):
     with tf.variable_scope(name):
-        if inputs.get_shape()[1] != filters:
+        if inputs.get_shape().as_list()[1] != filters:
             inputs = conv(inputs=inputs, filters=filters, training=training, regularization=regularization, name='inputs')
         conv1 = conv(inputs=inputs, filters=filters, training=training, regularization=regularization, name='conv1')
         conv2 = conv(inputs=conv1, filters=filters, training=training, regularization=regularization, name='conv2')
