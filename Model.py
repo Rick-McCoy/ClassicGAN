@@ -181,7 +181,9 @@ def generator4(inputs, encode, num, train):
         # shape: [None, 16, 4, CLASS_NUM, INPUT_LENGTH // 4]
         inputs = tf.concat([inputs, encode], axis=1)
         # shape: [None, 32, 4, CLASS_NUM, INPUT_LENGTH // 4]
-        inputs = tf.concat([inputs[:, :, i] for i in range(4)], axis=-1)
+        inputs = tf.unstack(inputs, axis=2, name='unstack')
+        # shape: [4, None, 32, CLASS_NUM, INPUT_LENGTH // 4]
+        inputs = tf.concat(inputs, axis=-1)
         # shape: [None, 32, CLASS_NUM, INPUT_LENGTH]
         res1 = residual_block(inputs=inputs, filters=16, training=train, regularization='batch_norm_relu', name='res1')
         # shape: [None, 16, CLASS_NUM, INPUT_LENGTH]
@@ -293,9 +295,9 @@ def discriminator3(inputs, train, name):
 def discriminator3_conditional(inputs, encode, train):
     with tf.variable_scope('Discriminator3_Conditional', reuse=tf.AUTO_REUSE):
         # shape: [None, CHANNEL_NUM, 4, 16]
-        encode = tf.stack([encode[:, :, :, 4 * i:4 * (i + 1)] for i in range(4)], axis=-1)
-        # shape: [None, CHANNEL_NUM, 4, 4, 4]
-        encode = tf.tile(input=encode, multiples=(1, 1, 1, 18, 24))
+        encode = tf.stack([encode[:, :, :, 2 * i:2 * (i + 1)] for i in range(8)], axis=-1)
+        # shape: [None, CHANNEL_NUM, 4, 2, 8]
+        encode = tf.tile(input=encode, multiples=(1, 1, 1, 36, 12))
         # shape: [None, CHANNEL_NUM, 4, CLASS_NUM, INPUT_LENGTH // 4]
         uncond = discriminator3(inputs=inputs, train=train, name='Discriminator3_Uncond')
         cond = discriminator3(inputs=tf.concat(values=[inputs, encode], axis=1), train=train, name='Discriminator3_Cond')
