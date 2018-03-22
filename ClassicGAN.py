@@ -65,10 +65,9 @@ def main():
         os.makedirs('Samples')
     
     with tf.name_scope('inputs'):
-        dataset = tf.data.Dataset().from_generator(generator, output_types=tf.float32, output_shapes=[None, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH]).batch(BATCH_SIZE)
+        dataset = tf.data.Dataset().from_generator(generator, output_types=tf.float32, output_shapes=[CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH]).batch(BATCH_SIZE)
         iter = dataset.make_one_shot_iterator()
         real_input_4 = iter.get_next()
-        real_input_4 = real_input_4[:BATCH_SIZE]
 
         input_noise1 = tf.placeholder(dtype=tf.float32, shape=[None, 1, 1, NOISE_LENGTH], \
                                         name='input_noise1')
