@@ -37,8 +37,13 @@ def gradient_penalty(real, gen, encode, discriminator):
 
 def generator():
     for path in pathlist:
-        yield np.load(str(path))
-        
+        yield str(path)
+
+def load(path):
+    return np.load(path)
+
+def wrap():
+    return tf.py_func(func=load, inp=path, Tout=tf.float32)
 
 def main():
 
@@ -58,7 +63,8 @@ def main():
         os.makedirs('Samples')
     
     with tf.name_scope('inputs'):
-        dataset = tf.data.Dataset().from_generator(generator, output_types=tf.float32, output_shapes=[CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH]).batch(BATCH_SIZE)
+        dataset = tf.data.Dataset().from_generator(generator, output_types=tf.string).batch(BATCH_SIZE)
+        dataset = dataset.map(wrap, num_parallel_calls=8)
         iter = dataset.make_one_shot_iterator()
         real_input_4 = iter.get_next()
 
@@ -290,13 +296,11 @@ def main():
                     feed_dict[input_noise4] = get_noise([BATCH_SIZE, CHANNEL_NUM, 1, NOISE_LENGTH])
                     run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
                     run_metadata = tf.RunMetadata()
-                    summary, _1, _2, _3, _4 = sess.run([merged, gen_train, dis1_train, dis2_train, dis3_train],
-                                        feed_dict=feed_dict,
-                                        options=run_options,
-                                        run_metadata=run_metadata)
+                    summary, _1, _2, _3, _4, _5 = sess.run([merged, gen_train, dis1_train, dis2_train, dis3_train, dis4_train],
+                                        feed_dict=feed_dict, options=run_options, run_metadata=run_metadata)
                     writer.add_run_metadata(run_metadata, 'Train Count %d' % train_count)
                     writer.add_summary(summary, train_count)
-                    print('Adding run metadata for', train_count)
+                    tqdm.write('Adding run metadata for', train_count)
                 if train_count % 1000 == 0:
                     feed_dict[input_noise1] = get_noise([BATCH_SIZE, 1, 1, NOISE_LENGTH])
                     feed_dict[input_noise2] = get_noise([BATCH_SIZE, 1, 1, NOISE_LENGTH])
