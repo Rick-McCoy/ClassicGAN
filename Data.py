@@ -11,7 +11,7 @@ from tqdm import tqdm
 CHANNEL_NUM = 6
 CLASS_NUM = 72
 INPUT_LENGTH = 384
-BATCH_NUM = 32
+BATCH_SIZE = 32
 #0 Piano: 22584
 #1 Chromatic Percussion: 216
 #2 Orgam: 500
@@ -54,22 +54,25 @@ def roll(path):
         raise Exception
     data = data > 0
     data = (data - 0.5) * 2.0
-    while length < INPUT_LENGTH * BATCH_NUM:
-        np.concatenate((data, data), axis=-1)
-        length *= 2
-    data = np.stack([data[:, :, i * INPUT_LENGTH:(i + 1) * INPUT_LENGTH] for i in range(BATCH_NUM)], axis=0)
+    #while length < INPUT_LENGTH * BATCH_SIZE:
+    #    np.concatenate((data, data), axis=-1)
+    #    length *= 2
+    data = np.split(data[:, :, :length // INPUT_LENGTH * INPUT_LENGTH], indices_or_sections=length // INPUT_LENGTH, axis=-1)
     return data
 
 def build_dataset():
     pathlist = list(pathlib.Path('Classics').glob('**/*.mid')) + list(pathlib.Path('TPD').glob('**/*.mid'))
     random.shuffle(pathlist)
+    cnt = 0
     for path in tqdm(pathlist):
         try:
-            np.save(str(path), roll(str(path)))
-            dataset += [roll(str(path))]
+            data = roll(str(path))
         except:
-            str(path)
+            tqdm.write(str(path) + ' ' + str(cnt))
             continue
+        for i, j in enumerate(data):
+            np.save(str(path) + '_' + str(i), j)
+        cnt+=1
 
 def main():
     build_dataset()

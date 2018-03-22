@@ -9,7 +9,7 @@ import tensorflow as tf
 import numpy as np
 import argparse
 from tqdm import tqdm
-from Data import roll, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH, BATCH_NUM
+from Data import roll, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH, BATCH_SIZE
 from Model import get_noise, generator1, generator2, generator3, generator4, \
                     noise_generator, time_seq_noise_generator, discriminator1_conditional, \
                     discriminator2_conditional, discriminator3_conditional, \
@@ -25,16 +25,27 @@ LAMBDA1 = 2
 LAMBDA2 = 10
 TRAIN_RATIO_DIS = 5
 TRAIN_RATIO_GEN = 1
+pathlist = pathlib.Path('Classics').glob('**/*.npy')#) + list(pathlib.Path('TPD').glob('**/*.npy'))
 
 def gradient_penalty(real, gen, encode, discriminator):
-    alpha = tf.random_uniform(shape=[BATCH_NUM] + [1] * (gen.shape.ndims - 1), minval=0., maxval=1.)
+    alpha = tf.random_uniform(shape=[BATCH_SIZE] + [1] * (gen.shape.ndims - 1), minval=0., maxval=1.)
     interpolate = real + alpha * (gen - real)
-    gradients = tf.gradients(discriminator(inputs=interpolate, encode=encode), \
-                            interpolate)[0]
-    slopes = tf.sqrt(1e-10 + tf.reduce_sum(tf.square(gradients), \
-                                            axis=list(range(1, gradients.shape.ndims))))
+    gradients = tf.gradients(discriminator(inputs=interpolate, encode=encode), interpolate)[0]
+    slopes = tf.sqrt(1e-10 + tf.reduce_sum(tf.square(gradients), axis=list(range(1, gradients.shape.ndims))))
     output = tf.reduce_mean((slopes - 1.) ** 2)
     return LAMBDA * output
+
+def generator():
+    for path in pathlist:
+        try:
+            data = np.load(str(path))
+            if data.shape[0] < BATCH_SIZE:
+                continue
+            yield data
+        except:
+            tqdm.write(str(path))
+            continue
+        
 
 def main():
 
@@ -52,8 +63,13 @@ def main():
         os.makedirs('train')
     if not os.path.exists('Samples'):
         os.makedirs('Samples')
-
+    
     with tf.name_scope('inputs'):
+        dataset = tf.data.Dataset().from_generator(generator, output_types=tf.float32, output_shapes=[None, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH]).batch(BATCH_SIZE)
+        iter = dataset.make_one_shot_iterator()
+        real_input_4 = iter.get_next()
+        real_input_4 = real_input_4[:BATCH_SIZE]
+
         input_noise1 = tf.placeholder(dtype=tf.float32, shape=[None, 1, 1, NOISE_LENGTH], \
                                         name='input_noise1')
         input_noise2 = tf.placeholder(dtype=tf.float32, shape=[None, 1, 1, NOISE_LENGTH], \
@@ -71,7 +87,7 @@ def main():
         input_noise4_split = tf.split(input_noise4, num_or_size_splits=CHANNEL_NUM, axis=1)
         noise4_split = [time_seq_noise_generator(noise=j, num=i, train=train) for i, j in enumerate(input_noise4_split)]
         noise4 = tf.concat(values=noise4_split, axis=1, name='noise4')
-        real_input_4 = tf.placeholder(dtype=tf.float32, shape=[None, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH], name='real_input_4')
+        #real_input_4 = tf.placeholder(dtype=tf.float32, shape=[None, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH], name='real_input_4')
         real_input_4_split = tf.split(real_input_4, num_or_size_splits=4, axis=-1, name='real_input_4_split')
         real_input_3 = tf.stack(real_input_4_split, axis=2, name='real_input_3')
         real_input_2 = tf.layers.average_pooling3d(inputs=real_input_3, pool_size=[1, 2, 2], strides=(1, 2, 2), padding='same', \
@@ -83,26 +99,26 @@ def main():
         encode = tf.concat(values=encode_split, axis=1, name='encode')
         input_noise = tf.concat(values=[noise1, noise2, noise3, noise4], axis=3, name='input_noise')
 
-        real_input_4_image = tf.expand_dims(real_input_4[:BATCH_NUM // 10], axis=-1, name='real_input_4_image_expand')
+        real_input_4_image = tf.expand_dims(real_input_4[:BATCH_SIZE // 10], axis=-1, name='real_input_4_image_expand')
         real_input_4_image = tf.unstack(real_input_4_image, axis=1, name='real_input_4_image_unstack')
         for i, j in enumerate(real_input_4_image):
             tf.summary.image('real_input_4_' + str(i), j)
         
-        real_input_3_image = tf.unstack(real_input_3[:BATCH_NUM // 10], axis=2, name='real_input_3_image_unstack')
+        real_input_3_image = tf.unstack(real_input_3[:BATCH_SIZE // 10], axis=2, name='real_input_3_image_unstack')
         real_input_3_image = tf.concat(real_input_3_image, axis=-1, name='real_input_3_image_concat')
         real_input_3_image = tf.expand_dims(real_input_3_image, axis=-1, name='real_input_3_expand')
         real_input_3_image = tf.unstack(real_input_3_image, axis=1, name='real_input_3_unstack_1')
         for i, j in enumerate(real_input_3_image):
             tf.summary.image('real_input_3_' + str(i), j)
             
-        real_input_2_image = tf.unstack(real_input_2[:BATCH_NUM // 10], axis=2, name='real_input_2_unstack')
+        real_input_2_image = tf.unstack(real_input_2[:BATCH_SIZE // 10], axis=2, name='real_input_2_unstack')
         real_input_2_image = tf.concat(real_input_2_image, axis=-1, name='real_input_2_concat')
         real_input_2_image = tf.expand_dims(real_input_2_image, axis=-1, name='real_input_2_expand')
         real_input_2_image = tf.unstack(real_input_2_image, axis=1, name='real_input_2_unstack_1')
         for i, j in enumerate(real_input_2_image):
             tf.summary.image('real_input_2_' + str(i), j)
             
-        real_input_1_image = tf.unstack(real_input_1[:BATCH_NUM // 10], axis=2, name='real_input_1_unstack')
+        real_input_1_image = tf.unstack(real_input_1[:BATCH_SIZE // 10], axis=2, name='real_input_1_unstack')
         real_input_1_image = tf.concat(real_input_1_image, axis=-1, name='real_input_3_concat')
         real_input_1_image = tf.expand_dims(real_input_1_image, axis=-1, name='real_input_1_expand')
         real_input_1_image = tf.unstack(real_input_1_image, axis=1, name='real_input_1_unstack_1')
@@ -223,24 +239,21 @@ def main():
         if tf.train.latest_checkpoint('Checkpoints') is not None:
             print('Restoring...')
             saver.restore(sess, tf.train.latest_checkpoint('Checkpoints'))
-        pathlist = list(pathlib.Path('Classics').glob('**/*.mid')) + list(pathlib.Path('TPD').glob('**/*.mid'))
-        # + list(pathlib.Path('Lakh').glob('**/*.mid'))
         train_count = 0
-        feed_dict = {input_noise1: None, input_noise2: None, input_noise3: None, input_noise4: None, \
-                        real_input_4: None, train: True}
+        feed_dict = {input_noise1: None, input_noise2: None, input_noise3: None, input_noise4: None, train: True}
         print('preparing complete')
         if sampling:
-            feed_dict[input_noise1] = get_noise([BATCH_NUM, 1, 1, NOISE_LENGTH])
-            feed_dict[input_noise2] = get_noise([BATCH_NUM, 1, 1, NOISE_LENGTH])
-            feed_dict[input_noise3] = get_noise([BATCH_NUM, CHANNEL_NUM, 1, NOISE_LENGTH])
-            feed_dict[input_noise4] = get_noise([BATCH_NUM, CHANNEL_NUM, 1, NOISE_LENGTH])
+            feed_dict = {input_noise1: None, input_noise2: None, input_noise3: None, input_noise4: None, real_input_4: None, train: True}
             path = args.sample
             try:
-                batch_input = roll(path)
+                feed_dict[real_input_4] = roll(path)
             except:
-                print('Error while Opening File.')
+                print('Error while opening file.')
                 return
-            feed_dict[real_input_4] = batch_input
+            feed_dict[input_noise1] = get_noise([BATCH_SIZE, 1, 1, NOISE_LENGTH])
+            feed_dict[input_noise2] = get_noise([BATCH_SIZE, 1, 1, NOISE_LENGTH])
+            feed_dict[input_noise3] = get_noise([BATCH_SIZE, CHANNEL_NUM, 1, NOISE_LENGTH])
+            feed_dict[input_noise4] = get_noise([BATCH_SIZE, CHANNEL_NUM, 1, NOISE_LENGTH])
             feed_dict[train] = True
             samples = sess.run(input_gen4, feed_dict=feed_dict)
             path = path.split('/')[-1]
@@ -250,31 +263,26 @@ def main():
             unpack_sample(name='Samples/sample_%s' % path+ '/%s.npy' % path, concat=args.concat)
             return
         writer = tf.summary.FileWriter('train', sess.graph)
+        input_num = 1000
         for __ in tqdm(range(TOTAL_TRAIN_EPOCH)):
-            random.shuffle(pathlist)
-            for path in tqdm(pathlist):
-                try:
-                    batch_input = roll(path)
-                except Exception:
-                    continue
-                tqdm.write(str(path))
-                feed_dict[real_input_4] = batch_input
+            for cur in tqdm(range(input_num)):
                 feed_dict[train] = True
+                run_options = tf.RunOptions(report_tensor_allocations_upon_oom=True)
                 for i in range(TRAIN_RATIO_DIS):
-                    feed_dict[input_noise1] = get_noise([BATCH_NUM, 1, 1, NOISE_LENGTH])
-                    feed_dict[input_noise2] = get_noise([BATCH_NUM, 1, 1, NOISE_LENGTH])
-                    feed_dict[input_noise3] = get_noise([BATCH_NUM, CHANNEL_NUM, 1, NOISE_LENGTH])
-                    feed_dict[input_noise4] = get_noise([BATCH_NUM, CHANNEL_NUM, 1, NOISE_LENGTH])
-                    _, loss_val_dis1 = sess.run([dis1_train, loss_dis1], feed_dict=feed_dict)
-                    _, loss_val_dis2 = sess.run([dis2_train, loss_dis2], feed_dict=feed_dict)
-                    _, loss_val_dis3 = sess.run([dis3_train, loss_dis3], feed_dict=feed_dict)
-                    _, loss_val_dis4 = sess.run([dis4_train, loss_dis4], feed_dict=feed_dict)
+                    feed_dict[input_noise1] = get_noise([BATCH_SIZE, 1, 1, NOISE_LENGTH])
+                    feed_dict[input_noise2] = get_noise([BATCH_SIZE, 1, 1, NOISE_LENGTH])
+                    feed_dict[input_noise3] = get_noise([BATCH_SIZE, CHANNEL_NUM, 1, NOISE_LENGTH])
+                    feed_dict[input_noise4] = get_noise([BATCH_SIZE, CHANNEL_NUM, 1, NOISE_LENGTH])
+                    _, loss_val_dis1 = sess.run([dis1_train, loss_dis1], feed_dict=feed_dict, options=run_options)
+                    _, loss_val_dis2 = sess.run([dis2_train, loss_dis2], feed_dict=feed_dict, options=run_options)
+                    _, loss_val_dis3 = sess.run([dis3_train, loss_dis3], feed_dict=feed_dict, options=run_options)
+                    _, loss_val_dis4 = sess.run([dis4_train, loss_dis4], feed_dict=feed_dict, options=run_options)
                 for i in range(TRAIN_RATIO_GEN):
-                    feed_dict[input_noise1] = get_noise([BATCH_NUM, 1, 1, NOISE_LENGTH])
-                    feed_dict[input_noise2] = get_noise([BATCH_NUM, 1, 1, NOISE_LENGTH])
-                    feed_dict[input_noise3] = get_noise([BATCH_NUM, CHANNEL_NUM, 1, NOISE_LENGTH])
-                    feed_dict[input_noise4] = get_noise([BATCH_NUM, CHANNEL_NUM, 1, NOISE_LENGTH])
-                    summary, _, loss_val_gen = sess.run([merged, gen_train, loss_gen], feed_dict=feed_dict)
+                    feed_dict[input_noise1] = get_noise([BATCH_SIZE, 1, 1, NOISE_LENGTH])
+                    feed_dict[input_noise2] = get_noise([BATCH_SIZE, 1, 1, NOISE_LENGTH])
+                    feed_dict[input_noise3] = get_noise([BATCH_SIZE, CHANNEL_NUM, 1, NOISE_LENGTH])
+                    feed_dict[input_noise4] = get_noise([BATCH_SIZE, CHANNEL_NUM, 1, NOISE_LENGTH])
+                    summary, _, loss_val_gen = sess.run([merged, gen_train, loss_gen], feed_dict=feed_dict, options=run_options)
                 writer.add_summary(summary, train_count)
                 tqdm.write('%06d' % train_count, end=' ')
                 tqdm.write('Discriminator1 loss : %.7f' % loss_val_dis1, end=' ')
@@ -284,10 +292,10 @@ def main():
                 tqdm.write('Generator loss : %.7f' % loss_val_gen)
                 train_count += 1
                 if train_count % 10 == 0:
-                    feed_dict[input_noise1] = get_noise([BATCH_NUM, 1, 1, NOISE_LENGTH])
-                    feed_dict[input_noise2] = get_noise([BATCH_NUM, 1, 1, NOISE_LENGTH])
-                    feed_dict[input_noise3] = get_noise([BATCH_NUM, CHANNEL_NUM, 1, NOISE_LENGTH])
-                    feed_dict[input_noise4] = get_noise([BATCH_NUM, CHANNEL_NUM, 1, NOISE_LENGTH])
+                    feed_dict[input_noise1] = get_noise([BATCH_SIZE, 1, 1, NOISE_LENGTH])
+                    feed_dict[input_noise2] = get_noise([BATCH_SIZE, 1, 1, NOISE_LENGTH])
+                    feed_dict[input_noise3] = get_noise([BATCH_SIZE, CHANNEL_NUM, 1, NOISE_LENGTH])
+                    feed_dict[input_noise4] = get_noise([BATCH_SIZE, CHANNEL_NUM, 1, NOISE_LENGTH])
                     run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
                     run_metadata = tf.RunMetadata()
                     summary, _1, _2, _3, _4 = sess.run([merged, gen_train, dis1_train, dis2_train, dis3_train],
@@ -298,10 +306,10 @@ def main():
                     writer.add_summary(summary, train_count)
                     print('Adding run metadata for', train_count)
                 if train_count % 1000 == 0:
-                    feed_dict[input_noise1] = get_noise([BATCH_NUM, 1, 1, NOISE_LENGTH])
-                    feed_dict[input_noise2] = get_noise([BATCH_NUM, 1, 1, NOISE_LENGTH])
-                    feed_dict[input_noise3] = get_noise([BATCH_NUM, CHANNEL_NUM, 1, NOISE_LENGTH])
-                    feed_dict[input_noise4] = get_noise([BATCH_NUM, CHANNEL_NUM, 1, NOISE_LENGTH])
+                    feed_dict[input_noise1] = get_noise([BATCH_SIZE, 1, 1, NOISE_LENGTH])
+                    feed_dict[input_noise2] = get_noise([BATCH_SIZE, 1, 1, NOISE_LENGTH])
+                    feed_dict[input_noise3] = get_noise([BATCH_SIZE, CHANNEL_NUM, 1, NOISE_LENGTH])
+                    feed_dict[input_noise4] = get_noise([BATCH_SIZE, CHANNEL_NUM, 1, NOISE_LENGTH])
                     samples = sess.run(input_gen4, feed_dict=feed_dict)
                     np.save(file='Samples/song_%06d' % train_count, arr=samples)
                     save_path = saver.save(sess, 'Checkpoints/song_%06d' % train_count + '.ckpt')
