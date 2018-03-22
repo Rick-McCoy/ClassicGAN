@@ -128,10 +128,10 @@ def generator2(inputs, encode, num, train):
     with tf.variable_scope('Generator2_' + str(num)):
         encode = tf.expand_dims(tf.expand_dims(tf.transpose(encode, perm=[0, 2, 1]), axis=-1), axis=-1)
         # shape: [None, 16, 4, 1, 1]
-        encode = tf.tile(input=encode, multiples=(1, 4, 1, CLASS_NUM // 4, INPUT_LENGTH // 16))
-        # shape: [None, 64, 4, CLASS_NUM // 4, INPUT_LENGTH // 16]
+        encode = tf.tile(input=encode, multiples=(1, 1, 1, CLASS_NUM // 4, INPUT_LENGTH // 16))
+        # shape: [None, 16, 4, CLASS_NUM // 4, INPUT_LENGTH // 16]
         inputs = tf.concat([inputs, encode], axis=1)
-        # shape: [None, 128, 4, CLASS_NUM // 4, INPUT_LENGTH // 16]
+        # shape: [None, 80, 4, CLASS_NUM // 4, INPUT_LENGTH // 16]
         res1 = residual_block(inputs=inputs, filters=64, training=train, regularization='batch_norm_relu', name='res1')
         # shape: [None, 64, 4, CLASS_NUM // 4, INPUT_LENGTH // 16]
         res2 = residual_block(inputs=res1, filters=64, training=train, regularization='batch_norm_relu', name='res2')
@@ -155,10 +155,10 @@ def generator3(inputs, encode, num, train):
     with tf.variable_scope('Generator3_' + str(num)):
         encode = tf.expand_dims(tf.expand_dims(tf.transpose(encode, perm=[0, 2, 1]), axis=-1), axis=-1)
         # shape: [None, 16, 4, 1, 1]
-        encode = tf.tile(input=encode, multiples=(1, 2, 1, CLASS_NUM // 2, INPUT_LENGTH // 8))
-        # shape: [None, 32, 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
+        encode = tf.tile(input=encode, multiples=(1, 1, 1, CLASS_NUM // 2, INPUT_LENGTH // 8))
+        # shape: [None, 16, 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
         inputs = tf.concat([inputs, encode], axis=1)
-        # shape: [None, 64, 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
+        # shape: [None, 48, 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
         res1 = residual_block(inputs=inputs, filters=32, training=train, regularization='batch_norm_relu', name='res1')
         # shape: [None, 32, 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
         res2 = residual_block(inputs=res1, filters=32, training=train, regularization='batch_norm_relu', name='res2')
