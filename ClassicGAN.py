@@ -37,14 +37,7 @@ def gradient_penalty(real, gen, encode, discriminator):
 
 def generator():
     for path in pathlist:
-        try:
-            data = np.load(str(path))
-            if data.shape[0] < BATCH_SIZE:
-                continue
-            yield data
-        except:
-            tqdm.write(str(path))
-            continue
+        yield np.load(str(path))
         
 
 def main():
