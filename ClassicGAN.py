@@ -260,7 +260,7 @@ def main():
             for path in tqdm(pathlist):
                 input_data = np.load(str(path))
                 sess.run(iterator.initializer, feed_dict={data: input_data})
-                for __ in tqdm(range(input_data.shape[0] // 16)):
+                for __ in tqdm(range(input_data.shape[0] // BATCH_SIZE)):
                     feed_dict[train] = True
                     run_options = tf.RunOptions(report_tensor_allocations_upon_oom=True)
                     for i in range(TRAIN_RATIO_DIS):
@@ -304,7 +304,7 @@ def main():
                         feed_dict[input_noise4] = get_noise([BATCH_SIZE, CHANNEL_NUM, 1, NOISE_LENGTH])
                         samples = sess.run(input_gen4, feed_dict=feed_dict)
                         np.save(file='Samples/song_%06d' % train_count, arr=samples)
-                        unpack_sample('Samples/song_%6d' % train_count)
+                        unpack_sample('Samples/song_%06d' % train_count)
                         save_path = saver.save(sess, 'Checkpoints/song_%06d' % train_count + '.ckpt')
                         tqdm.write('Model Saved: %s' % save_path)
         writer.close()
