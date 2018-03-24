@@ -9,6 +9,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import librosa.display
 import argparse
+import os
 from Data import INPUT_LENGTH, CHANNEL_NUM
 
 def set_piano_roll_to_instrument(piano_roll, instrument, velocity=100, tempo=120.0, beat_resolution=24):
@@ -55,28 +56,31 @@ def unpack_sample(name='', concat=False):
     if name == '':
         pathlist = list(pathlib.Path('Samples').glob('**/*.npy'))
         name = pathlist[-1]
+    if not os.path.exists(name):
+        os.mkdir(name)
+    savename = name + '/' + name.split('/')[-1]
     samples = np.load(name) > 0
     program_nums = [0, 24, 40, 56, 64, 72]
     is_drum = [False] * CHANNEL_NUM
     if concat:
         sample = np.concat([i for i in samples], axis=-1)
-        write_piano_rolls_to_midi(sample, program_nums=program_nums, is_drum=is_drum, filename=name + '_' + str(id) + '.mid')
+        write_piano_rolls_to_midi(sample, program_nums=program_nums, is_drum=is_drum, filename=savename + '_' + str(id) + '.mid')
         print(name + '_' + str(id) + '.mid')
         for i, piano_roll in enumerate(sample):
             fig = plt.figure(figsize=(12, 4))
             librosa.display.specshow(piano_roll, x_axis='time', y_axis='cqt_note', hop_length=1, sr=96, fmin=pm.note_number_to_hz(12))
-            plt.title(name + '_' + pm.program_to_instrument_name(program_nums[i]))
-            fig.savefig(name + '_' + str(id) + '_' + str(i) + '.png')
+            plt.title(savename + '_' + pm.program_to_instrument_name(program_nums[i]))
+            fig.savefig(savename + '_' + str(id) + '_' + str(i) + '.png')
             plt.close(fig)
         return
     for id, sample in enumerate(samples):
-        write_piano_rolls_to_midi(sample, program_nums=program_nums, is_drum=is_drum, filename=name + '_' + str(id) + '.mid')
-        print(name + '_' + str(id) + '.mid')
+        write_piano_rolls_to_midi(sample, program_nums=program_nums, is_drum=is_drum, filename=savename + '_' + str(id) + '.mid')
+        print(savename + '_' + str(id) + '.mid')
         for i, piano_roll in enumerate(sample):
             fig = plt.figure(figsize=(12, 4))
             librosa.display.specshow(piano_roll, x_axis='time', y_axis='cqt_note', hop_length=1, sr=96, fmin=pm.note_number_to_hz(12))
-            plt.title(name + '_' + pm.program_to_instrument_name(program_nums[i]))
-            fig.savefig(name + '_' + str(id) + '_' + str(i) + '.png')
+            plt.title(savename + '_' + pm.program_to_instrument_name(program_nums[i]))
+            fig.savefig(savename + '_' + str(id) + '_' + str(i) + '.png')
             plt.close(fig)
 def main():
     parser = argparse.ArgumentParser()

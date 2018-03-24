@@ -237,7 +237,7 @@ def main():
             feed_dict = {input_noise1: None, input_noise2: None, input_noise3: None, input_noise4: None, real_input_4: None, train: True}
             path = args.sample
             try:
-                feed_dict[real_input_4] = roll(path)
+                feed_dict[real_input_4] = roll(path)[:BATCH_SIZE]
             except:
                 print('Error while opening file.')
                 return
@@ -284,7 +284,7 @@ def main():
                 tqdm.write('Discriminator4 loss : %.7f' % loss_val_dis4, end=' ')
                 tqdm.write('Generator loss : %.7f' % loss_val_gen)
                 train_count += 1
-                if train_count % 100 == 10:
+                if train_count % 1000 == 0:
                     feed_dict[input_noise1] = get_noise([BATCH_SIZE, 1, 1, NOISE_LENGTH])
                     feed_dict[input_noise2] = get_noise([BATCH_SIZE, 1, 1, NOISE_LENGTH])
                     feed_dict[input_noise3] = get_noise([BATCH_SIZE, CHANNEL_NUM, 1, NOISE_LENGTH])
@@ -296,13 +296,13 @@ def main():
                     writer.add_run_metadata(run_metadata, 'Train Count %d' % train_count)
                     writer.add_summary(summary, train_count)
                     tqdm.write('Adding run metadata for %d' % train_count)
-                if train_count % 1000 == 0:
                     feed_dict[input_noise1] = get_noise([BATCH_SIZE, 1, 1, NOISE_LENGTH])
                     feed_dict[input_noise2] = get_noise([BATCH_SIZE, 1, 1, NOISE_LENGTH])
                     feed_dict[input_noise3] = get_noise([BATCH_SIZE, CHANNEL_NUM, 1, NOISE_LENGTH])
                     feed_dict[input_noise4] = get_noise([BATCH_SIZE, CHANNEL_NUM, 1, NOISE_LENGTH])
                     samples = sess.run(input_gen4, feed_dict=feed_dict)
                     np.save(file='Samples/song_%06d' % train_count, arr=samples)
+                    unpack_sample('Samples/song_%6d' % train_count)
                     save_path = saver.save(sess, 'Checkpoints/song_%06d' % train_count + '.ckpt')
                     tqdm.write('Model Saved: %s' % save_path)
         writer.close()
