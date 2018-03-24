@@ -6,6 +6,7 @@ import pretty_midi as pm
 import numpy as np
 import pathlib
 import random
+import os
 from tqdm import tqdm
 
 CHANNEL_NUM = 6
@@ -63,15 +64,23 @@ def roll(path):
 def build_dataset():
     pathlist = list(pathlib.Path('Classics').glob('**/*.mid')) + list(pathlib.Path('TPD').glob('**/*.mid'))
     random.shuffle(pathlist)
+    if not os.path.exists('Dataset'):
+        os.mkdir('Dataset')
     cnt = 0
+    concat = []
     for path in tqdm(pathlist):
         try:
-            data = roll(str(path))
+            if not concat:
+                concat = roll(str(path))
+            else:
+                concat.extend(roll(str(path)))
         except:
             tqdm.write(str(path) + ' ' + str(cnt))
             continue
-        for i, j in enumerate(data):
-            np.save(str(path) + '_' + str(i), j)
+        if len(concat) >= 1000:
+            tqdm.write('saving %d' % cnt)
+            np.save('Dataset/%d' % cnt, np.array(concat))
+            concat = []
         cnt+=1
 
 def main():

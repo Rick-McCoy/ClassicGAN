@@ -25,7 +25,7 @@ LAMBDA1 = 2
 LAMBDA2 = 10
 TRAIN_RATIO_DIS = 5
 TRAIN_RATIO_GEN = 1
-pathlist = pathlib.Path('Classics').glob('**/*.npy')#) + list(pathlib.Path('TPD').glob('**/*.npy'))
+pathlist = list(pathlib.Path('Dataset').glob('**/*.npy'))# + list(pathlib.Path('TPD').glob('**/*.npy'))
 
 def gradient_penalty(real, gen, encode, discriminator):
     alpha = tf.random_uniform(shape=[BATCH_SIZE] + [1] * (gen.shape.ndims - 1), minval=0., maxval=1.)
@@ -34,16 +34,6 @@ def gradient_penalty(real, gen, encode, discriminator):
     slopes = tf.sqrt(1e-10 + tf.reduce_sum(tf.square(gradients), axis=list(range(1, gradients.shape.ndims))))
     output = tf.reduce_mean((slopes - 1.) ** 2)
     return LAMBDA * output
-
-def generator():
-    for path in pathlist:
-        yield str(path)
-
-def load(path):
-    return np.load(path)
-
-def wrap():
-    return tf.py_func(func=load, inp=path, Tout=tf.float32)
 
 def main():
 
@@ -63,19 +53,22 @@ def main():
         os.makedirs('Samples')
     
     with tf.name_scope('inputs'):
-        dataset = tf.data.Dataset().from_generator(generator, output_types=tf.string).batch(BATCH_SIZE)
-        dataset = dataset.map(wrap, num_parallel_calls=8)
-        iter = dataset.make_one_shot_iterator()
-        real_input_4 = iter.get_next()
+        #data = np.load(str(pathlist[0]))
+        #dataset = tf.data.Dataset().from_tensor_slices(data).map(lambda x: x, num_parallel_calls=8).batch(BATCH_SIZE)
+        #dataset = dataset.flat_map(lambda filename: tf.data.Dataset().from_tensor_slices())
+        #dataset = tf.data.Dataset().from_generator(generator, output_types=tf.float32,
+        #                     output_shapes=[CHANNEL_NUM,CLASS_NUM, INPUT_LENGTH]).prefetch(buffer_size=2000).batch(BATCH_SIZE)
+        #real_input_4 = dataset.make_one_shot_iterator().get_next()
 
-        input_noise1 = tf.placeholder(dtype=tf.float32, shape=[None, 1, 1, NOISE_LENGTH], \
-                                        name='input_noise1')
-        input_noise2 = tf.placeholder(dtype=tf.float32, shape=[None, 1, 1, NOISE_LENGTH], \
-                                        name='input_noise2')
-        input_noise3 = tf.placeholder(dtype=tf.float32, shape=[None, CHANNEL_NUM, 1, NOISE_LENGTH], \
-                                        name='input_noise3')
-        input_noise4 = tf.placeholder(dtype=tf.float32, shape=[None, CHANNEL_NUM, 1, NOISE_LENGTH], \
-                                        name='input_noise4')
+        data = tf.placeholder(dtype=tf.float32, shape=[None, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH])
+        dataset = tf.data.Dataset().from_tensor_slices(data).map(lambda x: x, num_parallel_calls=8).repeat().shuffle(buffer_size=2000).apply(tf.contrib.data.batch_and_drop_remainder(BATCH_SIZE))
+        iterator = dataset.make_initializable_iterator()
+        real_input_4 = iterator.get_next()
+
+        input_noise1 = tf.placeholder(dtype=tf.float32, shape=[None, 1, 1, NOISE_LENGTH], name='input_noise1')
+        input_noise2 = tf.placeholder(dtype=tf.float32, shape=[None, 1, 1, NOISE_LENGTH], name='input_noise2')
+        input_noise3 = tf.placeholder(dtype=tf.float32, shape=[None, CHANNEL_NUM, 1, NOISE_LENGTH], name='input_noise3')
+        input_noise4 = tf.placeholder(dtype=tf.float32, shape=[None, CHANNEL_NUM, 1, NOISE_LENGTH], name='input_noise4')
 
         train = tf.placeholder(dtype=tf.bool, name='traintest')
         noise1 = tf.tile(input=input_noise1, multiples=[1, CHANNEL_NUM, 4, 1], name='noise1')
@@ -262,8 +255,10 @@ def main():
             return
         writer = tf.summary.FileWriter('train', sess.graph)
         input_num = 1000
-        for __ in tqdm(range(TOTAL_TRAIN_EPOCH)):
-            for cur in tqdm(range(input_num)):
+        for path in tqdm(pathlist):
+            input_data = np.load(str(path))
+            sess.run(iterator.initializer, feed_dict={data: input_data})
+            for __ in tqdm(range(input_data.shape[0] // 16)):
                 feed_dict[train] = True
                 run_options = tf.RunOptions(report_tensor_allocations_upon_oom=True)
                 for i in range(TRAIN_RATIO_DIS):
@@ -289,7 +284,7 @@ def main():
                 tqdm.write('Discriminator4 loss : %.7f' % loss_val_dis4, end=' ')
                 tqdm.write('Generator loss : %.7f' % loss_val_gen)
                 train_count += 1
-                if train_count % 10 == 0:
+                if train_count % 100 == 10:
                     feed_dict[input_noise1] = get_noise([BATCH_SIZE, 1, 1, NOISE_LENGTH])
                     feed_dict[input_noise2] = get_noise([BATCH_SIZE, 1, 1, NOISE_LENGTH])
                     feed_dict[input_noise3] = get_noise([BATCH_SIZE, CHANNEL_NUM, 1, NOISE_LENGTH])
@@ -300,7 +295,7 @@ def main():
                                         feed_dict=feed_dict, options=run_options, run_metadata=run_metadata)
                     writer.add_run_metadata(run_metadata, 'Train Count %d' % train_count)
                     writer.add_summary(summary, train_count)
-                    tqdm.write('Adding run metadata for', train_count)
+                    tqdm.write('Adding run metadata for %d' % train_count)
                 if train_count % 1000 == 0:
                     feed_dict[input_noise1] = get_noise([BATCH_SIZE, 1, 1, NOISE_LENGTH])
                     feed_dict[input_noise2] = get_noise([BATCH_SIZE, 1, 1, NOISE_LENGTH])
