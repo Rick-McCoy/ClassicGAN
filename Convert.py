@@ -59,6 +59,8 @@ def unpack_sample(name='', concat=False):
     if not os.path.exists(name):
         os.mkdir(name)
     savename = name + '/' + name.split('/')[-1]
+    if not name[-4:] == '.npy':
+        name = name + '.npy'
     samples = np.load(name) > 0
     program_nums = [0, 24, 40, 56, 64, 72]
     is_drum = [False] * CHANNEL_NUM
