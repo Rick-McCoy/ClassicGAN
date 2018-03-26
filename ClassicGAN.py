@@ -260,7 +260,7 @@ def main():
             for path in tqdm(pathlist):
                 input_data = np.load(str(path))
                 sess.run(iterator.initializer, feed_dict={data: input_data})
-                for __ in tqdm(range(input_data.shape[0] // BATCH_SIZE)):
+                for __ in tqdm(range(4 * TRAIN_RATIO_DIS + TRAIN_RATIO_DIS)):
                     feed_dict[train] = True
                     run_options = tf.RunOptions(report_tensor_allocations_upon_oom=True)
                     for i in range(TRAIN_RATIO_DIS):
