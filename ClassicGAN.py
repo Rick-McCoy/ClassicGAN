@@ -25,7 +25,7 @@ LAMBDA1 = 2
 LAMBDA2 = 10
 TRAIN_RATIO_DIS = 5
 TRAIN_RATIO_GEN = 1
-pathlist = list(pathlib.Path('Dataset').glob('**/*.npy'))# + list(pathlib.Path('TPD').glob('**/*.npy'))
+pathlist = list(pathlib.Path('Dataset').glob('**/*.npy'))
 
 def gradient_penalty(real, gen, encode, discriminator):
     alpha = tf.random_uniform(shape=[BATCH_SIZE] + [1] * (gen.shape.ndims - 1), minval=0., maxval=1.)

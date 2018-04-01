@@ -62,7 +62,7 @@ def roll(path):
     return data
 
 def build_dataset():
-    pathlist = list(pathlib.Path('Classics').glob('**/*.mid')) + list(pathlib.Path('TPD').glob('**/*.mid'))
+    pathlist = list(pathlib.Path('Classics').glob('**/*.mid'))
     random.shuffle(pathlist)
     if not os.path.exists('Dataset'):
         os.mkdir('Dataset')
