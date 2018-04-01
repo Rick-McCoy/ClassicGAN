@@ -75,7 +75,7 @@ def time_seq_noise_generator(noise, num, train):
         return output
 
 def encoder(inputs, num, train):
-    with tf.variable_scope('Encoder' + str(num)):
+    with tf.variable_scope('Encoder' + str(num), reuse=tf.AUTO_REUSE):
         # shape: [None, 1, 4, CLASS_NUM, INPUT_LENGTH // 4]
         conv1 = conv(inputs=inputs, filters=16, kernel_size=[1, 3, 1], strides=(1, 3, 1), training=train, regularization='batch_norm_lrelu', name='conv1')
         # shape: [None, 16, 4, CLASS_NUM // 3, INPUT_LENGTH // 4]
@@ -91,12 +91,26 @@ def encoder(inputs, num, train):
         # shape: [None, 16, 4, 1, INPUT_LENGTH // 96]
         conv7 = conv(inputs=conv6, filters=16, kernel_size=[1, 1, 4], strides=(1, 1, 4), training=train, regularization='batch_norm_lrelu', name='conv7')
         # shape: [None, 16, 4, 1, 1]
-        output = tf.transpose(tf.squeeze(conv7, axis=-1), perm=[0, 3, 2, 1])
+        flatten = [tf.layers.flatten(i) for i in tf.unstack(conv7, axis=2)]
+        # shape: [4, None, 16]
+        output_mean = [tf.layers.dense(i, units=16, activation=None, name='dense_mean') for i in flatten]
+        # shape: [4, None, 16]
+        output_mean = tf.stack(output_mean, axis=1)
+        # shape: [None, 4, 16]
+        output_mean = tf.expand_dims(output_mean, axis=1)
         # shape: [None, 1, 4, 16]
-        return output
+        output_var = [tf.layers.dense(i, units=16, activation=None, name='dense_var') for i in flatten]
+        # shape: [4, None, 16]
+        output_var = tf.stack(output_var, axis=1)
+        # shape: [None, 4, 16]
+        output_var = tf.expand_dims(output_var, axis=1)
+        # shape: [None, 1, 4, 16]
+        return output_mean, output_var
 
 def generator1(noise, encode, num, train):
     with tf.variable_scope('Generator1_' + str(num)):
+        encode = encode.sample()
+        # shape: [None, 4, 16]
         noise = tf.transpose(tf.concat([noise, encode], axis=2), perm=[0, 2, 1])
         # shape: [None, NOISE_LENGTH * 4 + 16, 4]
         noise = tf.expand_dims(tf.expand_dims(noise, axis=-1), axis=-1)
@@ -118,7 +132,9 @@ def generator1(noise, encode, num, train):
         output = tf.transpose(conv1, perm=[0, 2, 3, 4, 1])
         # shape: [None, 4, CLASS_NUM // 4, INPUT_LENGTH // 16, 1]
         output_image = tf.unstack(output[:BATCH_SIZE // 10], axis=1)
+        # shape: [4, BATCH_SIZE // 10, CLASS_NUM // 4, INPUT_LENGTH // 16, 1]
         output_image = tf.concat(output_image, axis=2)
+        # shape: [BATCH_SIZE // 10, CLASS_NUM // 4, INPUT_LENGTH // 4, 1]
         tf.summary.image(name='piano_roll', tensor=output_image)
         output = tf.squeeze(output, axis=-1)
         # shape: [None, 4, CLASS_NUM // 4, INPUT_LENGTH // 16]
@@ -126,6 +142,8 @@ def generator1(noise, encode, num, train):
 
 def generator2(inputs, encode, num, train):
     with tf.variable_scope('Generator2_' + str(num)):
+        encode = encode.sample()
+        # shape: [None, 4, 16]
         encode = tf.expand_dims(tf.expand_dims(tf.transpose(encode, perm=[0, 2, 1]), axis=-1), axis=-1)
         # shape: [None, 16, 4, 1, 1]
         encode = tf.tile(input=encode, multiples=(1, 4, 1, CLASS_NUM // 4, INPUT_LENGTH // 16))
@@ -145,7 +163,9 @@ def generator2(inputs, encode, num, train):
         output = tf.transpose(conv1, perm=[0, 2, 3, 4, 1])
         # shape: [None, 4, CLASS_NUM // 2, INPUT_LENGTH // 8, 1]
         output_image = tf.unstack(output[:BATCH_SIZE // 10], axis=1)
+        # shape: [4, BATCH_SIZE // 10, CLASS_NUM // 2, INPUT_LENGTH // 8, 1]
         output_image = tf.concat(output_image, axis=2)
+        # shape: [BATCH_SIZE // 10, CLASS_NUM // 2, INPUT_LENGTH // 2, 1]
         tf.summary.image(name='piano_roll', tensor=output_image)
         output = tf.squeeze(output, axis=-1)
         # shape: [None, 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
@@ -153,6 +173,8 @@ def generator2(inputs, encode, num, train):
 
 def generator3(inputs, encode, num, train):
     with tf.variable_scope('Generator3_' + str(num)):
+        encode = encode.sample()
+        # shape: [None, 4, 16]
         encode = tf.expand_dims(tf.expand_dims(tf.transpose(encode, perm=[0, 2, 1]), axis=-1), axis=-1)
         # shape: [None, 16, 4, 1, 1]
         encode = tf.tile(input=encode, multiples=(1, 2, 1, CLASS_NUM // 2, INPUT_LENGTH // 8))
@@ -172,7 +194,9 @@ def generator3(inputs, encode, num, train):
         output = tf.transpose(conv1, perm=[0, 2, 3, 4, 1])
         # shape: [None, 4, CLASS_NUM, INPUT_LENGTH // 4, 1]
         output_image = tf.unstack(output[:BATCH_SIZE // 10], axis=1)
+        # shape: [4, BATCH_SIZE // 10, CLASS_NUM // 2, INPUT_LENGTH // 8, 1]
         output_image = tf.concat(output_image, axis=2)
+        # shape: [BATCH_SIZE // 10, CLASS_NUM // 2, INPUT_LENGTH // 2, 1]
         tf.summary.image(name='piano_roll', tensor=output_image)
         output = tf.squeeze(output, axis=-1)
         # shape: [None, 4, CLASS_NUM, INPUT_LENGTH // 4]
@@ -180,6 +204,8 @@ def generator3(inputs, encode, num, train):
 
 def generator4(inputs, encode, num, train):
     with tf.variable_scope('Generator4_' + str(num)):
+        encode = encode.sample()
+        # shape: [None, 4, 16]
         encode = tf.expand_dims(tf.expand_dims(tf.transpose(encode, perm=[0, 2, 1]), axis=-1), axis=-1)
         # shape: [None, 16, 4, 1, 1]
         encode = tf.tile(input=encode, multiples=(1, 1, 1, CLASS_NUM, INPUT_LENGTH // 4))
@@ -228,6 +254,7 @@ def discriminator1(inputs, name):
 
 def discriminator1_conditional(inputs, encode):
     with tf.variable_scope('Discriminator1_Conditional', reuse=tf.AUTO_REUSE):
+        encode = encode.sample()
         # shape: [None, CHANNEL_NUM, 4, 16]
         encode = tf.split(encode, num_or_size_splits=8, axis=-1)
         # shape: [8, None, CHANNEL_NUM, 4, 2]
@@ -265,6 +292,7 @@ def discriminator2(inputs, name):
 
 def discriminator2_conditional(inputs, encode):
     with tf.variable_scope('Discriminator2_Conditional', reuse=tf.AUTO_REUSE):
+        encode = encode.sample()
         # shape: [None, CHANNEL_NUM, 4, 16]
         encode = tf.split(encode, num_or_size_splits=8, axis=-1)
         # shape: [8, None, CHANNEL_NUM, 4, 2]
@@ -303,6 +331,7 @@ def discriminator3(inputs, name):
 
 def discriminator3_conditional(inputs, encode):
     with tf.variable_scope('Discriminator3_Conditional', reuse=tf.AUTO_REUSE):
+        encode = encode.sample()
         # shape: [None, CHANNEL_NUM, 4, 16]
         encode = tf.split(encode, num_or_size_splits=8, axis=-1)
         # shape: [8, None, CHANNEL_NUM, 4, 2]
@@ -340,6 +369,7 @@ def discriminator4(inputs, name):
 
 def discriminator4_conditional(inputs, encode):
     with tf.variable_scope('Discriminator4_Conditional', reuse=tf.AUTO_REUSE):
+        encode = encode.sample()
         # shape: [None, CHANNEL_NUM, 4, 16]
         encode = tf.tile(input=encode, multiples=(1, 1, CLASS_NUM // 4, INPUT_LENGTH // 16))
         # shape: [None, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH]
