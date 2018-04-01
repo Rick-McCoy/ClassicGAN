@@ -27,10 +27,10 @@ TRAIN_RATIO_DIS = 5
 TRAIN_RATIO_GEN = 1
 pathlist = list(pathlib.Path('Dataset').glob('**/*.npy'))# + list(pathlib.Path('TPD').glob('**/*.npy'))
 
-def gradient_penalty(real, gen, encode_normal, discriminator):
+def gradient_penalty(real, gen, encode, discriminator):
     alpha = tf.random_uniform(shape=[BATCH_SIZE] + [1] * (gen.shape.ndims - 1), minval=0., maxval=1.)
     interpolate = real + alpha * (gen - real)
-    gradients = tf.gradients(discriminator(inputs=interpolate, encode=encode_normal.sample()), interpolate)[0]
+    gradients = tf.gradients(discriminator(inputs=interpolate, encode=encode), interpolate)[0]
     slopes = tf.sqrt(1e-10 + tf.reduce_sum(tf.square(gradients), axis=list(range(1, gradients.shape.ndims))))
     output = tf.reduce_mean((slopes - 1.) ** 2)
     return LAMBDA * output
@@ -150,8 +150,8 @@ def main():
         # shape: [CHANNEL_NUM, None, 4, 16]
         encode_unstack_var = tf.unstack(encode_var, axis=1, name='encode_unstack_var')
         # shape: [CHANNEL_NUM, None, 4, 16]
-        encode_unstack_normal = [tf.distributions.Normal(loc=encode_split_mean[i], \
-                                            scale=encode_split_var[i] for i in range(CHANNEL_NUM))]
+        encode_unstack_normal = [tf.distributions.Normal(loc=encode_unstack_mean[i], \
+                                            scale=encode_unstack_var[i]) for i in range(CHANNEL_NUM)]
         # shape: [CHANNEL_NUM, None, 4, 16]
         input_gen1, gen1 = zip(*[generator1(noise=input_noise_split[i], encode=encode_unstack_normal[i], \
                                             num=i, train=train) for i in range(CHANNEL_NUM)])
@@ -181,21 +181,21 @@ def main():
     with tf.name_scope('discriminator'):
         encode_normal = tf.distributions.Normal(loc=encode_mean, scale=encode_var)
         # shape: [None, CHANNEL_NUM, 4, 16]
-        dis1_real = discriminator1_conditional(inputs=real_input_1, encode=encode_normal.sample())
+        dis1_real = discriminator1_conditional(inputs=real_input_1, encode=encode_normal)
         # shape: [None, CHANNEL_NUM, 4, CLASS_NUM // 4, INPUT_LENGTH // 16]
-        dis1_gen = discriminator1_conditional(inputs=input_gen1, encode=encode_normal.sample())
+        dis1_gen = discriminator1_conditional(inputs=input_gen1, encode=encode_normal)
         # shape: [None, CHANNEL_NUM, 4, CLASS_NUM // 4, INPUT_LENGTH // 16]
-        dis2_real = discriminator2_conditional(inputs=real_input_2, encode=encode_normal.sample())
+        dis2_real = discriminator2_conditional(inputs=real_input_2, encode=encode_normal)
         # shape: [None, CHANNEL_NUM, 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
-        dis2_gen = discriminator2_conditional(inputs=input_gen2, encode=encode_normal.sample())
+        dis2_gen = discriminator2_conditional(inputs=input_gen2, encode=encode_normal)
         # shape: [None, CHANNEL_NUM, 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
-        dis3_real = discriminator3_conditional(inputs=real_input_3, encode=encode_normal.sample())
+        dis3_real = discriminator3_conditional(inputs=real_input_3, encode=encode_normal)
         # shape: [None, CHANNEL_NUM, 4, CLASS_NUM, INPUT_LENGTH // 4]
-        dis3_gen = discriminator3_conditional(inputs=input_gen3, encode=encode_normal.sample())
+        dis3_gen = discriminator3_conditional(inputs=input_gen3, encode=encode_normal)
         # shape: [None, CHANNEL_NUM, 4, CLASS_NUM, INPUT_LENGTH // 4]
-        dis4_real = discriminator4_conditional(inputs=real_input_4, encode=encode_normal.sample())
+        dis4_real = discriminator4_conditional(inputs=real_input_4, encode=encode_normal)
         # shape: [None, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH]
-        dis4_gen = discriminator4_conditional(inputs=input_gen4, encode=encode_normal.sample())
+        dis4_gen = discriminator4_conditional(inputs=input_gen4, encode=encode_normal)
         # shape: [None, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH]
     print('Discriminators set')
     with tf.name_scope('loss'):
