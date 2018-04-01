@@ -1,6 +1,6 @@
 # ClassicGAN
 
-Generates classical MIDI files. Stacks 7 Generators, 3 levels deep, StackGAN++ style.
+Generates classical MIDI files. Stacks 6 Generators, 4 levels deep, StackGAN++ style.
 
 ## Getting Started
 
@@ -17,34 +17,56 @@ networkx
 pytest
 ```
 
+Last three are for memory saving gradients.
+
 ### Installing
 
-None necessary. Clone git, then run
+None necessary.
+
+### Training
+
+Git clone this repository, then run
 
 ```
 python3 ClassicGAN.py
 ```
 
-Put training datasets of your own under /Classics.
+For your own datasets, put all midi files under /Classics or /TPD.
 
-Modify, then run
+Then run
 
 ```
-python3 Convert.py
+python3 Data.py
 ```
 
-for visualizations of the generated results.
+to convert them into .npy files.
 
-Conversion of generated results to midi files are being implemented.
+**Warning**: These are extremely large, as on average, roughly 15 midi files gets converted into 1GB .npy files.
 
-## Deployment
+### Sampling
 
-Currently manual.
+Make sure your checkpoints are all under /Checkpoints.
+
+Select a midi file for encoding.
+
+Then, run
+
+```
+python3 ClassicGAN.py -s /path/to/midi
+```
+
+Add ```-c True``` for concatenation of all generated 16 midi files.
+
 
 ## TODOs
 
 Integrate [Gradient Checkpointing](https://github.com/openai/gradient-checkpointing) - Completed.
 
+Convert generated results to midi - Completed.
+
+Faster datasets using tf.data.Dataset - Completed.
+
+Integrate VAEs - Completed.
 
 ## Authors
 
