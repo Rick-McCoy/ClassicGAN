@@ -280,9 +280,8 @@ def main():
                                                     loss=loss_gen, var_list=gen_var, name='gen_train')
         print('gen_train setup')
     print('Optimizers set')
-    gpu_options = tf.GPUOptions(allow_growth=True)
+    gpu_options = tf.GPUOptions(allow_growth=True, allocator_type='BFC')
     config = tf.ConfigProto(allow_soft_placement=True, gpu_options=gpu_options)
-    config.gpu_options.allocator_type = 'BFC'
     saver = tf.train.Saver()
     with tf.Session(config=config) as sess:
         merged = tf.summary.merge_all()
@@ -315,9 +314,8 @@ def main():
             unpack_sample(name='Samples/sample_%s' % path+ '/%s.npy' % path, concat=args.concat)
             return
         writer = tf.summary.FileWriter('train', sess.graph)
-        input_num = 1000
         epoch_num = 100
-        for epoch in tqdm(range(epoch_num)):
+        for ___ in tqdm(range(epoch_num)):
             for path in tqdm(pathlist):
                 input_data = np.load(str(path))
                 sess.run(iterator.initializer, feed_dict={data: input_data})
