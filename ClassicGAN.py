@@ -25,7 +25,6 @@ LAMBDA1 = 2
 LAMBDA2 = 10
 TRAIN_RATIO_DIS = 5
 TRAIN_RATIO_GEN = 1
-pathlist = list(pathlib.Path('Dataset').glob('**/*.npy'))
 
 def gradient_penalty(real, gen, encode, discriminator):
     alpha = tf.random_uniform(shape=[BATCH_SIZE] + [1] * (gen.shape.ndims - 1), minval=0., maxval=1.)
@@ -63,12 +62,6 @@ def main():
         dataset = dataset.apply(tf.contrib.data.batch_and_drop_remainder(BATCH_SIZE))
         iterator = dataset.make_one_shot_iterator()
         real_input_4 = iterator.get_next()
-
-        #data = tf.placeholder(dtype=tf.float32, shape=[None, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH])
-        #dataset = tf.data.Dataset().from_tensor_slices(data).map(lambda x: x, num_parallel_calls=8)
-        #dataset = dataset.repeat().shuffle(buffer_size=2000).apply(tf.contrib.data.batch_and_drop_remainder(BATCH_SIZE))
-        #iterator = dataset.make_initializable_iterator()
-        #real_input_4 = iterator.get_next()
 
         input_noise1 = tf.placeholder(dtype=tf.float32, shape=[None, 1, 1, NOISE_LENGTH], name='input_noise1')
         input_noise2 = tf.placeholder(dtype=tf.float32, shape=[None, 1, 1, NOISE_LENGTH], name='input_noise2')
@@ -327,10 +320,6 @@ def main():
         writer = tf.summary.FileWriter('train', sess.graph)
         epoch_num = 1000000
         for ___ in tqdm(range(epoch_num)):
-            #for path in tqdm(pathlist):
-                #input_data = np.load(str(path))
-                #sess.run(iterator.initializer, feed_dict={data: input_data})
-                #for __ in tqdm(range(4 * TRAIN_RATIO_DIS + TRAIN_RATIO_DIS)):
             feed_dict[train] = True
             run_options = tf.RunOptions(report_tensor_allocations_upon_oom=True)
             for i in range(TRAIN_RATIO_DIS):
