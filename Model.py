@@ -21,6 +21,9 @@ def conv(inputs, filters, kernel_size=[1, 3, 3], strides=(1, 1, 1), training=Tru
             activation_function = tf.nn.leaky_relu
         use_bias = regularization == ''
         if inputs.get_shape().ndims == 4:
+            if len(kernel_size) == 3:
+                kernel_size = [3, 3]
+                strides = (1, 1)
             if transpose:
                 conv_func = tf.layers.conv2d_transpose
             else:
