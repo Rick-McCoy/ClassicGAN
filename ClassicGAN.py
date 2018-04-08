@@ -58,7 +58,7 @@ def main():
             feature = {'roll' : tf.FixedLenFeature((6, 72, 384), tf.float32)}
             parsed = tf.parse_single_example(example_proto, feature)
             return parsed['roll']
-        dataset = dataset.map(_parse).repeat().shuffle(buffer_size=10000)
+        dataset = dataset.map(_parse).repeat().shuffle(buffer_size=2000)
         dataset = dataset.apply(tf.contrib.data.batch_and_drop_remainder(BATCH_SIZE))
         iterator = dataset.make_one_shot_iterator()
         real_input_4 = iterator.get_next()
@@ -206,21 +206,21 @@ def main():
     with tf.name_scope('loss'):
         loss_dis1 = tf.reduce_mean(dis1_gen - dis1_real) + gradient_penalty(real=real_input_1, \
                                         gen=input_gen1, encode=encode_normal, discriminator=discriminator1_conditional)
-        mean_gen1, dev_gen1 = tf.nn.moments(input_gen1, axes=list(range(2, input_gen1.shape.ndims)))
+        #mean_gen1, dev_gen1 = tf.nn.moments(input_gen1, axes=list(range(2, input_gen1.shape.ndims)))
         loss_gen1 = -tf.reduce_mean(dis1_gen)
         loss_dis2 = tf.reduce_mean(dis2_gen - dis2_real) + gradient_penalty(real=real_input_2, \
                                         gen=input_gen2, encode=encode_normal, discriminator=discriminator2_conditional)
-        mean_gen2, dev_gen2 = tf.nn.moments(input_gen2, axes=list(range(2, input_gen2.shape.ndims)))
+        #mean_gen2, dev_gen2 = tf.nn.moments(input_gen2, axes=list(range(2, input_gen2.shape.ndims)))
         loss_gen2 = -tf.reduce_mean(dis2_gen)# + LAMBDA1 * tf.reduce_mean(tf.squared_difference(mean_gen1, mean_gen2)) \
         #                                        + LAMBDA2 * tf.reduce_mean(tf.squared_difference(dev_gen1, dev_gen2))
         loss_dis3 = tf.reduce_mean(dis3_gen - dis3_real) + gradient_penalty(real=real_input_3, \
                                         gen=input_gen3, encode=encode_normal, discriminator=discriminator3_conditional)
-        mean_gen3, dev_gen3 = tf.nn.moments(input_gen3, axes=list(range(2, input_gen3.shape.ndims)))
+        #mean_gen3, dev_gen3 = tf.nn.moments(input_gen3, axes=list(range(2, input_gen3.shape.ndims)))
         loss_gen3 = -tf.reduce_mean(dis3_gen)# + LAMBDA1 * tf.reduce_mean(tf.squared_difference(mean_gen2, mean_gen3)) \
         #                                        + LAMBDA2 * tf.reduce_mean(tf.squared_difference(dev_gen2, dev_gen3))
         loss_dis4 = tf.reduce_mean(dis4_gen - dis4_real) + gradient_penalty(real=real_input_4, \
                                         gen=input_gen4, encode=encode_normal, discriminator=discriminator4_conditional)
-        mean_gen4, dev_gen4 = tf.nn.moments(input_gen4, axes=list(range(2, input_gen4.shape.ndims)))
+        #mean_gen4, dev_gen4 = tf.nn.moments(input_gen4, axes=list(range(2, input_gen4.shape.ndims)))
         loss_gen4 = -tf.reduce_mean(dis4_gen)# + LAMBDA1 * tf.reduce_mean(tf.squared_difference(mean_gen3, mean_gen4)) \
         #                                        + LAMBDA2 * tf.reduce_mean(tf.squared_difference(dev_gen3, dev_gen4))
         loss_gen = (loss_gen1 + loss_gen2 + loss_gen3 + loss_gen4) / 4.0
