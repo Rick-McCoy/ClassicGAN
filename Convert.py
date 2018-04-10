@@ -65,14 +65,14 @@ def unpack_sample(name='', concat=False):
     program_nums = [0, 24, 40, 56, 64, 72]
     is_drum = [False] * CHANNEL_NUM
     if concat:
-        sample = np.concat([i for i in samples], axis=-1)
-        write_piano_rolls_to_midi(sample, program_nums=program_nums, is_drum=is_drum, filename=savename + '_' + str(id) + '.mid')
-        print(name + '_' + str(id) + '.mid')
+        sample = np.concatenate([i for i in samples], axis=-1)
+        write_piano_rolls_to_midi(sample, program_nums=program_nums, is_drum=is_drum, filename=savename + '.mid')
+        print(name + '.mid')
         for i, piano_roll in enumerate(sample):
             fig = plt.figure(figsize=(12, 4))
             librosa.display.specshow(piano_roll, x_axis='time', y_axis='cqt_note', hop_length=1, sr=96, fmin=pm.note_number_to_hz(12))
             plt.title(savename + '_' + pm.program_to_instrument_name(program_nums[i]))
-            fig.savefig(savename + '_' + str(id) + '_' + str(i) + '.png')
+            fig.savefig(savename + '_' + str(i) + '.png')
             plt.close(fig)
         return
     for id, sample in enumerate(samples):

@@ -119,7 +119,6 @@ def encoder(inputs, num, train):
 
 def generator1(noise, encode, num, train):
     with tf.variable_scope('Generator1_' + str(num)):
-        encode = encode.sample()
         # shape: [None, 4, 16]
         noise = tf.transpose(tf.concat([noise, encode], axis=2), perm=[0, 2, 1])
         # shape: [None, NOISE_LENGTH * 4 + 16, 4]
@@ -158,14 +157,15 @@ def generator1(noise, encode, num, train):
 
 def generator2(inputs, encode, num, train):
     with tf.variable_scope('Generator2_' + str(num)):
-        encode = encode.sample()
-        # shape: [None, 4, 16]
-        encode = tf.expand_dims(tf.expand_dims(tf.transpose(encode, perm=[0, 2, 1]), axis=-1), axis=-1)
-        # shape: [None, 16, 4, 1, 1]
-        encode = tf.tile(input=encode, multiples=(1, 4, 1, CLASS_NUM // 4, INPUT_LENGTH // 16))
-        # shape: [None, 64, 4, CLASS_NUM // 4, INPUT_LENGTH // 16]
+        # shape: [None, CHANNEL_NUM, 4, 16]
+        encode = tf.split(axis=-1, value=encode, num_or_size_splits=8, name='encode_split')
+        # shape: [8, None, CHANNEL_NUM, 4, 2]
+        encode = tf.stack(encode, axis=-1, name='encode_stack')
+        # shape: [None, CHANNEL_NUM, 4, 2, 8]
+        encode = tf.tile(input=encode, multiples=(1, 10, 1, 9, 3))
+        # shape: [None, 60, 4, CLASS_NUM // 4, INPUT_LENGTH // 16]]
         inputs = tf.concat([inputs, encode], axis=1)
-        # shape: [None, 128, 4, CLASS_NUM // 4, INPUT_LENGTH // 16]
+        # shape: [None, 124, 4, CLASS_NUM // 4, INPUT_LENGTH // 16]
         res1 = residual_block(inputs=inputs, filters=64, training=train, regularization='batch_norm_relu', name='res1')
         # shape: [None, 64, 4, CLASS_NUM // 4, INPUT_LENGTH // 16]
         res2 = residual_block(inputs=res1, filters=64, training=train, regularization='batch_norm_relu', name='res2')
@@ -191,14 +191,14 @@ def generator2(inputs, encode, num, train):
 
 def generator3(inputs, encode, num, train):
     with tf.variable_scope('Generator3_' + str(num)):
-        encode = encode.sample()
-        # shape: [None, 4, 16]
-        encode = tf.expand_dims(tf.expand_dims(tf.transpose(encode, perm=[0, 2, 1]), axis=-1), axis=-1)
-        # shape: [None, 16, 4, 1, 1]
-        encode = tf.tile(input=encode, multiples=(1, 2, 1, CLASS_NUM // 2, INPUT_LENGTH // 8))
-        # shape: [None, 32, 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
+        encode = tf.split(axis=-1, value=encode, num_or_size_splits=8, name='encode_split')
+        # shape: [8, None, CHANNEL_NUM, 4, 2]
+        encode = tf.stack(encode, axis=-1, name='encode_stack')
+        # shape: [None, CHANNEL_NUM, 4, 2, 8]
+        encode = tf.tile(input=encode, multiples=(1, 5, 1, 18, 6), name='encode_tile')
+        # shape: [None, 30, 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
         inputs = tf.concat([inputs, encode], axis=1)
-        # shape: [None, 64, 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
+        # shape: [None, 62, 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
         res1 = residual_block(inputs=inputs, filters=32, training=train, regularization='batch_norm_relu', name='res1')
         # shape: [None, 32, 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
         res2 = residual_block(inputs=res1, filters=32, training=train, regularization='batch_norm_relu', name='res2')
@@ -206,6 +206,7 @@ def generator3(inputs, encode, num, train):
         deconv1 = conv(inputs=res2, filters=16, kernel_size=[1, 2, 1], strides=(1, 2, 1), training=train, \
                                             regularization='batch_norm_relu', transpose=True, name='deconv1')
         # shape: [None, 16, 4, CLASS_NUM, INPUT_LENGTH // 8]
+        print(deconv1.get_shape())
         deconv2 = conv(inputs=deconv1, filters=16, kernel_size=[1, 1, 2], strides=(1, 1, 2), training=train, \
                                             regularization='batch_norm_relu', transpose=True, name='deconv2')
         # shape: [None, 16, 4, CLASS_NUM, INPUT_LENGTH // 4]
@@ -224,14 +225,15 @@ def generator3(inputs, encode, num, train):
 
 def generator4(inputs, encode, num, train):
     with tf.variable_scope('Generator4_' + str(num)):
-        encode = encode.sample()
-        # shape: [None, 4, 16]
-        encode = tf.expand_dims(tf.expand_dims(tf.transpose(encode, perm=[0, 2, 1]), axis=-1), axis=-1)
-        # shape: [None, 16, 4, 1, 1]
-        encode = tf.tile(input=encode, multiples=(1, 1, 1, CLASS_NUM, INPUT_LENGTH // 4))
-        # shape: [None, 16, 4, CLASS_NUM, INPUT_LENGTH // 4]
+        # shape: [None, CHANNEL_NUM, 4, 16]
+        encode = tf.split(axis=-1, value=encode, num_or_size_splits=8, name='encode_split')
+        # shape: [8, None, CHANNEL_NUM, 4, 2]
+        encode = tf.stack(encode, axis=-1, name='encode_stack')
+        # shape: [None, CHANNEL_NUM, 4, 2, 8]
+        encode = tf.tile(encode, multiples=(1, 3, 1, 36, 12))
+        # shape: [None, 18, 4, CLASS_NUM, INPUT_LENGTH // 4]
         inputs = tf.concat([inputs, encode], axis=1)
-        # shape: [None, 32, 4, CLASS_NUM, INPUT_LENGTH // 4]
+        # shape: [None, 30, 4, CLASS_NUM, INPUT_LENGTH // 4]
         inputs = tf.unstack(inputs, axis=2, name='unstack')
         # shape: [4, None, 32, CLASS_NUM, INPUT_LENGTH // 4]
         inputs = tf.concat(inputs, axis=-1)
@@ -274,7 +276,6 @@ def discriminator1(inputs, name):
 
 def discriminator1_conditional(inputs, encode):
     with tf.variable_scope('Discriminator1_Conditional', reuse=tf.AUTO_REUSE):
-        encode = encode.sample()
         # shape: [None, CHANNEL_NUM, 4, 16]
         encode = tf.split(encode, num_or_size_splits=8, axis=-1)
         # shape: [8, None, CHANNEL_NUM, 4, 2]
@@ -312,7 +313,6 @@ def discriminator2(inputs, name):
 
 def discriminator2_conditional(inputs, encode):
     with tf.variable_scope('Discriminator2_Conditional', reuse=tf.AUTO_REUSE):
-        encode = encode.sample()
         # shape: [None, CHANNEL_NUM, 4, 16]
         encode = tf.split(encode, num_or_size_splits=8, axis=-1)
         # shape: [8, None, CHANNEL_NUM, 4, 2]
@@ -351,7 +351,6 @@ def discriminator3(inputs, name):
 
 def discriminator3_conditional(inputs, encode):
     with tf.variable_scope('Discriminator3_Conditional', reuse=tf.AUTO_REUSE):
-        encode = encode.sample()
         # shape: [None, CHANNEL_NUM, 4, 16]
         encode = tf.split(encode, num_or_size_splits=8, axis=-1)
         # shape: [8, None, CHANNEL_NUM, 4, 2]
@@ -389,7 +388,6 @@ def discriminator4(inputs, name):
 
 def discriminator4_conditional(inputs, encode):
     with tf.variable_scope('Discriminator4_Conditional', reuse=tf.AUTO_REUSE):
-        encode = encode.sample()
         # shape: [None, CHANNEL_NUM, 4, 16]
         encode = tf.tile(input=encode, multiples=(1, 1, CLASS_NUM // 4, INPUT_LENGTH // 16))
         # shape: [None, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH]
