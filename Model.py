@@ -206,7 +206,6 @@ def generator3(inputs, encode, num, train):
         deconv1 = conv(inputs=res2, filters=16, kernel_size=[1, 2, 1], strides=(1, 2, 1), training=train, \
                                             regularization='batch_norm_relu', transpose=True, name='deconv1')
         # shape: [None, 16, 4, CLASS_NUM, INPUT_LENGTH // 8]
-        print(deconv1.get_shape())
         deconv2 = conv(inputs=deconv1, filters=16, kernel_size=[1, 1, 2], strides=(1, 1, 2), training=train, \
                                             regularization='batch_norm_relu', transpose=True, name='deconv2')
         # shape: [None, 16, 4, CLASS_NUM, INPUT_LENGTH // 4]
