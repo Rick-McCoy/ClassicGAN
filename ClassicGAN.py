@@ -163,22 +163,27 @@ def main():
         # shape: [CHANNEL_NUM, None, NOISE_LENGTH * 2, 4, CLASS_NUM // 4, INPUT_LENGTH // 16]
         input_gen1 = tf.stack(input_gen1, axis=1, name='input_gen1_stack')
         # shape: [None, CHANNEL_NUM, 4, CLASS_NUM // 4, INPUT_LENGTH // 16]
+        gen1 = [tf.concat(values=[i, input_gen1], axis=1) for i in gen1]
+        # shape: [CHANNEL_NUM, None, NOISE_LENGTH * 2 + CHANNEL_NUM, 4, CLASS_NUM // 4, INPUT_LENGTH // 16]
         input_gen2, gen2 = zip(*[generator2(inputs=gen1[i], encode=encode_stack, \
                                             num=i, train=train) for i in range(CHANNEL_NUM)])
         # shape: [CHANNEL_NUM, None, 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
-        # shape: [CHANNEL_NUM, None, NOISE_LENGTH * 2, 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
+        # shape: [CHANNEL_NUM, None, 32, 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
         input_gen2 = tf.stack(input_gen2, axis=1, name='input_gen2_stack')
         # shape: [None, CHANNEL_NUM, 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
+        gen2 = [tf.concat(values=[i, input_gen2], axis=1) for i in gen2]
+        # shape: [CHANNEL_NUM, None, 32 + CHANNEL_NUM, 4, CLASS_NUM // 4, INPUT_LENGTH // 16]
         input_gen3, gen3 = zip(*[generator3(inputs=gen2[i], encode=encode_stack, \
                                             num=i, train=train) for i in range(CHANNEL_NUM)])
         # shape: [CHANNEL_NUM, None, 4, CLASS_NUM, INPUT_LENGTH // 4]
-        # shape: [CHANNEL_NUM, None, NOISE_LENGTH * 2, 4, CLASS_NUM, INPUT_LENGTH // 4]
+        # shape: [CHANNEL_NUM, None, 16, 4, CLASS_NUM, INPUT_LENGTH // 4]
         input_gen3 = tf.stack(input_gen3, axis=1, name='input_gen3_stack')
         # shape: [None, CHANNEL_NUM, 4, CLASS_NUM, INPUT_LENGTH // 4]
+        gen3 = [tf.concat(values=[i, input_gen3], axis=1) for i in gen3]
+        # shape: [CHANNEL_NUM, None, 16 + CHANNEL_NUM, 4, CLASS_NUM // 4, INPUT_LENGTH // 16]
         input_gen4 = [generator4(inputs=gen3[i], encode=encode_stack, \
                                             num=i, train=train) for i in range(CHANNEL_NUM)]
         # shape: [CHANNEL_NUM, None, CLASS_NUM, INPUT_LENGTH]
-        # shape: [CHANNEL_NUM, None, NOISE_LENGTH * 2, CLASS_NUM, INPUT_LENGTH]
         input_gen4 = tf.stack(input_gen4, axis=1, name='input_gen4_stack')
         # shape: [None, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH]
     print('Generators set')

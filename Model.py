@@ -165,7 +165,7 @@ def generator2(inputs, encode, num, train):
         encode = tf.tile(input=encode, multiples=(1, 10, 1, 9, 3))
         # shape: [None, 60, 4, CLASS_NUM // 4, INPUT_LENGTH // 16]]
         inputs = tf.concat([inputs, encode], axis=1)
-        # shape: [None, 124, 4, CLASS_NUM // 4, INPUT_LENGTH // 16]
+        # shape: [None, 130, 4, CLASS_NUM // 4, INPUT_LENGTH // 16]
         res1 = residual_block(inputs=inputs, filters=64, training=train, regularization='batch_norm_relu', name='res1')
         # shape: [None, 64, 4, CLASS_NUM // 4, INPUT_LENGTH // 16]
         res2 = residual_block(inputs=res1, filters=64, training=train, regularization='batch_norm_relu', name='res2')
@@ -198,7 +198,7 @@ def generator3(inputs, encode, num, train):
         encode = tf.tile(input=encode, multiples=(1, 5, 1, 18, 6), name='encode_tile')
         # shape: [None, 30, 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
         inputs = tf.concat([inputs, encode], axis=1)
-        # shape: [None, 62, 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
+        # shape: [None, 68, 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
         res1 = residual_block(inputs=inputs, filters=32, training=train, regularization='batch_norm_relu', name='res1')
         # shape: [None, 32, 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
         res2 = residual_block(inputs=res1, filters=32, training=train, regularization='batch_norm_relu', name='res2')
@@ -232,11 +232,11 @@ def generator4(inputs, encode, num, train):
         encode = tf.tile(encode, multiples=(1, 3, 1, 36, 12))
         # shape: [None, 18, 4, CLASS_NUM, INPUT_LENGTH // 4]
         inputs = tf.concat([inputs, encode], axis=1)
-        # shape: [None, 30, 4, CLASS_NUM, INPUT_LENGTH // 4]
+        # shape: [None, 40, 4, CLASS_NUM, INPUT_LENGTH // 4]
         inputs = tf.unstack(inputs, axis=2, name='unstack')
-        # shape: [4, None, 32, CLASS_NUM, INPUT_LENGTH // 4]
+        # shape: [4, None, 40, CLASS_NUM, INPUT_LENGTH // 4]
         inputs = tf.concat(inputs, axis=-1)
-        # shape: [None, 32, CLASS_NUM, INPUT_LENGTH]
+        # shape: [None, 40, CLASS_NUM, INPUT_LENGTH]
         res1 = residual_block(inputs=inputs, filters=16, training=train, regularization='batch_norm_relu', name='res1')
         # shape: [None, 16, CLASS_NUM, INPUT_LENGTH]
         res2 = residual_block(inputs=res1, filters=16, training=train, regularization='batch_norm_relu', name='res2')
