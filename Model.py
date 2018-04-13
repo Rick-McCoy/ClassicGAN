@@ -22,6 +22,8 @@ def conv(inputs, filters, kernel_size=[1, 3, 3], strides=(1, 1, 1), training=Tru
         use_bias = regularization == ''
         if regularization:
             output = tf.layers.batch_normalization(inputs=inputs, axis=1, training=training, name='batch_norm', fused=True)
+        else:
+            output = inputs
         if inputs.get_shape().ndims == 4:
             if len(kernel_size) == 3:
                 kernel_size = [3, 3]
@@ -36,7 +38,7 @@ def conv(inputs, filters, kernel_size=[1, 3, 3], strides=(1, 1, 1), training=Tru
             else:
                 conv_func = tf.layers.conv3d
         output = activation_function(output)
-        output = conv_func(inputs=inputs, filters=filters, kernel_size=kernel_size, strides=strides, \
+        output = conv_func(inputs=output, filters=filters, kernel_size=kernel_size, strides=strides, \
                             padding='same', data_format='channels_first', activation=None, \
                             use_bias=use_bias, name='conv')
         return output
