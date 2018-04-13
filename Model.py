@@ -20,6 +20,8 @@ def conv(inputs, filters, kernel_size=[1, 3, 3], strides=(1, 1, 1), training=Tru
         else:
             activation_function = tf.nn.leaky_relu
         use_bias = regularization == ''
+        if regularization != '':
+            output = tf.layers.batch_normalization(inputs=inputs, axis=1, training=training, name='batch_norm', fused=True)
         if inputs.get_shape().ndims == 4:
             if len(kernel_size) == 3:
                 kernel_size = [3, 3]
@@ -28,19 +30,14 @@ def conv(inputs, filters, kernel_size=[1, 3, 3], strides=(1, 1, 1), training=Tru
                 conv_func = tf.layers.conv2d_transpose
             else:
                 conv_func = tf.layers.conv2d
-            output = conv_func(inputs=inputs, filters=filters, kernel_size=kernel_size, strides=strides, \
-                                padding='same', data_format='channels_first', activation=activation_function, \
-                                use_bias=use_bias, name='conv')
         else:
             if transpose:
                 conv_func = tf.layers.conv3d_transpose
             else:
                 conv_func = tf.layers.conv3d
-            output = conv_func(inputs=inputs, filters=filters, kernel_size=kernel_size, strides=strides, \
-                                padding='same', data_format='channels_first', activation=activation_function, \
-                                use_bias=use_bias, name='conv')
-        if regularization != '':
-            output = tf.layers.batch_normalization(inputs=output, axis=1, training=training, name='batch_norm', fused=True)
+        output = conv_func(inputs=inputs, filters=filters, kernel_size=kernel_size, strides=strides, \
+                            padding='same', data_format='channels_first', activation=activation_function, \
+                            use_bias=use_bias, name='conv')
         return output
 
 def residual_block(inputs, filters, training, regularization='', name=''):
