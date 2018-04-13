@@ -111,43 +111,43 @@ def main():
         input_noise = tf.concat(values=[noise1, noise2, noise3, noise4], axis=3, name='input_noise')
         # shape: [None, CHANNEL_NUM, 4, NOISE_LENGTH * 4]
 
-        real_input_4_image = tf.expand_dims(real_input_4[:BATCH_SIZE // 10], axis=-1, name='real_input_4_image_expand')
-        # shape: [BATCH_SIZE // 10, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH, 1]
+        real_input_4_image = tf.expand_dims(real_input_4[0], axis=-1, name='real_input_4_image_expand')
+        # shape: [1, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH, 1]
         real_input_4_image = tf.unstack(real_input_4_image, axis=1, name='real_input_4_image_unstack')
-        # shape: [CHANNEL_NUM, BATCH_SIZE // 10, CLASS_NUM, INPUT_LENGTH, 1]
+        # shape: [CHANNEL_NUM, 1, CLASS_NUM, INPUT_LENGTH, 1]
         for i, j in enumerate(real_input_4_image):
             tf.summary.image('real_input_4_' + str(i), j)
         
-        real_input_3_image = tf.unstack(real_input_3[:BATCH_SIZE // 10], axis=2, name='real_input_3_image_unstack')
-        # shape: [4, BATCH_SIZE // 10, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH // 4]
+        real_input_3_image = tf.unstack(real_input_3[0], axis=2, name='real_input_3_image_unstack')
+        # shape: [4, 1, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH // 4]
         real_input_3_image = tf.concat(real_input_3_image, axis=-1, name='real_input_3_image_concat')
-        # shape: [BATCH_SIZE // 10, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH]
+        # shape: [1, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH]
         real_input_3_image = tf.expand_dims(real_input_3_image, axis=-1, name='real_input_3_expand')
-        # shape: [BATCH_SIZE // 10, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH, 1]
+        # shape: [1, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH, 1]
         real_input_3_image = tf.unstack(real_input_3_image, axis=1, name='real_input_3_image')
-        # shape: [CHANNEL_NUM, BATCH_SIZE // 10, CLASS_NUM, INPUT_LENGTH, 1]
+        # shape: [CHANNEL_NUM, 1, CLASS_NUM, INPUT_LENGTH, 1]
         for i, j in enumerate(real_input_3_image):
             tf.summary.image('real_input_3_' + str(i), j)
             
-        real_input_2_image = tf.unstack(real_input_2[:BATCH_SIZE // 10], axis=2, name='real_input_2_unstack')
-        # shape: [4, BATCH_SIZE // 10, CHANNEL_NUM, CLASS_NUM // 2, INPUT_LENGTH // 8]
+        real_input_2_image = tf.unstack(real_input_2[0], axis=2, name='real_input_2_unstack')
+        # shape: [4, 1, CHANNEL_NUM, CLASS_NUM // 2, INPUT_LENGTH // 8]
         real_input_2_image = tf.concat(real_input_2_image, axis=-1, name='real_input_2_concat')
-        # shape: [BATCH_SIZE // 10, CHANNEL_NUM, CLASS_NUM // 2, INPUT_LENGTH // 2]
+        # shape: [1, CHANNEL_NUM, CLASS_NUM // 2, INPUT_LENGTH // 2]
         real_input_2_image = tf.expand_dims(real_input_2_image, axis=-1, name='real_input_2_expand')
-        # shape: [BATCH_SIZE // 10, CHANNEL_NUM, CLASS_NUM // 2, INPUT_LENGTH // 2, 1]
+        # shape: [1, CHANNEL_NUM, CLASS_NUM // 2, INPUT_LENGTH // 2, 1]
         real_input_2_image = tf.unstack(real_input_2_image, axis=1, name='real_input_2_image')
-        # shape: [CHANNEL_NUM, BATCH_SIZE // 10, CLASS_NUM // 2, INPUT_LENGTH // 2, 1]
+        # shape: [CHANNEL_NUM, 1, CLASS_NUM // 2, INPUT_LENGTH // 2, 1]
         for i, j in enumerate(real_input_2_image):
             tf.summary.image('real_input_2_' + str(i), j)
             
-        real_input_1_image = tf.unstack(real_input_1[:BATCH_SIZE // 10], axis=2, name='real_input_1_unstack')
-        # shape: [4, BATCH_SIZE // 10, CHANNEL_NUM, CLASS_NUM // 4, INPUT_LENGTH // 16]
+        real_input_1_image = tf.unstack(real_input_1[0], axis=2, name='real_input_1_unstack')
+        # shape: [4, 1, CHANNEL_NUM, CLASS_NUM // 4, INPUT_LENGTH // 16]
         real_input_1_image = tf.concat(real_input_1_image, axis=-1, name='real_input_3_concat')
-        # shape: [BATCH_SIZE // 10, CHANNEL_NUM, CLASS_NUM // 4, INPUT_LENGTH // 4]
+        # shape: [1, CHANNEL_NUM, CLASS_NUM // 4, INPUT_LENGTH // 4]
         real_input_1_image = tf.expand_dims(real_input_1_image, axis=-1, name='real_input_1_expand')
-        # shape: [BATCH_SIZE // 10, CHANNEL_NUM, CLASS_NUM // 4, INPUT_LENGTH // 4, 1]
+        # shape: [1, CHANNEL_NUM, CLASS_NUM // 4, INPUT_LENGTH // 4, 1]
         real_input_1_image = tf.unstack(real_input_1_image, axis=1, name='real_input_1_image')
-        # shape: [CHANNEL_NUM, BATCH_SIZE // 10, CLASS_NUM // 4, INPUT_LENGTH // 4, 1]
+        # shape: [CHANNEL_NUM, 1, CLASS_NUM // 4, INPUT_LENGTH // 4, 1]
         for i, j in enumerate(real_input_1_image):
             tf.summary.image('real_input_1_' + str(i), j)
 

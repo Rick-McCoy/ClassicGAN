@@ -20,7 +20,7 @@ def conv(inputs, filters, kernel_size=[1, 3, 3], strides=(1, 1, 1), training=Tru
         else:
             activation_function = tf.nn.leaky_relu
         use_bias = regularization == ''
-        if regularization != '':
+        if regularization:
             output = tf.layers.batch_normalization(inputs=inputs, axis=1, training=training, name='batch_norm', fused=True)
         if inputs.get_shape().ndims == 4:
             if len(kernel_size) == 3:
@@ -143,10 +143,10 @@ def generator1(noise, encode, num, train):
         # shape: [None, 1, 4, CLASS_NUM // 4, INPUT_LENGTH // 16]
         output = tf.transpose(conv1, perm=[0, 2, 3, 4, 1])
         # shape: [None, 4, CLASS_NUM // 4, INPUT_LENGTH // 16, 1]
-        output_image = tf.unstack(output[:BATCH_SIZE // 10], axis=1)
-        # shape: [4, BATCH_SIZE // 10, CLASS_NUM // 4, INPUT_LENGTH // 16, 1]
+        output_image = tf.unstack(output[0], axis=1)
+        # shape: [4, 1, CLASS_NUM // 4, INPUT_LENGTH // 16, 1]
         output_image = tf.concat(output_image, axis=2)
-        # shape: [BATCH_SIZE // 10, CLASS_NUM // 4, INPUT_LENGTH // 4, 1]
+        # shape: [1, CLASS_NUM // 4, INPUT_LENGTH // 4, 1]
         tf.summary.image(name='piano_roll', tensor=output_image)
         output = tf.squeeze(output, axis=-1)
         # shape: [None, 4, CLASS_NUM // 4, INPUT_LENGTH // 16]
@@ -177,10 +177,10 @@ def generator2(inputs, encode, num, train):
         # shape: [None, 1, 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
         output = tf.transpose(conv1, perm=[0, 2, 3, 4, 1])
         # shape: [None, 4, CLASS_NUM // 2, INPUT_LENGTH // 8, 1]
-        output_image = tf.unstack(output[:BATCH_SIZE // 10], axis=1)
-        # shape: [4, BATCH_SIZE // 10, CLASS_NUM // 2, INPUT_LENGTH // 8, 1]
+        output_image = tf.unstack(output[0], axis=1)
+        # shape: [4, 1, CLASS_NUM // 2, INPUT_LENGTH // 8, 1]
         output_image = tf.concat(output_image, axis=2)
-        # shape: [BATCH_SIZE // 10, CLASS_NUM // 2, INPUT_LENGTH // 2, 1]
+        # shape: [1, CLASS_NUM // 2, INPUT_LENGTH // 2, 1]
         tf.summary.image(name='piano_roll', tensor=output_image)
         output = tf.squeeze(output, axis=-1)
         # shape: [None, 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
@@ -210,10 +210,10 @@ def generator3(inputs, encode, num, train):
         # shape: [None, 1, 4, CLASS_NUM, INPUT_LENGTH // 4]
         output = tf.transpose(conv1, perm=[0, 2, 3, 4, 1])
         # shape: [None, 4, CLASS_NUM, INPUT_LENGTH // 4, 1]
-        output_image = tf.unstack(output[:BATCH_SIZE // 10], axis=1)
-        # shape: [4, BATCH_SIZE // 10, CLASS_NUM // 2, INPUT_LENGTH // 8, 1]
+        output_image = tf.unstack(output[0], axis=1)
+        # shape: [4, 1, CLASS_NUM // 2, INPUT_LENGTH // 8, 1]
         output_image = tf.concat(output_image, axis=2)
-        # shape: [BATCH_SIZE // 10, CLASS_NUM // 2, INPUT_LENGTH // 2, 1]
+        # shape: [1, CLASS_NUM // 2, INPUT_LENGTH // 2, 1]
         tf.summary.image(name='piano_roll', tensor=output_image)
         output = tf.squeeze(output, axis=-1)
         # shape: [None, 4, CLASS_NUM, INPUT_LENGTH // 4]
@@ -246,7 +246,7 @@ def generator4(inputs, encode, num, train):
         # shape: [None, 1, CLASS_NUM, INPUT_LENGTH]
         output = tf.transpose(conv1, perm=[0, 2, 3, 1], name='image')
         # shape: [None, CLASS_NUM, INPUT_LENGTH, 1]
-        tf.summary.image(name='piano_roll', tensor=output[:BATCH_SIZE // 10])
+        tf.summary.image(name='piano_roll', tensor=output[0])
         output = tf.squeeze(output, axis=-1, name='output')
         # shape: [None, CLASS_NUM, INPUT_LENGTH]
         return output
