@@ -320,10 +320,10 @@ def main():
             unpack_sample(name='Samples/sample_%s' % path+ '/%s.npy' % path, concat=args.concat)
             return
         writer = tf.summary.FileWriter('train', sess.graph)
+        run_options = tf.RunOptions(report_tensor_allocations_upon_oom=True)
         epoch_num = 1000000
         for ___ in tqdm(range(epoch_num)):
             feed_dict[train] = True
-            run_options = tf.RunOptions(report_tensor_allocations_upon_oom=True)
             for i in range(TRAIN_RATIO_DIS):
                 feed_dict[input_noise1] = get_noise([BATCH_SIZE, 1, 1, NOISE_LENGTH])
                 feed_dict[input_noise2] = get_noise([BATCH_SIZE, 1, 1, NOISE_LENGTH])
