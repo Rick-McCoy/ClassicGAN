@@ -365,4 +365,4 @@ def format_ops(ops, sort_outputs=True):
 def my_add_control_inputs(wait_to_do_ops, inputs_to_do_before):
     for op in wait_to_do_ops:
         ci = [i for i in inputs_to_do_before if op.control_inputs is None or i not in op.control_inputs]
-ge.add_control_inputs(op, ci)
+        ge.add_control_inputs(op, ci)
