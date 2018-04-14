@@ -37,10 +37,13 @@ def conv(inputs, filters, kernel_size=[1, 3, 3], strides=(1, 1, 1), training=Tru
                 conv_func = tf.layers.conv3d_transpose
             else:
                 conv_func = tf.layers.conv3d
-        output = activation_function(output)
+        if activation_function != tf.tanh:
+            output = activation_function(output)
         output = conv_func(inputs=output, filters=filters, kernel_size=kernel_size, strides=strides, \
                             padding='same', data_format='channels_first', activation=None, \
                             use_bias=use_bias, name='conv')
+        if activation_function == tf.tanh:
+            output = activation_function(output)
         return output
 
 def residual_block(inputs, filters, training, regularization='', name=''):
