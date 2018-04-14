@@ -87,7 +87,7 @@ def gradients(ys, xs, grad_ys=None, checkpoints='collection', **kwargs):
             
         elif checkpoints == 'speed':
             # checkpoint all expensive ops to maximize running speed
-            checkpoints = ge.filter_ts_from_regex(fwd_ops, 'conv2d|Conv|MatMul')
+            checkpoints = ge.filter_ts_from_regex(fwd_ops, 'conv3d|conv2d|Conv|MatMul')
             
         elif checkpoints == 'memory':
 
