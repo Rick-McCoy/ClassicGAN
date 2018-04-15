@@ -155,7 +155,7 @@ def main():
     with tf.name_scope('generator'):
         input_noise_split = tf.unstack(input_noise, axis=1, name='input_noise_split')
         # shape: [CHANNEL_NUM, None, 4, NOISE_LENGTH * 4]
-        input_gen1, gen1 = zip(*[generator1(noise=input_noise_split[i], encode=encode[i], \
+        input_gen1, gen1 = zip(*[generator1(noise=input_noise_split[i], encode=encode[:, i], \
                                             num=i, train=train) for i in range(CHANNEL_NUM)])
         # shape: [CHANNEL_NUM, None, 4, CLASS_NUM // 4, INPUT_LENGTH // 16]
         # shape: [CHANNEL_NUM, None, NOISE_LENGTH * 2, 4, CLASS_NUM // 4, INPUT_LENGTH // 16]
