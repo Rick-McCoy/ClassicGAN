@@ -13,14 +13,16 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 def conv(inputs, filters, kernel_size=[1, 3, 3], strides=(1, 1, 1), training=True, regularization='', transpose=False, name=''):
     with tf.variable_scope(name, reuse=tf.AUTO_REUSE):
-        if regularization == 'batch_norm_relu':
+        if regularization[-5:] == 'lrelu':
             activation_function = tf.nn.relu
-        elif regularization == 'batch_norm_tanh':
+        elif regularization[-4:] == 'relu':
+            activation_function = tf.nn.relu
+        elif regularization[-4:] == 'tanh':
             activation_function = tf.tanh
         else:
             activation_function = tf.nn.leaky_relu
         use_bias = regularization == ''
-        if regularization:
+        if regularization[:10] == 'batch_norm':
             output = tf.layers.batch_normalization(inputs=inputs, axis=1, training=training, name='batch_norm', fused=True)
         else:
             output = inputs
@@ -83,19 +85,19 @@ def encoder(inputs, num, train):
                                                             regularization='batch_norm_lrelu', name='conv1')
         # shape: [None, 16, 4, CLASS_NUM // 3, INPUT_LENGTH // 4]
         conv2 = conv(inputs=conv1, filters=16, kernel_size=[1, 4, 1], strides=(1, 4, 1), training=train, \
-                                                            regularization='batch_norm_lrelu', name='conv2')
+                                                            regularization='lrelu', name='conv2')
         # shape: [None, 16, 4, CLASS_NUM // 12, INPUT_LENGTH // 4]
         conv3 = conv(inputs=conv2, filters=16, kernel_size=[1, 6, 1], strides=(1, 6, 1), training=train, \
-                                                            regularization='batch_norm_lrelu', name='conv3')
+                                                            regularization='lrelu', name='conv3')
         # shape: [None, 16, 4, 1, INPUT_LENGTH // 4]
         conv4 = conv(inputs=conv3, filters=16, kernel_size=[1, 1, 2], strides=(1, 1, 2), training=train, \
                                                             regularization='batch_norm_lrelu', name='conv4')
         # shape: [None, 16, 4, 1, INPUT_LENGTH // 8]
         conv5 = conv(inputs=conv4, filters=16, kernel_size=[1, 1, 3], strides=(1, 1, 3), training=train, \
-                                                            regularization='batch_norm_lrelu', name='conv5')
+                                                            regularization='lrelu', name='conv5')
         # shape: [None, 16, 4, 1, INPUT_LENGTH // 24]
         conv6 = conv(inputs=conv5, filters=16, kernel_size=[1, 1, 4], strides=(1, 1, 4), training=train, \
-                                                            regularization='batch_norm_lrelu', name='conv6')
+                                                            regularization='lrelu', name='conv6')
         # shape: [None, 16, 4, 1, INPUT_LENGTH // 96]
         conv7 = conv(inputs=conv6, filters=16, kernel_size=[1, 1, 4], strides=(1, 1, 4), training=train, \
                                                             regularization='batch_norm_lrelu', name='conv7')
@@ -124,19 +126,19 @@ def generator1(noise, encode, num, train):
         noise = tf.expand_dims(tf.expand_dims(noise, axis=-1), axis=-1)
         # shape: [None, NOISE_LENGTH * 4 + 16, 4, 1, 1]
         deconv1 = conv(inputs=noise, filters=NOISE_LENGTH * 64, kernel_size=[1, 1, 2], strides=(1, 1, 2), \
-                            training=train, regularization='batch_norm_relu', transpose=True, name='deconv1')
+                            training=train, regularization='relu', transpose=True, name='deconv1')
         # shape: [None, NOISE_LENGTH * 64, 4, 1, 2]
         deconv2 = conv(inputs=deconv1, filters=NOISE_LENGTH * 32, kernel_size=[1, 1, 3], strides=(1, 1, 3), \
-                            training=train, regularization='batch_norm_relu', transpose=True, name='deconv2')
+                            training=train, regularization='relu', transpose=True, name='deconv2')
         # shape: [None, NOISE_LENGTH * 32, 4, 1, 6]
         deconv3 = conv(inputs=deconv2, filters=NOISE_LENGTH * 16, kernel_size=[1, 1, 4], strides=(1, 1, 4), \
                             training=train, regularization='batch_norm_relu', transpose=True, name='deconv3')
         # shape: [None, NOISE_LENGTH * 16, 4, 1, 24]
         deconv4 = conv(inputs=deconv3, filters=NOISE_LENGTH * 8, kernel_size=[1, 2, 1], strides=(1, 2, 1), \
-                            training=train, regularization='batch_norm_relu', transpose=True, name='deconv4')
+                            training=train, regularization='relu', transpose=True, name='deconv4')
         # shape: [None, NOISE_LENGTH * 8, 4, 2, 24]
         deconv5 = conv(inputs=deconv4, filters=NOISE_LENGTH * 4, kernel_size=[1, 3, 1], strides=(1, 3, 1), \
-                            training=train, regularization='batch_norm_relu', transpose=True, name='deconv5')
+                            training=train, regularization='relu', transpose=True, name='deconv5')
         # shape: [None, NOISE_LENGTH * 4, 4, 6, 24]
         deconv6 = conv(inputs=deconv5, filters=NOISE_LENGTH * 2, kernel_size=[1, 3, 1], strides=(1, 3, 1), \
                             training=train, regularization='batch_norm_relu', transpose=True, name='deconv6')
