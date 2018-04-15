@@ -44,12 +44,12 @@ def conv(inputs, filters, kernel_size=[1, 3, 3], strides=(1, 1, 1), training=Tru
                             use_bias=use_bias, name='conv')
         return output
 
-def residual_block(inputs, filters, training, regularization='', name=''):
+def residual_block(inputs, filters, training, name=''):
     with tf.variable_scope(name):
         if inputs.get_shape().as_list()[1] != filters:
-            inputs = conv(inputs=inputs, filters=filters, training=training, regularization=regularization, name='inputs')
-        conv1 = conv(inputs=inputs, filters=filters, training=training, regularization=regularization, name='conv1')
-        conv2 = conv(inputs=conv1, filters=filters, training=training, regularization=regularization, name='conv2')
+            inputs = conv(inputs=inputs, filters=filters, training=training, regularization='relu', name='inputs')
+        conv1 = conv(inputs=inputs, filters=filters, training=training, regularization='batch_norm_relu', name='conv1')
+        conv2 = conv(inputs=conv1, filters=filters, training=training, regularization='batch_norm_relu', name='conv2')
         return inputs + conv2
 
 def noise_generator(noise, train):
@@ -167,12 +167,12 @@ def generator2(inputs, encode, num, train):
         # shape: [None, 6, 4, CLASS_NUM // 4, INPUT_LENGTH // 16]]
         inputs = tf.concat([inputs, encode], axis=1)
         # shape: [None, 76, 4, CLASS_NUM // 4, INPUT_LENGTH // 16]
-        res1 = residual_block(inputs=inputs, filters=64, training=train, regularization='batch_norm_relu', name='res1')
+        res1 = residual_block(inputs=inputs, filters=64, training=train, name='res1')
         # shape: [None, 64, 4, CLASS_NUM // 4, INPUT_LENGTH // 16]
-        res2 = residual_block(inputs=res1, filters=64, training=train, regularization='batch_norm_relu', name='res2')
+        res2 = residual_block(inputs=res1, filters=64, training=train, name='res2')
         # shape: [None, 64, 4, CLASS_NUM // 4, INPUT_LENGTH // 16]
         deconv1 = conv(inputs=res2, filters=32, kernel_size=[1, 2, 1], strides=(1, 2, 1), training=train, \
-                                            regularization='batch_norm_relu', transpose=True, name='deconv1')
+                                            regularization='relu', transpose=True, name='deconv1')
         # shape: [None, 32, 4, CLASS_NUM // 2, INPUT_LENGTH // 16]
         deconv2 = conv(inputs=deconv1, filters=32, kernel_size=[1, 1, 2], strides=(1, 1, 2), training=train, \
                                             regularization='batch_norm_relu', transpose=True, name='deconv2')
@@ -200,12 +200,12 @@ def generator3(inputs, encode, num, train):
         # shape: [None, 6, 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
         inputs = tf.concat([inputs, encode], axis=1)
         # shape: [None, 44, 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
-        res1 = residual_block(inputs=inputs, filters=32, training=train, regularization='batch_norm_relu', name='res1')
+        res1 = residual_block(inputs=inputs, filters=32, training=train, name='res1')
         # shape: [None, 32, 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
-        res2 = residual_block(inputs=res1, filters=32, training=train, regularization='batch_norm_relu', name='res2')
+        res2 = residual_block(inputs=res1, filters=32, training=train, name='res2')
         # shape: [None, 32, 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
         deconv1 = conv(inputs=res2, filters=16, kernel_size=[1, 2, 1], strides=(1, 2, 1), training=train, \
-                                            regularization='batch_norm_relu', transpose=True, name='deconv1')
+                                            regularization='relu', transpose=True, name='deconv1')
         # shape: [None, 16, 4, CLASS_NUM, INPUT_LENGTH // 8]
         deconv2 = conv(inputs=deconv1, filters=16, kernel_size=[1, 1, 2], strides=(1, 1, 2), training=train, \
                                             regularization='batch_norm_relu', transpose=True, name='deconv2')
@@ -238,13 +238,13 @@ def generator4(inputs, encode, num, train):
         # shape: [4, None, 28, CLASS_NUM, INPUT_LENGTH // 4]
         inputs = tf.concat(inputs, axis=-1)
         # shape: [None, 28, CLASS_NUM, INPUT_LENGTH]
-        res1 = residual_block(inputs=inputs, filters=16, training=train, regularization='batch_norm_relu', name='res1')
+        res1 = residual_block(inputs=inputs, filters=16, training=train, name='res1')
         # shape: [None, 16, CLASS_NUM, INPUT_LENGTH]
-        res2 = residual_block(inputs=res1, filters=16, training=train, regularization='batch_norm_relu', name='res2')
+        res2 = residual_block(inputs=res1, filters=16, training=train, name='res2')
         # shape: [None, 16, CLASS_NUM, INPUT_LENGTH]
-        res3 = residual_block(inputs=res2, filters=16, training=train, regularization='batch_norm_relu', name='res3')
+        res3 = residual_block(inputs=res2, filters=16, training=train, name='res3')
         # shape: [None, 16, CLASS_NUM, INPUT_LENGTH]
-        res4 = residual_block(inputs=res3, filters=16, training=train, regularization='batch_norm_relu', name='res4')
+        res4 = residual_block(inputs=res3, filters=16, training=train, name='res4')
         # shape: [None, 16, CLASS_NUM, INPUT_LENGTH]
         conv1 = conv(inputs=res4, filters=1, training=train, regularization='batch_norm_tanh', name='conv1')
         # shape: [None, 1, CLASS_NUM, INPUT_LENGTH]
