@@ -153,8 +153,6 @@ def main():
             tf.summary.image('real_input_1_' + str(i), j)
 
     with tf.name_scope('generator'):
-        encode = tf.stack(encode, axis=1, name='encode')
-        # shape: [None, CHANNEL_NUM, 4, 16]
         input_noise_split = tf.unstack(input_noise, axis=1, name='input_noise_split')
         # shape: [CHANNEL_NUM, None, 4, NOISE_LENGTH * 4]
         input_gen1, gen1 = zip(*[generator1(noise=input_noise_split[i], encode=encode[i], \
