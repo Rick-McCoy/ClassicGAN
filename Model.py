@@ -101,19 +101,11 @@ def encoder(inputs, num, train):
         # shape: [None, 16, 4, 1, 1]
         flatten = [tf.layers.flatten(i) for i in tf.unstack(conv7, axis=2)]
         # shape: [4, None, 16]
-        output_mean = [tf.layers.dense(i, units=16, activation=None, name='dense_mean') for i in flatten]
+        output = [tf.layers.dense(i, units=16, activation=None, name='dense') for i in flatten]
         # shape: [4, None, 16]
-        output_mean = tf.stack(output_mean, axis=1)
+        output = tf.stack(output, axis=1)
         # shape: [None, 4, 16]
-        output_mean = tf.expand_dims(output_mean, axis=1)
-        # shape: [None, 1, 4, 16]
-        output_var = [tf.layers.dense(i, units=16, activation=None, name='dense_var') for i in flatten]
-        # shape: [4, None, 16]
-        output_var = tf.stack(output_var, axis=1)
-        # shape: [None, 4, 16]
-        output_var = tf.expand_dims(output_var, axis=1)
-        # shape: [None, 1, 4, 16]
-        return output_mean, output_var
+        return output
 
 def generator1(noise, encode, num, train):
     with tf.variable_scope('Generator1_' + str(num)):
@@ -193,6 +185,7 @@ def generator2(inputs, encode, num, train):
 
 def generator3(inputs, encode, num, train):
     with tf.variable_scope('Generator3_' + str(num)):
+        # shape: [None, CHANNEL_NUM, 4, 16]
         encode = tf.split(axis=-1, value=encode, num_or_size_splits=8, name='encode_split')
         # shape: [8, None, CHANNEL_NUM, 4, 2]
         encode = tf.stack(encode, axis=-1, name='encode_stack')
@@ -233,7 +226,7 @@ def generator4(inputs, encode, num, train):
         # shape: [8, None, CHANNEL_NUM, 4, 2]
         encode = tf.stack(encode, axis=-1, name='encode_stack')
         # shape: [None, CHANNEL_NUM, 4, 2, 8]
-        encode = tf.tile(encode, multiples=(1, 1, 1, 36, 12))
+        encode = tf.tile(input=encode, multiples=(1, 1, 1, 36, 12), name='encode_tile')
         # shape: [None, 6, 4, CLASS_NUM, INPUT_LENGTH // 4]
         inputs = tf.concat([inputs, encode], axis=1)
         # shape: [None, 28, 4, CLASS_NUM, INPUT_LENGTH // 4]

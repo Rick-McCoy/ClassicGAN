@@ -97,16 +97,9 @@ def main():
         # shape: [None, CHANNEL_NUM, 4, CLASS_NUM // 4, INPUT_LENGTH // 16]
         real_input_3_split = tf.split(real_input_3, num_or_size_splits=CHANNEL_NUM, axis=1, name='real_input_3_split')
         # shape: [CHANNEL_NUM, None, 1, 4, CLASS_NUM, INPUT_LENGTH // 4]
-        encode_split_mean, encode_split_var = zip(*[encoder(inputs=j, num=i, \
-                                                    train=train) for i, j in enumerate(real_input_3_split)])
-        # shape: [CHANNEL_NUM, None, 1, 4, 16]
-        encode_mean = [tf.squeeze(i, axis=1) for i in encode_split_mean]
+        encode_split = [encoder(inputs=j, num=i, train=train) for i, j in enumerate(real_input_3_split)]
         # shape: [CHANNEL_NUM, None, 4, 16]
-        encode_var = [tf.squeeze(i, axis=1) for i in encode_split_var]
-        # shape: [CHANNEL_NUM, None, 4, 16]
-        encode_norm = [tf.distributions.Normal(loc=encode_mean[i], scale=encode_var[i]) for i in range(CHANNEL_NUM)]
-        # shape: [CHANNEL_NUM, None, 4, 16]
-        encode = tf.stack([i.sample() for i in encode_norm], axis=1, name='encode')
+        encode = tf.stack(encode_split, axis=1, name='encode')
         # shape: [None, CHANNEL_NUM, 4, 16]
 
         input_noise = tf.concat(values=[noise1, noise2, noise3, noise4], axis=3, name='input_noise')
