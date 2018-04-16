@@ -11,18 +11,14 @@ NOISE_LENGTH = 32
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
-def conv(inputs, filters, kernel_size=[1, 3, 3], strides=(1, 1, 1), training=True, regularization='', transpose=False, name=''):
+def conv(inputs, filters, kernel_size=[1, 3, 3], strides=(1, 1, 1), training=True, regularization='lrelu', transpose=False, name=''):
     with tf.variable_scope(name, reuse=tf.AUTO_REUSE):
         if regularization[-5:] == 'lrelu':
-            activation_function = tf.nn.relu
+            activation_function = tf.nn.leaky_relu
         elif regularization[-4:] == 'relu':
             activation_function = tf.nn.relu
-        elif regularization[-4:] == 'tanh':
-            activation_function = tf.tanh
-        else:
-            activation_function = tf.nn.leaky_relu
-        use_bias = regularization == ''
-        if regularization[:10] == 'batch_norm':
+        use_bias = regularization[:10] != 'batch_norm'
+        if not use_bias:
             output = tf.layers.batch_normalization(inputs=inputs, axis=1, training=training, name='batch_norm', fused=True)
         else:
             output = inputs
@@ -39,8 +35,9 @@ def conv(inputs, filters, kernel_size=[1, 3, 3], strides=(1, 1, 1), training=Tru
                 conv_func = tf.layers.conv3d_transpose
             else:
                 conv_func = tf.layers.conv3d
+        output = activation_function(output)
         output = conv_func(inputs=output, filters=filters, kernel_size=kernel_size, strides=strides, \
-                            padding='same', data_format='channels_first', activation=activation_function, \
+                            padding='same', data_format='channels_first', activation=None, \
                             use_bias=use_bias, name='conv')
         return output
 
@@ -143,9 +140,11 @@ def generator1(noise, encode, num, train):
         deconv6 = conv(inputs=deconv5, filters=NOISE_LENGTH * 2, kernel_size=[1, 3, 1], strides=(1, 3, 1), \
                             training=train, regularization='batch_norm_relu', transpose=True, name='deconv6')
         # shape: [None, NOISE_LENGTH * 2, 4, CLASS_NUM // 4, INPUT_LENGTH // 16]
-        conv1 = conv(inputs=deconv6, filters=1, training=train, regularization='batch_norm_tanh', name='conv1')
+        conv1 = conv(inputs=deconv6, filters=1, training=train, regularization='batch_norm_relu', name='conv1')
         # shape: [None, 1, 4, CLASS_NUM // 4, INPUT_LENGTH // 16]
-        output = tf.transpose(conv1, perm=[0, 2, 3, 4, 1])
+        output = tf.tanh(conv1)
+        # shape: [None, 1, 4, CLASS_NUM // 4, INPUT_LENGTH // 16]
+        output = tf.transpose(output, perm=[0, 2, 3, 4, 1])
         # shape: [None, 4, CLASS_NUM // 4, INPUT_LENGTH // 16, 1]
         output_image = tf.unstack(output[:1], axis=1)
         # shape: [4, 1, CLASS_NUM // 4, INPUT_LENGTH // 16, 1]
@@ -164,7 +163,7 @@ def generator2(inputs, encode, num, train):
         encode = tf.stack(encode, axis=-1, name='encode_stack')
         # shape: [None, CHANNEL_NUM, 4, 2, 8]
         encode = tf.tile(input=encode, multiples=(1, 1, 1, 9, 3))
-        # shape: [None, 6, 4, CLASS_NUM // 4, INPUT_LENGTH // 16]]
+        # shape: [None, 6, 4, CLASS_NUM // 4, INPUT_LENGTH // 16]
         inputs = tf.concat([inputs, encode], axis=1)
         # shape: [None, 76, 4, CLASS_NUM // 4, INPUT_LENGTH // 16]
         res1 = residual_block(inputs=inputs, filters=64, training=train, name='res1')
@@ -177,9 +176,11 @@ def generator2(inputs, encode, num, train):
         deconv2 = conv(inputs=deconv1, filters=32, kernel_size=[1, 1, 2], strides=(1, 1, 2), training=train, \
                                             regularization='batch_norm_relu', transpose=True, name='deconv2')
         # shape: [None, 32, 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
-        conv1 = conv(inputs=deconv2, filters=1, training=train, regularization='batch_norm_tanh', name='conv1')
+        conv1 = conv(inputs=deconv2, filters=1, training=train, regularization='batch_norm_relu', name='conv1')
         # shape: [None, 1, 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
-        output = tf.transpose(conv1, perm=[0, 2, 3, 4, 1])
+        output = tf.tanh(conv1)
+        # shape: [None, 1, 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
+        output = tf.transpose(output, perm=[0, 2, 3, 4, 1])
         # shape: [None, 4, CLASS_NUM // 2, INPUT_LENGTH // 8, 1]
         output_image = tf.unstack(output[:1], axis=1)
         # shape: [4, 1, CLASS_NUM // 2, INPUT_LENGTH // 8, 1]
@@ -210,9 +211,11 @@ def generator3(inputs, encode, num, train):
         deconv2 = conv(inputs=deconv1, filters=16, kernel_size=[1, 1, 2], strides=(1, 1, 2), training=train, \
                                             regularization='batch_norm_relu', transpose=True, name='deconv2')
         # shape: [None, 16, 4, CLASS_NUM, INPUT_LENGTH // 4]
-        conv1 = conv(inputs=deconv2, filters=1, training=train, regularization='batch_norm_tanh', name='conv1')
+        conv1 = conv(inputs=deconv2, filters=1, training=train, regularization='batch_norm_relu', name='conv1')
         # shape: [None, 1, 4, CLASS_NUM, INPUT_LENGTH // 4]
-        output = tf.transpose(conv1, perm=[0, 2, 3, 4, 1])
+        output = tf.tanh(conv1)
+        # shape: [None, 1, 4, CLASS_NUM, INPUT_LENGTH // 4]
+        output = tf.transpose(output, perm=[0, 2, 3, 4, 1])
         # shape: [None, 4, CLASS_NUM, INPUT_LENGTH // 4, 1]
         output_image = tf.unstack(output[:1], axis=1)
         # shape: [4, 1, CLASS_NUM // 2, INPUT_LENGTH // 8, 1]
@@ -246,9 +249,11 @@ def generator4(inputs, encode, num, train):
         # shape: [None, 16, CLASS_NUM, INPUT_LENGTH]
         res4 = residual_block(inputs=res3, filters=16, training=train, name='res4')
         # shape: [None, 16, CLASS_NUM, INPUT_LENGTH]
-        conv1 = conv(inputs=res4, filters=1, training=train, regularization='batch_norm_tanh', name='conv1')
+        conv1 = conv(inputs=res4, filters=1, training=train, regularization='batch_norm_relu', name='conv1')
         # shape: [None, 1, CLASS_NUM, INPUT_LENGTH]
-        output = tf.transpose(conv1, perm=[0, 2, 3, 1], name='image')
+        output = tf.tanh(conv1)
+        # shape: [None, 1, CLASS_NUM, INPUT_LENGTH]
+        output = tf.transpose(output, perm=[0, 2, 3, 1], name='image')
         # shape: [None, CLASS_NUM, INPUT_LENGTH, 1]
         tf.summary.image(name='piano_roll', tensor=output[:1])
         output = tf.squeeze(output, axis=-1, name='output')
