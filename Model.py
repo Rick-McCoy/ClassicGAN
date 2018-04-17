@@ -320,7 +320,7 @@ def discriminator3(inputs, encode):
 def discriminator4(inputs, encode):
     with tf.variable_scope('Discriminator4', reuse=tf.AUTO_REUSE):
         # shape: [None, 6, 72, 384]
-        down = downsample(inputs, filter_size=16, name='downsample')
+        down = downsample2d(inputs, filter_size=16, name='downsample')
         # shape: [None, 512, 3, 4]
         block = block3x3(down, filter_size=512, name='block1')
         # shape: [None, 128, 3, 4]
