@@ -251,7 +251,7 @@ def downsample(inputs, filter_size, name):
         num = 5
         while output.get_shape().as_list()[3] > 3:
             filter_size = filter_size * 2
-            output = conv(inputs=output, filters=filter_size, kernel_size=[1, 3, 3], strides=(1, 3, 3), name='conv' + str(num))
+            output = conv(inputs=output, filters=filter_size, kernel_size=[1, 3, 3], strides=(1, 2, 2), name='conv' + str(num))
             num += 1
         return output
 
