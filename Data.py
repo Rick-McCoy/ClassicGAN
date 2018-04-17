@@ -69,9 +69,6 @@ def roll(path):
         raise Exception
     data = data > 0
     data = (data - 0.5) * 2.0
-    #while length < INPUT_LENGTH * BATCH_SIZE:
-    #    np.concatenate((data, data), axis=-1)
-    #    length *= 2
     data = np.split(data[:, :, :length // INPUT_LENGTH * INPUT_LENGTH], indices_or_sections=length // INPUT_LENGTH, axis=-1)
     return data
 
