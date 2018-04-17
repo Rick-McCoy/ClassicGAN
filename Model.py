@@ -256,7 +256,7 @@ def downsample(inputs, filter_size, name):
         return output
 
 def downsample2d(inputs, filter_size, name):
-    with tf.variable_Scope(name, reuse=tf.AUTO_REUSE):
+    with tf.variable_scope(name, reuse=tf.AUTO_REUSE):
         output = conv(inputs=inputs, filters=filter_size, kernel_size=[1, 2], strides=(1, 2), name='conv1')
         filter_size = filter_size * 2
         output = conv(inputs=output, filters=filter_size, kernel_size=[1, 2], strides=(1, 2), name='conv2')
