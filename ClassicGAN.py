@@ -11,9 +11,9 @@ import argparse
 from tqdm import tqdm
 from Data import roll, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH, BATCH_SIZE
 from Model import get_noise, generator1, generator2, generator3, generator4, \
-                    noise_generator, time_seq_noise_generator, discriminator1_conditional, \
-                    discriminator2_conditional, discriminator3_conditional, \
-                    discriminator4_conditional, encoder, NOISE_LENGTH
+                    noise_generator, time_seq_noise_generator, discriminator1, \
+                    discriminator2, discriminator3, \
+                    discriminator4, encoder, NOISE_LENGTH
 from Convert import unpack_sample
 import memory_saving_gradients
 tf.__dict__["gradients"] = memory_saving_gradients.gradients_speed
@@ -179,40 +179,40 @@ def main():
         # shape: [None, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH]
     print('Generators set')
     with tf.name_scope('discriminator'):
-        dis1_real = discriminator1_conditional(inputs=real_input_1, encode=encode)
+        dis1_real = discriminator1(inputs=real_input_1, encode=encode)
         # shape: [None, CHANNEL_NUM, 4, CLASS_NUM // 4, INPUT_LENGTH // 16]
-        dis1_gen = discriminator1_conditional(inputs=input_gen1, encode=encode)
+        dis1_gen = discriminator1(inputs=input_gen1, encode=encode)
         # shape: [None, CHANNEL_NUM, 4, CLASS_NUM // 4, INPUT_LENGTH // 16]
-        dis2_real = discriminator2_conditional(inputs=real_input_2, encode=encode)
+        dis2_real = discriminator2(inputs=real_input_2, encode=encode)
         # shape: [None, CHANNEL_NUM, 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
-        dis2_gen = discriminator2_conditional(inputs=input_gen2, encode=encode)
+        dis2_gen = discriminator2(inputs=input_gen2, encode=encode)
         # shape: [None, CHANNEL_NUM, 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
-        dis3_real = discriminator3_conditional(inputs=real_input_3, encode=encode)
+        dis3_real = discriminator3(inputs=real_input_3, encode=encode)
         # shape: [None, CHANNEL_NUM, 4, CLASS_NUM, INPUT_LENGTH // 4]
-        dis3_gen = discriminator3_conditional(inputs=input_gen3, encode=encode)
+        dis3_gen = discriminator3(inputs=input_gen3, encode=encode)
         # shape: [None, CHANNEL_NUM, 4, CLASS_NUM, INPUT_LENGTH // 4]
-        dis4_real = discriminator4_conditional(inputs=real_input_4, encode=encode)
+        dis4_real = discriminator4(inputs=real_input_4, encode=encode)
         # shape: [None, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH]
-        dis4_gen = discriminator4_conditional(inputs=input_gen4, encode=encode)
+        dis4_gen = discriminator4(inputs=input_gen4, encode=encode)
         # shape: [None, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH]
     print('Discriminators set')
     with tf.name_scope('loss'):
         loss_dis1 = tf.reduce_mean(dis1_gen - dis1_real) + gradient_penalty(real=real_input_1, \
-                                        gen=input_gen1, encode=encode, discriminator=discriminator1_conditional)
+                                        gen=input_gen1, encode=encode, discriminator=discriminator1)
         mean_gen1, dev_gen1 = tf.nn.moments(input_gen1, axes=list(range(2, input_gen1.shape.ndims)))
         loss_gen1 = -tf.reduce_mean(dis1_gen)
         loss_dis2 = tf.reduce_mean(dis2_gen - dis2_real) + gradient_penalty(real=real_input_2, \
-                                        gen=input_gen2, encode=encode, discriminator=discriminator2_conditional)
+                                        gen=input_gen2, encode=encode, discriminator=discriminator2)
         mean_gen2, dev_gen2 = tf.nn.moments(input_gen2, axes=list(range(2, input_gen2.shape.ndims)))
         loss_gen2 = -tf.reduce_mean(dis2_gen) + LAMBDA1 * tf.reduce_mean(tf.squared_difference(mean_gen1, mean_gen2)) \
                                                 + LAMBDA2 * tf.reduce_mean(tf.squared_difference(dev_gen1, dev_gen2))
         loss_dis3 = tf.reduce_mean(dis3_gen - dis3_real) + gradient_penalty(real=real_input_3, \
-                                        gen=input_gen3, encode=encode, discriminator=discriminator3_conditional)
+                                        gen=input_gen3, encode=encode, discriminator=discriminator3)
         mean_gen3, dev_gen3 = tf.nn.moments(input_gen3, axes=list(range(2, input_gen3.shape.ndims)))
         loss_gen3 = -tf.reduce_mean(dis3_gen) + LAMBDA1 * tf.reduce_mean(tf.squared_difference(mean_gen2, mean_gen3)) \
                                                 + LAMBDA2 * tf.reduce_mean(tf.squared_difference(dev_gen2, dev_gen3))
         loss_dis4 = tf.reduce_mean(dis4_gen - dis4_real) + gradient_penalty(real=real_input_4, \
-                                        gen=input_gen4, encode=encode, discriminator=discriminator4_conditional)
+                                        gen=input_gen4, encode=encode, discriminator=discriminator4)
         mean_gen4, dev_gen4 = tf.nn.moments(input_gen4, axes=list(range(2, input_gen4.shape.ndims)))
         loss_gen4 = -tf.reduce_mean(dis4_gen) + LAMBDA1 * tf.reduce_mean(tf.squared_difference(mean_gen3, mean_gen4)) \
                                                 + LAMBDA2 * tf.reduce_mean(tf.squared_difference(dev_gen3, dev_gen4))
@@ -239,10 +239,10 @@ def main():
         gen_var += tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Generator2_' + str(i))
         gen_var += tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Generator3_' + str(i))
         gen_var += tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Generator4_' + str(i))
-    dis1_var = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Discriminator1_Conditional')
-    dis2_var = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Discriminator2_Conditional')
-    dis3_var = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Discriminator3_Conditional')
-    dis4_var = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Discriminator4_Conditional')
+    dis1_var = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Discriminator1')
+    dis2_var = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Discriminator2')
+    dis3_var = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Discriminator3')
+    dis4_var = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Discriminator4')
     gen_extra_update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Noise_generator')
     for i in range(CHANNEL_NUM):
         gen_extra_update_ops += tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Encoder' + str(i))
@@ -251,10 +251,10 @@ def main():
         gen_extra_update_ops += tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Generator2_' + str(i))
         gen_extra_update_ops += tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Generator3_' + str(i))
         gen_extra_update_ops += tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Generator4_' + str(i))
-    dis1_extra_update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Discriminator1_Conditional')
-    dis2_extra_update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Discriminator2_Conditional')
-    dis3_extra_update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Discriminator3_Conditional')
-    dis4_extra_update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Discriminator4_Conditional')
+    dis1_extra_update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Discriminator1')
+    dis2_extra_update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Discriminator2')
+    dis3_extra_update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Discriminator3')
+    dis4_extra_update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Discriminator4')
     with tf.name_scope('optimizers'):
         with tf.control_dependencies(dis1_extra_update_ops):
             dis1_train = tf.train.AdamOptimizer(learning_rate=0.0002, beta1=0.5, beta2=0.99).minimize(\
