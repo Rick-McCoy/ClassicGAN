@@ -96,6 +96,7 @@ def build_dataset():
 
 def main():
     build_dataset()
+    npy_to_tf()
 
 if __name__ == '__main__':
     main()
