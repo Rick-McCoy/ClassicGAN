@@ -60,7 +60,7 @@ def upblock(inputs, filter_size, training, name='upblock'):
     with tf.variable_scope(name):
         output = conv(inputs, filters=filter_size, kernel_size=[1, 2, 2], strides=(1, 2, 2), \
                                 training=training, regularization='batch_norm_relu', transpose=True, name='conv1')
-        output = conv(output, filters=filter_size, kernel_size=[1, 3, 3], strides=(1, 3, 3), \
+        output = conv(output, filters=filter_size, kernel_size=[1, 3, 3], strides=(1, 1, 1), \
                                 training=training, regularization='batch_norm_relu', transpose=True, name='conv2')
         return output
 
