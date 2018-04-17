@@ -255,12 +255,28 @@ def downsample(inputs, filter_size, name):
             num += 1
         return output
 
+def downsample2d(inputs, filter_size, name):
+    with tf.variable_Scope(name, reuse=tf.AUTO_REUSE):
+        output = conv(inputs=inputs, filters=filter_size, kernel_size=[1, 2], strides=(1, 2), name='conv1')
+        filter_size = filter_size * 2
+        output = conv(inputs=output, filters=filter_size, kernel_size=[1, 2], strides=(1, 2), name='conv2')
+        filter_size = filter_size * 2
+        output = conv(inputs=output, filters=filter_size, kernel_size=[2, 2], strides=(2, 2), name='conv3')
+        filter_size = filter_size * 2
+        output = conv(inputs=output, filters=filter_size, kernel_size=[3, 3], strides=(3, 3), name='conv4')
+        num = 5
+        while output.get_shape().as_list()[2] > 3:
+            filter_size = filter_size * 2
+            output = conv(inputs=output, filters=filter_size, kernel_size=[3, 3], strides=(2, 2), name='conv' + str(num))
+            num += 1
+        return output
+
 def block3x3(inputs, filter_size, name):
     with tf.variable_scope(name, reuse=tf.AUTO_REUSE):
         filter_size = filter_size / 2
-        output = conv(inputs=inputs, filters=filter_size, kernel_size=[1, 3, 3], strides=(1, 1, 1), name='conv1')
+        output = conv(inputs=inputs, filters=filter_size, name='conv1')
         filter_size = filter_size / 2
-        output = conv(inputs=output, filters=filter_size, kernel_size=[1, 3, 3], strides=(1, 1, 1), name='conv2')
+        output = conv(inputs=output, filters=filter_size, name='conv2')
         return output
 
 def conditional_output(inputs, encode, name):
@@ -303,11 +319,11 @@ def discriminator3(inputs, encode):
 
 def discriminator4(inputs, encode):
     with tf.variable_scope('Discriminator4', reuse=tf.AUTO_REUSE):
-        # shape: [None, 6, 4, 36, 48]
+        # shape: [None, 6, 72, 384]
         down = downsample(inputs, filter_size=16, name='downsample')
-        # shape: [None, 512, 1, 3, 4]
+        # shape: [None, 512, 3, 4]
         block = block3x3(down, filter_size=512, name='block1')
-        # shape: [None, 128, 1, 3, 4]
+        # shape: [None, 128, 3, 4]
         return conditional_output(block, encode, 'cond_out')
 
 def get_noise(size):
