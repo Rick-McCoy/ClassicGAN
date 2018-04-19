@@ -56,9 +56,12 @@ def residual_block(inputs, filters, training, name=''):
 
 def encode_concat(inputs, encode, name='encode_concat'):
     with tf.variable_scope(name):
-        encode = tf.split(axis=-1, value=encode, \
-                        num_or_size_splits=8, name='encode_split')
+        encode = tf.split(encode, axis=-1, num_or_size_splits=8, \
+                            name='encode_split')
         encode = tf.stack(encode, axis=-1, name='encode_stack')
+        encode = tf.split(encode, axis=3, num_or_size_splits=4, \
+                            name='encode_split_2')
+        encode = tf.concat(encode, axis=1, name='encode_concat')
         dim1 = inputs.get_shape().as_list()[3] // 2
         dim2 = inputs.get_shape().as_list()[4] // 8
         encode = tf.tile(input=encode, multiples=(1, 1, 1, dim1, dim2))
@@ -116,43 +119,42 @@ def time_seq_noise_generator(noise, num, train):
 def encoder(inputs, num, train):
     with tf.variable_scope('Encoder' + str(num)):
         # shape: [None, 1, 4, 72, 96]
-        conv1 = conv(inputs=inputs, filters=16, kernel_size=[1, 1, 2], \
+        conv1 = conv(inputs=inputs, filters=2, kernel_size=[1, 1, 2], \
                     strides=(1, 1, 2), training=train, \
                     regularization='batch_norm_lrelu', name='conv1')
-        # shape: [None, 16, 4, 72, 48]
-        conv2 = conv(inputs=conv1, filters=16, kernel_size=[1, 2, 2], \
+        # shape: [None, 2, 4, 72, 48]
+        conv2 = conv(inputs=conv1, filters=4, kernel_size=[1, 2, 2], \
                     strides=(1, 2, 2), training=train, \
                     regularization='batch_norm_lrelu', name='conv2')
-        # shape: [None, 16, 4, 36, 24]
-        conv3 = conv(inputs=conv2, filters=16, kernel_size=[1, 2, 2], \
+        # shape: [None, 4, 4, 36, 24]
+        conv3 = conv(inputs=conv2, filters=8, kernel_size=[1, 2, 2], \
                     strides=(1, 2, 2), training=train, \
                     regularization='batch_norm_lrelu', name='conv3')
-        # shape: [None, 16, 4, 18, 12]
+        # shape: [None, 8, 4, 18, 12]
         conv4 = conv(inputs=conv3, filters=16, kernel_size=[1, 2, 2], \
                     strides=(1, 2, 2), training=train, \
                     regularization='batch_norm_lrelu', name='conv4')
         # shape: [None, 16, 4, 9, 6]
-        conv5 = conv(inputs=conv4, filters=16, kernel_size=[1, 3, 2], \
+        conv5 = conv(inputs=conv4, filters=32, kernel_size=[1, 3, 2], \
                     strides=(1, 3, 2), training=train, \
                     regularization='batch_norm_lrelu', name='conv5')
-        # shape: [None, 16, 4, 3, 3]
-        conv6 = conv(inputs=conv5, filters=16, kernel_size=[1, 3, 3], \
+        # shape: [None, 32, 4, 3, 3]
+        conv6 = conv(inputs=conv5, filters=64, kernel_size=[1, 3, 3], \
                     strides=(1, 3, 3), training=train, \
                     regularization='batch_norm_lrelu', name='conv6')
-        # shape: [None, 16, 4, 1, 1]
+        # shape: [None, 64, 4, 1, 1]
         output = tf.stack([tf.layers.flatten(i) \
                         for i in tf.unstack(conv6, axis=2)], axis=1)
-        # shape: [None, 4, 16]
+        # shape: [None, 4, 64]
         return output
 
 def generator1(noise, encode, num, train):
     with tf.variable_scope('Generator1_' + str(num)):
-        # shape: [None, 4, 16]
         noise = tf.transpose(tf.concat([noise, encode], axis=2), \
                             perm=[0, 2, 1])
-        # shape: [None, 144, 4]
+        # shape: [None, 192, 4]
         noise = tf.expand_dims(tf.expand_dims(noise, axis=-1), axis=-1)
-        # shape: [None, 144, 4, 1, 1]
+        # shape: [None, 192, 4, 1, 1]
         transconv1 = conv(inputs=noise, filters=1024, \
                     kernel_size=[1, 1, 2], strides=(1, 1, 2), \
                     training=train, regularization='batch_norm_relu', \
@@ -187,9 +189,9 @@ def generator1(noise, encode, num, train):
 
 def generator2(inputs, encode, num, train):
     with tf.variable_scope('Generator2_' + str(num)):
-        # shape: [None, 6, 4, 16]
+        # shape: [None, 6, 4, 64]
         inputs = encode_concat(inputs, encode)
-        # shape: [None, 140, 4, 18, 24]
+        # shape: [None, 158, 4, 18, 24]
         res1 = residual_block(inputs=inputs, filters=64, \
                             training=train, name='res1')
         # shape: [None, 64, 4, 18, 24]
@@ -212,9 +214,9 @@ def generator2(inputs, encode, num, train):
 
 def generator3(inputs, encode, num, train):
     with tf.variable_scope('Generator3_' + str(num)):
-        # shape: [None, 6, 4, 16]
+        # shape: [None, 6, 4, 64]
         inputs = encode_concat(inputs, encode)
-        # shape: [None, 44, 4, 36, 48]
+        # shape: [None, 62, 4, 36, 48]
         res1 = residual_block(inputs=inputs, filters=32, \
                             training=train, name='res1')
         # shape: [None, 32, 4, 36, 48]
@@ -237,21 +239,26 @@ def generator3(inputs, encode, num, train):
 
 def generator4(inputs, encode, num, train):
     with tf.variable_scope('Generator4_' + str(num)):
-        # shape: [None, 6, 4, 16]
+        # shape: [None, 6, 4, 64]
         encode = tf.split(axis=-1, value=encode, \
                         num_or_size_splits=8, name='encode_split')
-        # shape: [8, None, 6, 4, 2]
+        # shape: [8, None, 6, 4, 8]
         encode = tf.stack(encode, axis=-1, name='encode_stack')
-        # shape: [None, 6, 4, 2, 8]
+        # shape: [None, 6, 4, 8, 8]
+        encode = tf.split(axis=3, value=encode, #
+                        num_or_size_splits=4, name='encode_split_2')
+        # shape: [4, None, 6, 4, 2, 8]
+        encode = tf.concat(encode, axis=1, name='encode_concat')
+        # shape: [None, 24, 4, 2, 8]
         encode = tf.tile(input=encode, multiples=(1, 1, 1, 36, 12), \
                         name='encode_tile')
-        # shape: [None, 6, 4, 72, 96]
+        # shape: [None, 24, 4, 72, 96]
         inputs = tf.concat([inputs, encode], axis=1)
-        # shape: [None, 28, 4, 72, 96]
+        # shape: [None, 46, 4, 72, 96]
         inputs = tf.unstack(inputs, axis=2, name='unstack')
-        # shape: [4, None, 28, 72, 96]
+        # shape: [4, None, 46, 72, 96]
         inputs = tf.concat(inputs, axis=-1)
-        # shape: [None, 28, 72, 384]
+        # shape: [None, 46, 72, 384]
         res1 = residual_block(inputs=inputs, filters=16, \
                             training=train, name='res1')
         # shape: [None, 16, 72, 384]
