@@ -33,10 +33,10 @@ def gradient_penalty(real, gen, encode, discriminator):
 
 def inference(real_input_4):
     with tf.name_scope('inputs'):
-        input_noise1 = tf.random_normal(dtype=tf.float32, shape=[None, 1, 1, NOISE_LENGTH], name='input_noise1')
-        input_noise2 = tf.random_normal(dtype=tf.float32, shape=[None, 1, 1, NOISE_LENGTH], name='input_noise2')
-        input_noise3 = tf.random_normal(dtype=tf.float32, shape=[None, CHANNEL_NUM, 1, NOISE_LENGTH], name='input_noise3')
-        input_noise4 = tf.random_normal(dtype=tf.float32, shape=[None, CHANNEL_NUM, 1, NOISE_LENGTH], name='input_noise4')
+        input_noise1 = tf.random_normal(dtype=tf.float32, shape=[BATCH_SIZE, 1, 1, NOISE_LENGTH], name='input_noise1')
+        input_noise2 = tf.random_normal(dtype=tf.float32, shape=[BATCH_SIZE, 1, 1, NOISE_LENGTH], name='input_noise2')
+        input_noise3 = tf.random_normal(dtype=tf.float32, shape=[BATCH_SIZE, CHANNEL_NUM, 1, NOISE_LENGTH], name='input_noise3')
+        input_noise4 = tf.random_normal(dtype=tf.float32, shape=[BATCH_SIZE, CHANNEL_NUM, 1, NOISE_LENGTH], name='input_noise4')
 
         train = tf.placeholder(dtype=tf.bool, name='traintest')
         noise1 = tf.tile(input=input_noise1, multiples=[1, CHANNEL_NUM, 4, 1], name='noise1')
