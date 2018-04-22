@@ -4,7 +4,6 @@ from __future__ import print_function
 import os
 import warnings
 import tensorflow as tf
-import numpy as np
 import argparse
 from tqdm import tqdm
 from Data import roll, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH, BATCH_SIZE
@@ -12,7 +11,6 @@ from Model import get_noise, generator1, generator2, generator3, generator4, \
                     noise_generator, time_seq_noise_generator, discriminator1, \
                     discriminator2, discriminator3, discriminator4, encoder, \
                     NOISE_LENGTH
-from Convert import unpack_sample
 import memory_saving_gradients
 tf.__dict__["gradients"] = memory_saving_gradients.gradients_speed
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
@@ -34,7 +32,6 @@ def gradient_penalty(real, gen, encode, discriminator):
         return LAMBDA * output
 
 def inference(real_input_4):
-
     with tf.name_scope('inputs'):
         input_noise1 = tf.random_normal(dtype=tf.float32, shape=[None, 1, 1, NOISE_LENGTH], name='input_noise1')
         input_noise2 = tf.random_normal(dtype=tf.float32, shape=[None, 1, 1, NOISE_LENGTH], name='input_noise2')
