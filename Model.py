@@ -164,7 +164,7 @@ def genblock(inputs, encode, filters, train, name='genblock'):
                             training=train, name='res1')
         res2 = residual_block(inputs=res1, filters=filters, \
                             training=train, name='res2')
-        upblock1 = upblock(res2, filters=filters/2, training=train)
+        upblock1 = upblock(res2, filters=filters // 2, training=train)
         conv1 = conv(inputs=upblock1, filters=1, training=train, \
                     regularization='batch_norm_relu', name='conv1')
         output = tf.transpose(tf.tanh(conv1), perm=[0, 2, 3, 4, 1])
