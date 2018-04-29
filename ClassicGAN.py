@@ -60,10 +60,10 @@ def main():
             feature = {'roll' : tf.FixedLenFeature((6, 72, 384), tf.float32)}
             parsed = tf.parse_single_example(example_proto, feature)
             return parsed['roll']
-        dataset = dataset.map(_parse, num_parallel_calls=8)
         dataset = dataset.apply(data.shuffle_and_repeat(buffer_size=16384))
-        dataset = dataset.apply(data.batch_and_drop_remainder(BATCH_SIZE))
-        dataset = dataset.prefetch(2)
+        dataset = dataset.apply(data.map_and_batch(_parse, batch_size=BATCH_SIZE\
+                                        , num_parallel_batches=8, drop_remainder=True))
+        dataset = dataset.prefetch(4)
         iterator = dataset.make_one_shot_iterator()
         real_input_4 = iterator.get_next()
 
