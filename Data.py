@@ -77,27 +77,16 @@ def build_dataset():
     random.shuffle(pathlist)
     if not os.path.exists('Dataset'):
         os.mkdir('Dataset')
-    cnt = 0
-    concat = []
     writer = tf.python_io.TFRecordWriter('Dataset/dataset')
     for path in tqdm(pathlist):
         try:
-            if not concat:
-                concat = roll(str(path))
-            else:
-                concat.extend(roll(str(path)))
+            data = roll(str(path))
         except:
-            tqdm.write(str(path) + ' ' + str(cnt))
             continue
-        if len(concat) >= 1000:
-            data = np.array(concat)
-            for datum in data:
-                feature = {'roll': tf.train.Feature(float_list=tf.train.FloatList(value=datum.flatten()))}
-                example = tf.train.Example(features=tf.train.Features(feature=feature))
-                serialized = example.SerializeToString()
-                writer.write(serialized)
-            concat = []
-        cnt+=1
+        feature = {'roll': tf.train.Feature(float_list=tf.train.FloatList(value=data.flatten()))}
+        example = tf.train.Example(features=tf.train.Features(feature=feature))
+        serialized = example.SerializeToString()
+        writer.write(serialized)
     writer.close()
 
 def main():
