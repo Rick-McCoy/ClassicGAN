@@ -79,6 +79,7 @@ def build_dataset():
         os.mkdir('Dataset')
     cnt = 0
     concat = []
+    writer = tf.python_io.TFRecordWriter('Dataset/dataset')
     for path in tqdm(pathlist):
         try:
             if not concat:
@@ -89,14 +90,18 @@ def build_dataset():
             tqdm.write(str(path) + ' ' + str(cnt))
             continue
         if len(concat) >= 1000:
-            tqdm.write('saving %d' % cnt)
-            np.save('Dataset/%d' % cnt, np.array(concat))
+            data = np.array(concat)
+            for datum in data:
+                feature = {'roll': tf.train.Feature(float_list=tf.train.FloatList(value=datum.flatten()))}
+                example = tf.train.Example(features=tf.train.Features(feature=feature))
+                serialized = example.SerializeToString()
+                writer.write(serialized)
             concat = []
         cnt+=1
+    writer.close()
 
 def main():
     build_dataset()
-    npy_to_tf()
 
 if __name__ == '__main__':
     main()

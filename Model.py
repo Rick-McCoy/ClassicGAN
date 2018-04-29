@@ -144,13 +144,13 @@ def generator2(inputs, encode, num, train):
 
 def generator3(inputs, encode, num, train):
     with tf.variable_scope('Generator3_' + str(num)):
-        # shape: [None, 6, 4, 64]
+        # shape: [None, 64]
         inputs = encode_concat(inputs, encode)
-        # shape: [None, 46, 4, 72, 96]
+        # shape: [None, 33, 4, 72, 96]
         inputs = tf.unstack(inputs, axis=2, name='unstack')
-        # shape: [4, None, 46, 72, 96]
+        # shape: [4, None, 33, 72, 96]
         inputs = tf.concat(inputs, axis=-1)
-        # shape: [None, 46, 72, 384]
+        # shape: [None, 33, 72, 384]
         res1 = residual_block(inputs=inputs, filters=16, \
                             training=train, name='res1')
         # shape: [None, 16, 72, 384]
