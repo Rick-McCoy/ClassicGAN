@@ -70,6 +70,7 @@ def roll(path):
     data = data > 0
     data = (data - 0.5) * 2.0
     data = np.split(data[:, :, :length // INPUT_LENGTH * INPUT_LENGTH], indices_or_sections=length // INPUT_LENGTH, axis=-1)
+    data = np.stack(data, axis=0)
     return data
 
 def build_dataset():
