@@ -196,10 +196,7 @@ def generator4(inputs, encode, num, train):
         res2 = residual_block(inputs=res1, filters=16, \
                             training=train, name='res2')
         # shape: [None, 16, 72, 384]
-        res3 = residual_block(inputs=res2, filters=16, \
-                            training=train, name='res3')
-        # shape: [None, 16, 72, 384]
-        conv1 = conv(inputs=res3, filters=1, training=train, \
+        conv1 = conv(inputs=res2, filters=1, training=train, \
                     regularization='batch_norm_relu', name='conv1')
         # shape: [None, 1, 72, 384]
         output = tf.tanh(conv1)

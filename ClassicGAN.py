@@ -6,6 +6,7 @@ import os
 import random
 import warnings
 import tensorflow as tf
+from tensorflow.contrib import data
 import numpy as np
 import argparse
 from tqdm import tqdm
@@ -54,14 +55,15 @@ def main():
     
     with tf.name_scope('inputs'):
         filename = 'Dataset/dataset.tfrecord'
-        dataset = tf.data.TFRecordDataset(filename)
+        dataset = tf.data.TFRecordDataset(filename, num_parallel_reads=8)
         def _parse(example_proto):
             feature = {'roll' : tf.FixedLenFeature((6, 72, 384), tf.float32)}
             parsed = tf.parse_single_example(example_proto, feature)
             return parsed['roll']
         dataset = dataset.map(_parse, num_parallel_calls=8)
-        dataset = dataset.apply(tf.contrib.data.shuffle_and_repeat(buffer_size=20000))
-        dataset = dataset.apply(tf.contrib.data.batch_and_drop_remainder(BATCH_SIZE))
+        dataset = dataset.apply(data.shuffle_and_repeat(buffer_size=16384))
+        dataset = dataset.apply(data.batch_and_drop_remainder(BATCH_SIZE))
+        dataset = dataset.prefetch(2)
         iterator = dataset.make_one_shot_iterator()
         real_input_4 = iterator.get_next()
 
