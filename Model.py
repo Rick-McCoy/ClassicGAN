@@ -81,12 +81,11 @@ def summary_image(inputs, name='summary_image'):
 
 def encoder(inputs, train):
     with tf.variable_scope('Encoder'):
-        filters = [16, 16, 16, 16, 16, 16]
         kernel_size = [[1, 1, 2], [1, 2, 2], [1, 2, 2], \
                     [1, 2, 2], [1, 3, 2], [1, 3, 3]]
         output = inputs
         for i, kernel in enumerate(kernel_size):
-            output = conv(inputs=output, filters=filters[i], \
+            output = conv(inputs=output, filters=16, \
             kernel_size=kernel, strides=tuple(kernel), \
             training=train, regularization='batch_norm_lrelu', \
             name='conv' + str(i + 1))
@@ -174,49 +173,24 @@ def generator3(inputs, encode, num, train):
 
 def downsample(inputs, filters, name):
     with tf.variable_scope(name, reuse=tf.AUTO_REUSE):
-        output = conv(inputs=inputs, filters=filters, \
-                    kernel_size=[2, 1, 1], strides=(2, 1, 1), \
-                    name='conv1')
-        filters = filters * 2
-        output = conv(inputs=output, filters=filters, \
-                    kernel_size=[2, 1, 1], strides=(2, 1, 1), \
-                    name='conv2')
-        filters = filters * 2
-        output = conv(inputs=output, filters=filters, \
-                    kernel_size=[1, 2, 2], strides=(1, 2, 2), \
-                    name='conv3')
-        filters = filters * 2
-        output = conv(inputs=output, filters=filters, \
-                    kernel_size=[1, 3, 3], strides=(1, 3, 3), \
-                    name='conv4')
+        if inputs.get_shape().ndims == 5:
+            kernel_size=[[2, 1, 1], [2, 1, 1], [1, 2, 2], [1, 3, 3]]
+            strides = (1, 2, 2)
+        else:
+            kernel_size=[[1, 2], [1, 2], [2, 2], [3, 3]]
+            strides = (1, 2, 2)
+        output = inputs
+        for i, kernel in kernel_size:
+            output = conv(inputs=output, filters=filters, \
+                        kernel_size=kernel, strides=tuple(kernel), \
+                        name='conv' + str(i + 1))
+            filters = filters * 2
         num = 5
         while output.get_shape().as_list()[3] > 3:
-            filters = filters * 2
             output = conv(inputs=output, filters=filters, \
-                        kernel_size=[1, 3, 3], strides=(1, 2, 2), \
+                        kernel_size=kernel_size[3], strides=strides, \
                         name='conv' + str(num))
-            num += 1
-        return output
-
-def downsample2d(inputs, filters, name):
-    with tf.variable_scope(name, reuse=tf.AUTO_REUSE):
-        output = conv(inputs=inputs, filters=filters, \
-                    kernel_size=[1, 2], strides=(1, 2), name='conv1')
-        filters = filters * 2
-        output = conv(inputs=output, filters=filters, \
-                    kernel_size=[1, 2], strides=(1, 2), name='conv2')
-        filters = filters * 2
-        output = conv(inputs=output, filters=filters, \
-                    kernel_size=[2, 2], strides=(2, 2), name='conv3')
-        filters = filters * 2
-        output = conv(inputs=output, filters=filters, \
-                    kernel_size=[3, 3], strides=(3, 3), name='conv4')
-        num = 5
-        while output.get_shape().as_list()[2] > 3:
             filters = filters * 2
-            output = conv(inputs=output, filters=filters, \
-                    kernel_size=[3, 3], strides=(2, 2), \
-                    name='conv' + str(num))
             num += 1
         return output
 
@@ -266,7 +240,7 @@ def discriminator2(inputs, encode):
 def discriminator3(inputs, encode):
     with tf.variable_scope('Discriminator3', reuse=tf.AUTO_REUSE):
         # shape: [None, 6, 72, 384]
-        down = downsample2d(inputs, filters=16, name='downsample2d')
+        down = downsample(inputs, filters=16, name='downsample')
         # shape: [None, 512, 3, 4]
         block = block3x3(down, filters=512, name='block1')
         # shape: [None, 128, 3, 4]
