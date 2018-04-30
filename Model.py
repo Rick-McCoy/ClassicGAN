@@ -119,9 +119,7 @@ def genblock(inputs, encode, filters, train, name='genblock'):
 
 def shared_gen(noise, encode, train):
     with tf.variable_scope('Shared_generator'):
-        filters = [1024, 512, 256, 128]
         kernel_size = [[1, 1, 2], [1, 2, 2], [1, 3, 2], [1, 3, 3]]
-        strides = [(1, 1, 2), (1, 2, 2), (1, 3, 2), (1, 3, 3)]
         encode = tf.squeeze(encode, axis=1)
         encode = tf.unstack(encode, axis=-1)
         encode = tf.concat(encode, axis=-1)
@@ -130,11 +128,13 @@ def shared_gen(noise, encode, train):
         output = tf.expand_dims(tf.expand_dims(noise, axis=-1), axis=-1)
         # shape: [None, 144, 4, 1, 1]
         for i, kernel in enumerate(kernel_size):
-            output = conv(inputs=output, filters=filters[i], \
-                            kernel_size=kernel, strides=strides[i], \
+            output = conv(inputs=output, filters=1024 // 2 ** i, \
+                            kernel_size=kernel, strides=tuple(kernel), \
                             training=train, regularization='batch_norm_relu', \
                             transpose=True, name='conv' + str(i + 1))
         # shape: [None, 128, 4, 18, 24]
+        output = conv(inputs=output, filters=64, training=train, \
+                        regularization='batch_norm_tanh', name='conv5')
         return output
 
 def generator1(inputs, encode, num, train):
@@ -161,7 +161,7 @@ def generator3(inputs, encode, num, train):
                             training=train, name='res2')
         # shape: [None, 16, 72, 384]
         conv1 = conv(inputs=res2, filters=1, training=train, \
-                    regularization='batch_norm_relu', name='conv1')
+                    regularization='batch_norm_tanh', name='conv1')
         # shape: [None, 1, 72, 384]
         output = tf.tanh(conv1)
         # shape: [None, 1, 72, 384]
