@@ -222,7 +222,7 @@ def main():
             except:
                 print('Error while opening file.')
                 return
-            feed_dict[input_noise] = get_noise([BATCH_SIZE, NOISE_LENGTH])
+            feed_dict[input_noise] = get_noise([BATCH_SIZE, NOISE_LENGTH, 4])
             feed_dict[train] = True
             samples = sess.run(output_gen3, feed_dict=feed_dict)
             path = path.split('/')[-1]
@@ -237,12 +237,12 @@ def main():
         for train_count in tqdm(range(epoch_num)):
             feed_dict[train] = True
             for i in range(TRAIN_RATIO_DIS):
-                feed_dict[input_noise] = get_noise([BATCH_SIZE, NOISE_LENGTH])
+                feed_dict[input_noise] = get_noise([BATCH_SIZE, NOISE_LENGTH, 4])
                 _, loss_val_dis1 = sess.run([dis1_train, loss_dis1], feed_dict=feed_dict, options=run_options)
                 _, loss_val_dis2 = sess.run([dis2_train, loss_dis2], feed_dict=feed_dict, options=run_options)
                 _, loss_val_dis3 = sess.run([dis3_train, loss_dis3], feed_dict=feed_dict, options=run_options)
             for i in range(TRAIN_RATIO_GEN):
-                feed_dict[input_noise] = get_noise([BATCH_SIZE, NOISE_LENGTH])
+                feed_dict[input_noise] = get_noise([BATCH_SIZE, NOISE_LENGTH, 4])
                 summary, _, loss_val_gen = sess.run([merged, gen_train, loss_gen], \
                                                     feed_dict=feed_dict, options=run_options)
             writer.add_summary(summary, train_count)
@@ -252,7 +252,7 @@ def main():
             tqdm.write('Discriminator3 loss : %.7f' % loss_val_dis3, end=' ')
             tqdm.write('Generator loss : %.7f' % loss_val_gen)
             if train_count % 1000 == 0:
-                feed_dict[input_noise] = get_noise([BATCH_SIZE, NOISE_LENGTH])
+                feed_dict[input_noise] = get_noise([BATCH_SIZE, NOISE_LENGTH, 4])
                 samples = sess.run(output_gen3, feed_dict=feed_dict)
                 np.save(file='Samples/song_%06d' % train_count, arr=samples)
                 unpack_sample('Samples/song_%06d' % train_count)
