@@ -66,7 +66,7 @@ def main():
         iterator = dataset.make_one_shot_iterator()
         real_input_3 = iterator.get_next()
 
-        input_noise = tf.placeholder(dtype=tf.float32, shape=[None, NOISE_LENGTH], name='input_noise')
+        input_noise = tf.placeholder(dtype=tf.float32, shape=[None, NOISE_LENGTH, 4], name='input_noise')
 
         train = tf.placeholder(dtype=tf.bool, name='traintest')
         #real_input_4 = tf.placeholder(dtype=tf.float32, \
