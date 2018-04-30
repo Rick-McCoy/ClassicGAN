@@ -88,24 +88,16 @@ def main():
         for i, j in enumerate(real_input_3_image):
             tf.summary.image('real_input_3_' + str(i), j)
             
-        real_input_2_image = tf.unstack(real_input_2[:1], axis=2, name='real_input_2_unstack')
-        # shape: [4, 1, CHANNEL_NUM, CLASS_NUM // 2, INPUT_LENGTH // 8]
-        real_input_2_image = tf.concat(real_input_2_image, axis=-1, name='real_input_2_concat')
-        # shape: [1, CHANNEL_NUM, CLASS_NUM // 2, INPUT_LENGTH // 2]
-        real_input_2_image = tf.expand_dims(real_input_2_image, axis=-1, name='real_input_2_expand')
-        # shape: [1, CHANNEL_NUM, CLASS_NUM // 2, INPUT_LENGTH // 2, 1]
-        real_input_2_image = tf.unstack(real_input_2_image, axis=1, name='real_input_2_image')
+        real_input_2_image = [tf.layers.max_pooling2d(inputs=image, pool_size=[2, 2], strides=(2, 2), \
+                                                        padding='same', name='real_input_2_inage') \
+                                                        for image in real_input_3_image]
         # shape: [CHANNEL_NUM, 1, CLASS_NUM // 2, INPUT_LENGTH // 2, 1]
         for i, j in enumerate(real_input_2_image):
             tf.summary.image('real_input_2_' + str(i), j)
             
-        real_input_1_image = tf.unstack(real_input_1[:1], axis=2, name='real_input_1_unstack')
-        # shape: [4, 1, CHANNEL_NUM, CLASS_NUM // 4, INPUT_LENGTH // 16]
-        real_input_1_image = tf.concat(real_input_1_image, axis=-1, name='real_input_1_concat')
-        # shape: [1, CHANNEL_NUM, CLASS_NUM // 4, INPUT_LENGTH // 4]
-        real_input_1_image = tf.expand_dims(real_input_1_image, axis=-1, name='real_input_1_expand')
-        # shape: [1, CHANNEL_NUM, CLASS_NUM // 4, INPUT_LENGTH // 4, 1]
-        real_input_1_image = tf.unstack(real_input_1_image, axis=1, name='real_input_1_image')
+        real_input_1_image = [tf.layers.max_pooling2d(inputs=image, pool_size=[2, 2], strides=(2, 2), \
+                                                        padding='same', name='real_input_1_inage') \
+                                                        for image in real_input_2_image]
         # shape: [CHANNEL_NUM, 1, CLASS_NUM // 4, INPUT_LENGTH // 4, 1]
         for i, j in enumerate(real_input_1_image):
             tf.summary.image('real_input_1_' + str(i), j)

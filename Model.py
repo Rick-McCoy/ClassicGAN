@@ -134,7 +134,10 @@ def shared_gen(noise, encode, train):
 
 def generator1(inputs, encode, num, train):
     with tf.variable_scope('Generator1_' + str(num)):
-        return genblock(inputs, encode, 64, train)
+        output, gen = genblock(inputs, encode, 64, train)
+        print(output.get_shape().as_list())
+        print(gen.get_shape().as_list())
+        return output, gen
 
 def generator2(inputs, encode, num, train):
     with tf.variable_scope('Generator2_' + str(num)):
