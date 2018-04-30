@@ -32,18 +32,6 @@ BATCH_SIZE = 16
 #15 Sound Effects: 36
 #16 Drums: 411
 
-def npy_to_tf():
-    pathlist = list(pathlib.Path('Dataset').glob('**/*.npy'))
-    writer = tf.python_io.TFRecordWriter('Dataset/dataset')
-    for path in tqdm(pathlist):
-        data = np.load(str(path))
-        for roll in data:
-            feature = {'roll': tf.train.Feature(float_list=tf.train.FloatList(value=roll.flatten()))}
-            example = tf.train.Example(features=tf.train.Features(feature=feature))
-            serialized = example.SerializeToString()
-            writer.write(serialized)
-    writer.close()
-
 def roll(path):
     try:
         song = pm.PrettyMIDI(midi_file=str(path), resolution=96)
@@ -78,7 +66,7 @@ def build_dataset():
     random.shuffle(pathlist)
     if not os.path.exists('Dataset'):
         os.mkdir('Dataset')
-    writer = tf.python_io.TFRecordWriter('Dataset/dataset')
+    writer = tf.python_io.TFRecordWriter('Dataset/dataset.tfrecord')
     for path in tqdm(pathlist):
         try:
             data = roll(str(path))
