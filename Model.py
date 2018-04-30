@@ -210,7 +210,7 @@ def downsample2d(inputs, filters, name):
         while output.get_shape().as_list()[2] > 3:
             filters = filters * 2
             output = conv(inputs=output, filters=filters, \
-                    kernel_size=[2, 2], strides=(2, 2), \
+                    kernel_size=[3, 3], strides=(2, 2), \
                     name='conv' + str(num))
             num += 1
         return output
