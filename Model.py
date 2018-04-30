@@ -178,7 +178,7 @@ def downsample(inputs, filters, name):
             strides = (1, 2, 2)
         else:
             kernel_size=[[1, 2], [1, 2], [2, 2], [3, 3]]
-            strides = (1, 2, 2)
+            strides = (2, 2)
         output = inputs
         for i, kernel in enumerate(kernel_size):
             output = conv(inputs=output, filters=filters, \
