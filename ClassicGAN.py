@@ -78,8 +78,8 @@ def main():
         real_input_1 = tf.layers.max_pooling3d(inputs=real_input_2, pool_size=[1, 2, 2], strides=(1, 2, 2), \
                                                     padding='same', data_format='channels_first', name='real_input_1')
         # shape: [None, CHANNEL_NUM, 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
-        encode = encoder(inputs=real_input_3, train=train)
-        # shape: [None, 64]
+        encode = encoder(inputs=real_input_2, train=train)
+        # shape: [None, 4, 2, 8]
 
         real_input_3_image = tf.expand_dims(real_input_3[:1], axis=-1, name='real_input_3_image_expand')
         # shape: [1, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH, 1]

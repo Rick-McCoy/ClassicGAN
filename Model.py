@@ -56,13 +56,6 @@ def residual_block(inputs, filters, training, name=''):
 
 def encode_concat(inputs, encode, name='encode_concat'):
     with tf.variable_scope(name):
-        encode = tf.split(encode, axis=-1, num_or_size_splits=8, \
-                            name='encode_split')
-        encode = tf.stack(encode, axis=-1, name='encode_stack')
-        encode = tf.split(encode, axis=1, num_or_size_splits=2, \
-                            name='encode_split_2')
-        encode = tf.stack(encode, axis=2, name='encode_stack_2')
-        encode = tf.expand_dims(encode, axis=1)
         dim1 = inputs.get_shape().as_list()[3] // 2
         dim2 = inputs.get_shape().as_list()[4] // 8
         encode = tf.tile(input=encode, multiples=(1, 1, 1, dim1, dim2))
@@ -88,18 +81,25 @@ def summary_image(inputs, name='summary_image'):
 
 def encoder(inputs, train):
     with tf.variable_scope('Encoder'):
-        filters = [8, 16, 32, 64, 64, 64]
-        kernel_size = [[1, 2], [2, 2], [2, 2], \
-                    [2, 3], [3, 4], [3, 4]]
+        filters = [16, 16, 16, 16, 16, 16]
+        kernel_size = [[1, 1, 2], [1, 2, 2], [1, 2, 2], \
+                    [1, 2, 2], [1, 3, 2], [1, 3, 3]]
         output = inputs
         for i, kernel in enumerate(kernel_size):
             output = conv(inputs=output, filters=filters[i], \
             kernel_size=kernel, strides=tuple(kernel), \
             training=train, regularization='batch_norm_lrelu', \
             name='conv' + str(i + 1))
-        # shape: [None, 64, 1, 1]
-        output = tf.layers.flatten(output)
-        # shape: [None, 64]
+        # shape: [None, 16, 4, 1, 1]
+        output = tf.squeeze(output)
+        output = tf.transpose(output, perm=[0, 2, 1])
+        # shape: [None, 4, 16]
+        output = tf.split(output, axis=-1, num_or_size_splits=2, \
+                            name='output_split')
+        # shape: [None, 4, 2, 8]
+        output = tf.stack(output, axis=2)
+        output = tf.expand_dims(output, axis=1)
+        # shape: [None, 1, 4, 2, 8]
         return output
 
 def genblock(inputs, encode, filters, train, name='genblock'):
@@ -122,7 +122,7 @@ def shared_gen(noise, encode, train):
         filters = [256, 128, 128, 64, 64]
         kernel_size = [[2, 1, 1], [1, 1, 2], [1, 2, 2], [1, 3, 2], [1, 3, 3]]
         strides = [(2, 1, 1), (1, 1, 2), (1, 2, 2), (1, 3, 2), (1, 3, 3)]
-        noise = tf.concat([noise, encode], axis=1)
+        noise = tf.concat([noise, tf.layers.flatten(encode)], axis=1)
         output = tf.layers.dense(inputs=noise, units=1024, activation=tf.nn.relu)
         output = tf.reshape(output, shape=[-1, 512, 2, 1, 1])
         for i, kernel in enumerate(kernel_size):
@@ -134,10 +134,7 @@ def shared_gen(noise, encode, train):
 
 def generator1(inputs, encode, num, train):
     with tf.variable_scope('Generator1_' + str(num)):
-        output, gen = genblock(inputs, encode, 64, train)
-        print(output.get_shape().as_list())
-        print(gen.get_shape().as_list())
-        return output, gen
+        return genblock(inputs, encode, 64, train)
 
 def generator2(inputs, encode, num, train):
     with tf.variable_scope('Generator2_' + str(num)):
@@ -145,7 +142,7 @@ def generator2(inputs, encode, num, train):
 
 def generator3(inputs, encode, num, train):
     with tf.variable_scope('Generator3_' + str(num)):
-        # shape: [None, 64]
+        # shape: [None, 4, 16]
         inputs = encode_concat(inputs, encode)
         # shape: [None, 33, 4, 72, 96]
         inputs = tf.unstack(inputs, axis=2, name='unstack')
