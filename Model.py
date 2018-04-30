@@ -123,10 +123,10 @@ def shared_gen(noise, encode, train):
     with tf.variable_scope('Shared_generator'):
         filters = [256, 128, 128, 64, 64]
         kernel_size = [[2, 1, 1], [1, 1, 2], [1, 2, 2], [1, 3, 2], [1, 3, 3]]
-        strides = [(1, 1, 1), (1, 1, 2), (1, 2, 2), (1, 3, 2), (1, 3, 3)]
+        strides = [(2, 1, 1), (1, 1, 2), (1, 2, 2), (1, 3, 2), (1, 3, 3)]
         noise = tf.concat([noise, encode], axis=1)
-        output = tf.layers.dense(inputs=noise, units=1536, activation=tf.nn.relu)
-        output = tf.reshape(output, shape=[-1, 512, 3, 1, 1])
+        output = tf.layers.dense(inputs=noise, units=1024, activation=tf.nn.relu)
+        output = tf.reshape(output, shape=[-1, 512, 2, 1, 1])
         for i, kernel in enumerate(kernel_size):
             output = conv(inputs=output, filters=filters[i], \
                             kernel_size=kernel, strides=strides[i], \

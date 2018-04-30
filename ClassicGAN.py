@@ -71,9 +71,9 @@ def main():
         train = tf.placeholder(dtype=tf.bool, name='traintest')
         #real_input_4 = tf.placeholder(dtype=tf.float32, \
         # shape=[None, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH], name='real_input_4')
-        real_input_3_split = tf.split(real_input_3, num_or_size_splits=4, axis=-1, name='real_input_4_split')
+        real_input_3_split = tf.split(real_input_3, num_or_size_splits=4, axis=-1, name='real_input_3_split')
         # shape: [4, None, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH // 4]
-        real_input_2 = tf.stack(real_input_3_split, axis=2, name='real_input_3')
+        real_input_2 = tf.stack(real_input_3_split, axis=2, name='real_input_2')
         # shape: [None, CHANNEL_NUM, 4, CLASS_NUM, INPUT_LENGTH // 4]
         real_input_1 = tf.layers.max_pooling3d(inputs=real_input_2, pool_size=[1, 2, 2], strides=(1, 2, 2), \
                                                     padding='same', data_format='channels_first', name='real_input_1')
@@ -101,7 +101,7 @@ def main():
             
         real_input_1_image = tf.unstack(real_input_1[:1], axis=2, name='real_input_1_unstack')
         # shape: [4, 1, CHANNEL_NUM, CLASS_NUM // 4, INPUT_LENGTH // 16]
-        real_input_1_image = tf.concat(real_input_1_image, axis=-1, name='real_input_3_concat')
+        real_input_1_image = tf.concat(real_input_1_image, axis=-1, name='real_input_1_concat')
         # shape: [1, CHANNEL_NUM, CLASS_NUM // 4, INPUT_LENGTH // 4]
         real_input_1_image = tf.expand_dims(real_input_1_image, axis=-1, name='real_input_1_expand')
         # shape: [1, CHANNEL_NUM, CLASS_NUM // 4, INPUT_LENGTH // 4, 1]
@@ -117,7 +117,7 @@ def main():
                                             num=i, train=train) for i in range(CHANNEL_NUM)])
         # shape: [CHANNEL_NUM, None, 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
         # shape: [CHANNEL_NUM, None, 32, 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
-        output_gen1 = tf.stack(output_gen1, axis=1, name='output_gen2_stack')
+        output_gen1 = tf.stack(output_gen1, axis=1, name='output_gen1_stack')
         # shape: [None, CHANNEL_NUM, 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
         gen1 = [tf.concat(values=[i, output_gen1], axis=1) for i in gen1]
         # shape: [CHANNEL_NUM, None, 38, 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
@@ -125,14 +125,14 @@ def main():
                                             num=i, train=train) for i in range(CHANNEL_NUM)])
         # shape: [CHANNEL_NUM, None, 4, CLASS_NUM, INPUT_LENGTH // 4]
         # shape: [CHANNEL_NUM, None, 16, 4, CLASS_NUM, INPUT_LENGTH // 4]
-        output_gen2 = tf.stack(output_gen2, axis=1, name='output_gen3_stack')
+        output_gen2 = tf.stack(output_gen2, axis=1, name='output_gen2_stack')
         # shape: [None, CHANNEL_NUM, 4, CLASS_NUM, INPUT_LENGTH // 4]
         gen2 = [tf.concat(values=[i, output_gen2], axis=1) for i in gen2]
         # shape: [CHANNEL_NUM, None, 22, 4, CLASS_NUM, INPUT_LENGTH // 4]
         output_gen3 = [generator3(inputs=gen2[i], encode=encode, \
                                     num=i, train=train) for i in range(CHANNEL_NUM)]
         # shape: [CHANNEL_NUM, None, CLASS_NUM, INPUT_LENGTH]
-        output_gen3 = tf.stack(output_gen3, axis=1, name='output_gen4_stack')
+        output_gen3 = tf.stack(output_gen3, axis=1, name='output_gen3_stack')
         # shape: [None, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH]
     print('Generators set')
     with tf.name_scope('discriminator'):
@@ -175,7 +175,7 @@ def main():
         tf.summary.scalar('loss_gen3', loss_gen3)
         tf.summary.scalar('dis3_real', tf.reduce_mean(dis3_real))
     print('Losses set')
-    gen_var = [tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Shared_generator')]
+    gen_var = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Shared_generator')
     gen_var += tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Encoder')
     for i in range(CHANNEL_NUM):
         gen_var += tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Generator1_' + str(i))
@@ -195,19 +195,19 @@ def main():
     dis3_extra_update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Discriminator3')
     with tf.name_scope('optimizers'):
         with tf.control_dependencies(dis1_extra_update_ops):
-            dis1_train = tf.train.AdamOptimizer(learning_rate=0.0002, beta1=0.5, beta2=0.99).minimize(\
+            dis1_train = tf.train.AdamOptimizer(learning_rate=0.0002, beta1=0.5, beta2=0.9).minimize(\
                                                     loss=loss_dis1, var_list=dis1_var, name='dis1_train')
         print('dis1_train setup')
         with tf.control_dependencies(dis2_extra_update_ops):
-            dis2_train = tf.train.AdamOptimizer(learning_rate=0.0002, beta1=0.5, beta2=0.99).minimize(\
+            dis2_train = tf.train.AdamOptimizer(learning_rate=0.0002, beta1=0.5, beta2=0.9).minimize(\
                                                     loss=loss_dis2, var_list=dis2_var, name='dis2_train')
         print('dis2_train setup')
         with tf.control_dependencies(dis3_extra_update_ops):
-            dis3_train = tf.train.AdamOptimizer(learning_rate=0.0002, beta1=0.5, beta2=0.99).minimize(\
+            dis3_train = tf.train.AdamOptimizer(learning_rate=0.0002, beta1=0.5, beta2=0.9).minimize(\
                                                     loss=loss_dis3, var_list=dis3_var, name='dis3_train')
         print('dis3_train setup')
         with tf.control_dependencies(gen_extra_update_ops):
-            gen_train = tf.train.AdamOptimizer(learning_rate=0.0002, beta1=0.5, beta2=0.99).minimize(\
+            gen_train = tf.train.AdamOptimizer(learning_rate=0.0002, beta1=0.5, beta2=0.9).minimize(\
                                                     loss=loss_gen, var_list=gen_var, name='gen_train')
         print('gen_train setup')
     print('Optimizers set')
