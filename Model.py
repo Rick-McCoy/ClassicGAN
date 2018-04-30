@@ -6,7 +6,7 @@ import os
 import tensorflow as tf
 from numpy.random import normal
 
-NOISE_LENGTH = 32
+NOISE_LENGTH = 128
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
