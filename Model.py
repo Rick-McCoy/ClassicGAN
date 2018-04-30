@@ -32,11 +32,9 @@ def conv(inputs, filters, kernel_size=[1, 3, 3], strides=(1, 1, 1), \
             conv_func = tf.layers.conv3d_transpose
         else:
             conv_func = tf.layers.conv3d
-        padding = 'valid' if kernel_size[0] != strides[0] \
-                    and inputs.get_shape().ndims == 5 else 'same'
         output = conv_func(inputs=inputs, filters=filters, \
                         kernel_size=kernel_size, strides=strides, \
-                        padding=padding, data_format='channels_first', \
+                        padding='same', data_format='channels_first', \
                         use_bias=use_bias, name='conv')
         if not use_bias:
             output = tf.layers.batch_normalization(inputs=output, \
