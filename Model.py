@@ -180,7 +180,7 @@ def downsample(inputs, filters, name):
             kernel_size=[[1, 2], [1, 2], [2, 2], [3, 3]]
             strides = (1, 2, 2)
         output = inputs
-        for i, kernel in kernel_size:
+        for i, kernel in enumerate(kernel_size):
             output = conv(inputs=output, filters=filters, \
                         kernel_size=kernel, strides=tuple(kernel), \
                         name='conv' + str(i + 1))
