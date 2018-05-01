@@ -186,7 +186,7 @@ def downsample(inputs, filters, name):
                         name='conv' + str(i + 1))
             filters = filters * 2
         num = 5
-        while output.get_shape().as_list()[3] > 3:
+        while output.get_shape().as_list()[-2] > 3:
             output = conv(inputs=output, filters=filters, \
                         kernel_size=kernel_size[3], strides=strides, \
                         name='conv' + str(num))
