@@ -83,24 +83,16 @@ def main():
 
         real_input_3_image = tf.expand_dims(real_input_3[:1], axis=-1, name='real_input_3_image_expand')
         # shape: [1, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH, 1]
-        real_input_3_image = tf.unstack(real_input_3_image, axis=1, name='real_input_3_image_unstack')
-        # shape: [CHANNEL_NUM, 1, CLASS_NUM, INPUT_LENGTH, 1]
-        for i, j in enumerate(real_input_3_image):
-            tf.summary.image('real_input_3_' + str(i), j)
-            
-        real_input_2_image = [tf.layers.max_pooling2d(inputs=image, pool_size=[2, 2], strides=(2, 2), \
-                                                        padding='same', name='real_input_2_inage') \
-                                                        for image in real_input_3_image]
-        # shape: [CHANNEL_NUM, 1, CLASS_NUM // 2, INPUT_LENGTH // 2, 1]
-        for i, j in enumerate(real_input_2_image):
-            tf.summary.image('real_input_2_' + str(i), j)
-            
-        real_input_1_image = [tf.layers.max_pooling2d(inputs=image, pool_size=[2, 2], strides=(2, 2), \
-                                                        padding='same', name='real_input_1_inage') \
-                                                        for image in real_input_2_image]
-        # shape: [CHANNEL_NUM, 1, CLASS_NUM // 4, INPUT_LENGTH // 4, 1]
-        for i, j in enumerate(real_input_1_image):
-            tf.summary.image('real_input_1_' + str(i), j)
+        real_input_2_image = tf.layers.max_pooling3d(inputs=real_input_3_image, pool_size=[2, 2], \
+                                                        strides=(2, 2), padding='same', \
+                                                        name='real_input_2_image')
+        real_input_1_image = tf.layers.max_pooling3d(inputs=real_input_2_image, pool_size=[2, 2], \
+                                                        strides=(2, 2), padding='same', \
+                                                        name='real_input_1_image')
+        for i in range(CHANNEL_NUM):
+            tf.summary.image('real_input_1_' + str(i), real_input_1_image[:, i])
+            tf.summary.image('real_input_2_' + str(i), real_input_2_image[:, i])
+            tf.summary.image('real_input_3_' + str(i), real_input_3_image[:, i])
 
     with tf.name_scope('generator'):
         shared_output = shared_gen(noise=input_noise, encode=encode, train=train)
