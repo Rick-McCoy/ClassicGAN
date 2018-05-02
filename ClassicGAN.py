@@ -156,6 +156,7 @@ def main():
     tf.summary.scalar('loss_dis3', loss_dis3)
     tf.summary.scalar('loss_gen3', loss_gen3)
     tf.summary.scalar('dis3_real', tf.reduce_mean(dis3_real))
+    tf.summary.scalar('loss_gen', loss_gen)
     print('Losses set')
     gen_var = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Shared_generator')
     gen_var += tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Encoder')
