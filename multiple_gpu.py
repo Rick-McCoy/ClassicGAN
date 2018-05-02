@@ -120,10 +120,10 @@ def inference(real_input_3):
     loss_gen3 = -tf.reduce_mean(dis3_gen)# + LAMBDA1 * tf.reduce_mean(tf.squared_difference(mean_gen2, mean_gen3)) \
                                         #    + LAMBDA2 * tf.reduce_mean(tf.squared_difference(dev_gen2, dev_gen3))
     loss_gen = tf.add_n([loss_gen1, loss_gen2, loss_gen3]) / 3
-    tf.add_to_collection(loss_dis1, 'loss_dis1')
-    tf.add_to_collection(loss_dis2, 'loss_dis2')
-    tf.add_to_collection(loss_dis3, 'loss_dis3')
-    tf.add_to_collection(loss_gen, 'loss_gen')
+    tf.add_to_collection(name='loss_dis1', value=loss_dis1)
+    tf.add_to_collection(name='loss_dis2', value=loss_dis2)
+    tf.add_to_collection(name='loss_dis3', value=loss_dis3)
+    tf.add_to_collection(name='loss_gen', value=loss_gen)
     print('Losses set')
 
 def make_iterator():
