@@ -52,114 +52,110 @@ def main():
     if not os.path.exists('Samples'):
         os.makedirs('Samples')
     
-    with tf.name_scope('inputs'):
-        filename = 'Dataset/dataset.tfrecord'
-        dataset = tf.data.TFRecordDataset(filename, num_parallel_reads=8)
-        def _parse(example_proto):
-            feature = {'roll' : tf.FixedLenFeature((6, 72, 384), tf.float32)}
-            parsed = tf.parse_single_example(example_proto, feature)
-            return parsed['roll']
-        dataset = dataset.apply(data.shuffle_and_repeat(buffer_size=16384))
-        dataset = dataset.apply(data.map_and_batch(_parse, batch_size=BATCH_SIZE, \
-                                            num_parallel_batches=8, drop_remainder=True))
-        dataset = dataset.prefetch(4)
-        iterator = dataset.make_one_shot_iterator()
-        real_input_3 = iterator.get_next()
+    filename = 'Dataset/dataset.tfrecord'
+    dataset = tf.data.TFRecordDataset(filename, num_parallel_reads=8)
+    def _parse(example_proto):
+        feature = {'roll' : tf.FixedLenFeature((6, 72, 384), tf.float32)}
+        parsed = tf.parse_single_example(example_proto, feature)
+        return parsed['roll']
+    dataset = dataset.apply(data.shuffle_and_repeat(buffer_size=16384))
+    dataset = dataset.apply(data.map_and_batch(_parse, batch_size=BATCH_SIZE, \
+                                        num_parallel_batches=8, drop_remainder=True))
+    dataset = dataset.prefetch(4)
+    iterator = dataset.make_one_shot_iterator()
+    real_input_3 = iterator.get_next()
 
-        input_noise = tf.placeholder(dtype=tf.float32, shape=[None, NOISE_LENGTH, 4], name='input_noise')
+    input_noise = tf.placeholder(dtype=tf.float32, shape=[None, NOISE_LENGTH, 4], name='input_noise')
 
-        train = tf.placeholder(dtype=tf.bool, name='traintest')
-        #real_input_4 = tf.placeholder(dtype=tf.float32, \
-        # shape=[None, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH], name='real_input_4')
-        real_input_3_split = tf.split(real_input_3, num_or_size_splits=4, axis=-1, name='real_input_3_split')
-        # shape: [4, None, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH // 4]
-        real_input_2 = tf.stack(real_input_3_split, axis=2, name='real_input_2')
-        # shape: [None, CHANNEL_NUM, 4, CLASS_NUM, INPUT_LENGTH // 4]
-        real_input_1 = tf.layers.max_pooling3d(inputs=real_input_2, pool_size=[1, 2, 2], strides=(1, 2, 2), \
-                                                    padding='same', data_format='channels_first', name='real_input_1')
-        # shape: [None, CHANNEL_NUM, 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
-        encode = encoder(inputs=real_input_2, train=train)
-        # shape: [None, 4, 2, 8]
+    train = tf.placeholder(dtype=tf.bool, name='traintest')
+    #real_input_4 = tf.placeholder(dtype=tf.float32, \
+    # shape=[None, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH], name='real_input_4')
+    real_input_3_split = tf.split(real_input_3, num_or_size_splits=4, axis=-1, name='real_input_3_split')
+    # shape: [4, None, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH // 4]
+    real_input_2 = tf.stack(real_input_3_split, axis=2, name='real_input_2')
+    # shape: [None, CHANNEL_NUM, 4, CLASS_NUM, INPUT_LENGTH // 4]
+    real_input_1 = tf.layers.max_pooling3d(inputs=real_input_2, pool_size=[1, 2, 2], strides=(1, 2, 2), \
+                                                padding='same', data_format='channels_first', name='real_input_1')
+    # shape: [None, CHANNEL_NUM, 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
+    encode = encoder(inputs=real_input_2, train=train)
+    # shape: [None, 4, 2, 8]
 
-        real_input_3_image = tf.expand_dims(real_input_3[:1], axis=-1, name='real_input_3_image_expand')
-        # shape: [1, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH, 1]
-        real_input_2_image = tf.layers.max_pooling3d(inputs=real_input_3_image, pool_size=[2, 2, 1], \
-                                                        strides=(2, 2, 1), padding='same', \
-                                                        data_format='channels_first', \
-                                                        name='real_input_2_image')
-        real_input_1_image = tf.layers.max_pooling3d(inputs=real_input_2_image, pool_size=[2, 2, 1], \
-                                                        strides=(2, 2, 1), padding='same', \
-                                                        data_format='channels_first', \
-                                                        name='real_input_1_image')
-        for i in range(CHANNEL_NUM):
-            tf.summary.image('real_input_1_' + str(i), real_input_1_image[:, i])
-            tf.summary.image('real_input_2_' + str(i), real_input_2_image[:, i])
-            tf.summary.image('real_input_3_' + str(i), real_input_3_image[:, i])
+    real_input_3_image = tf.expand_dims(real_input_3[:1], axis=-1, name='real_input_3_image_expand')
+    # shape: [1, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH, 1]
+    real_input_2_image = tf.layers.max_pooling3d(inputs=real_input_3_image, pool_size=[2, 2, 1], \
+                                                    strides=(2, 2, 1), padding='same', \
+                                                    data_format='channels_first', \
+                                                    name='real_input_2_image')
+    real_input_1_image = tf.layers.max_pooling3d(inputs=real_input_2_image, pool_size=[2, 2, 1], \
+                                                    strides=(2, 2, 1), padding='same', \
+                                                    data_format='channels_first', \
+                                                    name='real_input_1_image')
+    for i in range(CHANNEL_NUM):
+        tf.summary.image('real_input_1_' + str(i), real_input_1_image[:, i])
+        tf.summary.image('real_input_2_' + str(i), real_input_2_image[:, i])
+        tf.summary.image('real_input_3_' + str(i), real_input_3_image[:, i])
 
-    with tf.name_scope('generator'):
-        shared_output = shared_gen(noise=input_noise, encode=encode, train=train)
-        # shape: [None, 64, 4, CLASS_NUM // 4, INPUT_LENGTH // 16]
-        output_gen1, gen1 = zip(*[generator1(inputs=shared_output, encode=encode, \
-                                            num=i, train=train) for i in range(CHANNEL_NUM)])
-        # shape: [CHANNEL_NUM, None, 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
-        # shape: [CHANNEL_NUM, None, 32, 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
-        output_gen1 = tf.stack(output_gen1, axis=1, name='output_gen1_stack')
-        # shape: [None, CHANNEL_NUM, 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
-        gen1 = [tf.concat(values=[i, output_gen1], axis=1) for i in gen1]
-        # shape: [CHANNEL_NUM, None, 38, 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
-        output_gen2, gen2 = zip(*[generator2(inputs=gen1[i], encode=encode, \
-                                            num=i, train=train) for i in range(CHANNEL_NUM)])
-        # shape: [CHANNEL_NUM, None, 4, CLASS_NUM, INPUT_LENGTH // 4]
-        # shape: [CHANNEL_NUM, None, 16, 4, CLASS_NUM, INPUT_LENGTH // 4]
-        output_gen2 = tf.stack(output_gen2, axis=1, name='output_gen2_stack')
-        # shape: [None, CHANNEL_NUM, 4, CLASS_NUM, INPUT_LENGTH // 4]
-        gen2 = [tf.concat(values=[i, output_gen2], axis=1) for i in gen2]
-        # shape: [CHANNEL_NUM, None, 22, 4, CLASS_NUM, INPUT_LENGTH // 4]
-        output_gen3 = [generator3(inputs=gen2[i], encode=encode, \
-                                    num=i, train=train) for i in range(CHANNEL_NUM)]
-        # shape: [CHANNEL_NUM, None, CLASS_NUM, INPUT_LENGTH]
-        output_gen3 = tf.stack(output_gen3, axis=1, name='output_gen3_stack')
-        # shape: [None, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH]
+    shared_output = shared_gen(noise=input_noise, encode=encode, train=train)
+    # shape: [None, 64, 4, CLASS_NUM // 4, INPUT_LENGTH // 16]
+    output_gen1, gen1 = zip(*[generator1(inputs=shared_output, encode=encode, \
+                                        num=i, train=train) for i in range(CHANNEL_NUM)])
+    # shape: [CHANNEL_NUM, None, 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
+    # shape: [CHANNEL_NUM, None, 32, 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
+    output_gen1 = tf.stack(output_gen1, axis=1, name='output_gen1_stack')
+    # shape: [None, CHANNEL_NUM, 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
+    gen1 = [tf.concat(values=[i, output_gen1], axis=1) for i in gen1]
+    # shape: [CHANNEL_NUM, None, 38, 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
+    output_gen2, gen2 = zip(*[generator2(inputs=gen1[i], encode=encode, \
+                                        num=i, train=train) for i in range(CHANNEL_NUM)])
+    # shape: [CHANNEL_NUM, None, 4, CLASS_NUM, INPUT_LENGTH // 4]
+    # shape: [CHANNEL_NUM, None, 16, 4, CLASS_NUM, INPUT_LENGTH // 4]
+    output_gen2 = tf.stack(output_gen2, axis=1, name='output_gen2_stack')
+    # shape: [None, CHANNEL_NUM, 4, CLASS_NUM, INPUT_LENGTH // 4]
+    gen2 = [tf.concat(values=[i, output_gen2], axis=1) for i in gen2]
+    # shape: [CHANNEL_NUM, None, 22, 4, CLASS_NUM, INPUT_LENGTH // 4]
+    output_gen3 = [generator3(inputs=gen2[i], encode=encode, \
+                                num=i, train=train) for i in range(CHANNEL_NUM)]
+    # shape: [CHANNEL_NUM, None, CLASS_NUM, INPUT_LENGTH]
+    output_gen3 = tf.stack(output_gen3, axis=1, name='output_gen3_stack')
+    # shape: [None, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH]
     print('Generators set')
-    with tf.name_scope('discriminator'):
-        dis1_real = discriminator1(inputs=real_input_1, encode=encode)
-        # shape: [None, CHANNEL_NUM, 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
-        dis1_gen = discriminator1(inputs=output_gen1, encode=encode)
-        # shape: [None, CHANNEL_NUM, 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
-        dis2_real = discriminator2(inputs=real_input_2, encode=encode)
-        # shape: [None, CHANNEL_NUM, 4, CLASS_NUM, INPUT_LENGTH // 4]
-        dis2_gen = discriminator2(inputs=output_gen2, encode=encode)
-        # shape: [None, CHANNEL_NUM, 4, CLASS_NUM, INPUT_LENGTH // 4]
-        dis3_real = discriminator3(inputs=real_input_3, encode=encode)
-        # shape: [None, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH]
-        dis3_gen = discriminator3(inputs=output_gen3, encode=encode)
-        # shape: [None, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH]
+    dis1_real = discriminator1(inputs=real_input_1, encode=encode)
+    # shape: [None, CHANNEL_NUM, 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
+    dis1_gen = discriminator1(inputs=output_gen1, encode=encode)
+    # shape: [None, CHANNEL_NUM, 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
+    dis2_real = discriminator2(inputs=real_input_2, encode=encode)
+    # shape: [None, CHANNEL_NUM, 4, CLASS_NUM, INPUT_LENGTH // 4]
+    dis2_gen = discriminator2(inputs=output_gen2, encode=encode)
+    # shape: [None, CHANNEL_NUM, 4, CLASS_NUM, INPUT_LENGTH // 4]
+    dis3_real = discriminator3(inputs=real_input_3, encode=encode)
+    # shape: [None, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH]
+    dis3_gen = discriminator3(inputs=output_gen3, encode=encode)
+    # shape: [None, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH]
     print('Discriminators set')
-    with tf.name_scope('loss'):
-        loss_dis1 = tf.reduce_mean(dis1_gen - dis1_real) + gradient_penalty(real=real_input_1, \
-                                        gen=output_gen1, encode=encode, discriminator=discriminator1)
-        #mean_gen1, dev_gen1 = tf.nn.moments(output_gen1, axes=list(range(2, output_gen1.shape.ndims)))
-        loss_gen1 = -tf.reduce_mean(dis1_gen)
-        loss_dis2 = tf.reduce_mean(dis2_gen - dis2_real) + gradient_penalty(real=real_input_2, \
-                                        gen=output_gen2, encode=encode, discriminator=discriminator2)
-        #mean_gen2, dev_gen2 = tf.nn.moments(output_gen2, axes=list(range(2, output_gen2.shape.ndims)))
-        loss_gen2 = -tf.reduce_mean(dis2_gen)# + LAMBDA1 * tf.reduce_mean(tf.squared_difference(mean_gen1, mean_gen2)) \
-                                            #    + LAMBDA2 * tf.reduce_mean(tf.squared_difference(dev_gen1, dev_gen2))
-        loss_dis3 = tf.reduce_mean(dis3_gen - dis3_real) + gradient_penalty(real=real_input_3, \
-                                        gen=output_gen3, encode=encode, discriminator=discriminator3)
-        #mean_gen3, dev_gen3 = tf.nn.moments(output_gen3, axes=list(range(2, output_gen3.shape.ndims)))
-        loss_gen3 = -tf.reduce_mean(dis3_gen)# + LAMBDA1 * tf.reduce_mean(tf.squared_difference(mean_gen2, mean_gen3)) \
-                                            #    + LAMBDA2 * tf.reduce_mean(tf.squared_difference(dev_gen2, dev_gen3))
-        loss_gen = tf.add_n([loss_gen1, loss_gen2, loss_gen3]) / 3
-        tf.summary.scalar('loss_dis1', loss_dis1)
-        tf.summary.scalar('loss_gen1', loss_gen1)
-        tf.summary.scalar('dis1_real', tf.reduce_mean(dis1_real))
-        tf.summary.scalar('loss_dis2', loss_dis2)
-        tf.summary.scalar('loss_gen2', loss_gen2)
-        tf.summary.scalar('dis2_real', tf.reduce_mean(dis2_real))
-        tf.summary.scalar('loss_dis3', loss_dis3)
-        tf.summary.scalar('loss_gen3', loss_gen3)
-        tf.summary.scalar('dis3_real', tf.reduce_mean(dis3_real))
+    loss_dis1 = tf.reduce_mean(dis1_gen - dis1_real) + gradient_penalty(real=real_input_1, \
+                                    gen=output_gen1, encode=encode, discriminator=discriminator1)
+    #mean_gen1, dev_gen1 = tf.nn.moments(output_gen1, axes=list(range(2, output_gen1.shape.ndims)))
+    loss_gen1 = -tf.reduce_mean(dis1_gen)
+    loss_dis2 = tf.reduce_mean(dis2_gen - dis2_real) + gradient_penalty(real=real_input_2, \
+                                    gen=output_gen2, encode=encode, discriminator=discriminator2)
+    #mean_gen2, dev_gen2 = tf.nn.moments(output_gen2, axes=list(range(2, output_gen2.shape.ndims)))
+    loss_gen2 = -tf.reduce_mean(dis2_gen)# + LAMBDA1 * tf.reduce_mean(tf.squared_difference(mean_gen1, mean_gen2)) \
+                                        #    + LAMBDA2 * tf.reduce_mean(tf.squared_difference(dev_gen1, dev_gen2))
+    loss_dis3 = tf.reduce_mean(dis3_gen - dis3_real) + gradient_penalty(real=real_input_3, \
+                                    gen=output_gen3, encode=encode, discriminator=discriminator3)
+    #mean_gen3, dev_gen3 = tf.nn.moments(output_gen3, axes=list(range(2, output_gen3.shape.ndims)))
+    loss_gen3 = -tf.reduce_mean(dis3_gen)# + LAMBDA1 * tf.reduce_mean(tf.squared_difference(mean_gen2, mean_gen3)) \
+                                        #    + LAMBDA2 * tf.reduce_mean(tf.squared_difference(dev_gen2, dev_gen3))
+    loss_gen = tf.add_n([loss_gen1, loss_gen2, loss_gen3]) / 3
+    tf.summary.scalar('loss_dis1', loss_dis1)
+    tf.summary.scalar('loss_gen1', loss_gen1)
+    tf.summary.scalar('dis1_real', tf.reduce_mean(dis1_real))
+    tf.summary.scalar('loss_dis2', loss_dis2)
+    tf.summary.scalar('loss_gen2', loss_gen2)
+    tf.summary.scalar('dis2_real', tf.reduce_mean(dis2_real))
+    tf.summary.scalar('loss_dis3', loss_dis3)
+    tf.summary.scalar('loss_gen3', loss_gen3)
+    tf.summary.scalar('dis3_real', tf.reduce_mean(dis3_real))
     print('Losses set')
     gen_var = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Shared_generator')
     gen_var += tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Encoder')
