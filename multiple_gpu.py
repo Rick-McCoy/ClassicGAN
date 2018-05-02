@@ -196,6 +196,7 @@ def train():
                         tower_grads_dis1.append(grad_dis2)
                         tower_grads_dis1.append(grad_dis3)
                         tower_grads_dis1.append(grad_gen)
+                        print('GPU No. %d complete' % i)
 
         grads_dis1 = average_gradients(tower_grads_dis1)
         grads_dis2 = average_gradients(tower_grads_dis2)

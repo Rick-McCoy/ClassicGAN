@@ -5,6 +5,8 @@ import tensorflow as tf
 import tensorflow.contrib.graph_editor as ge
 import time
 import sys
+import warnings
+warnings.simplefilter('ignore')
 sys.setrecursionlimit(10000)
 # refers back to current module if we decide to split helpers out
 util = sys.modules[__name__]
