@@ -83,11 +83,11 @@ def main():
 
         real_input_3_image = tf.expand_dims(real_input_3[:1], axis=-1, name='real_input_3_image_expand')
         # shape: [1, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH, 1]
-        real_input_2_image = tf.layers.max_pooling3d(inputs=real_input_3_image, pool_size=[2, 2], \
-                                                        strides=(2, 2), padding='same', \
+        real_input_2_image = tf.layers.max_pooling3d(inputs=real_input_3_image, pool_size=[2, 2, 1], \
+                                                        strides=(2, 2, 1), padding='same', \
                                                         name='real_input_2_image')
-        real_input_1_image = tf.layers.max_pooling3d(inputs=real_input_2_image, pool_size=[2, 2], \
-                                                        strides=(2, 2), padding='same', \
+        real_input_1_image = tf.layers.max_pooling3d(inputs=real_input_2_image, pool_size=[2, 2, 1], \
+                                                        strides=(2, 2, 1), padding='same', \
                                                         name='real_input_1_image')
         for i in range(CHANNEL_NUM):
             tf.summary.image('real_input_1_' + str(i), real_input_1_image[:, i])
