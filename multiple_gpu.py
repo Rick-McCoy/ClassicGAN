@@ -167,10 +167,10 @@ def average_gradients(tower_grads):
 
 def train():
     with tf.Graph().as_default(), tf.device('/cpu:0'):
-        dis1_opt = tf.train.AdamOptimizer(learning_rate=0.0002, beta1=0.5, beta2=0.99)
-        dis2_opt = tf.train.AdamOptimizer(learning_rate=0.0002, beta1=0.5, beta2=0.99)
-        dis3_opt = tf.train.AdamOptimizer(learning_rate=0.0002, beta1=0.5, beta2=0.99)
-        gen_opt = tf.train.AdamOptimizer(learning_rate=0.0002, beta1=0.5, beta2=0.99)
+        dis1_opt = tf.train.AdamOptimizer(learning_rate=0.0002, beta1=0.5, beta2=0.9)
+        dis2_opt = tf.train.AdamOptimizer(learning_rate=0.0002, beta1=0.5, beta2=0.9)
+        dis3_opt = tf.train.AdamOptimizer(learning_rate=0.0002, beta1=0.5, beta2=0.9)
+        gen_opt = tf.train.AdamOptimizer(learning_rate=0.0002, beta1=0.5, beta2=0.9)
 
         iterator = make_iterator()
 
