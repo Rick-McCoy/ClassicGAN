@@ -249,7 +249,7 @@ def main():
                 unpack_sample('Samples/song_%06d' % train_count)
                 save_path = saver.save(sess, 'Checkpoints/song_%06d' % train_count + '.ckpt')
                 tqdm.write('Model Saved: %s' % save_path)
-                trace_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
+                trace_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE) # pylint: disable=E1101
                 run_metadata = tf.RunMetadata()
                 _1, _2, _3, _4 = sess.run([dis1_train, dis2_train, dis3_train, gen_train], \
                                             feed_dict=feed_dict, options=trace_options, \
