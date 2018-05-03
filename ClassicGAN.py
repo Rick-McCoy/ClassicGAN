@@ -254,7 +254,7 @@ def main():
                 _1, _2, _3, _4 = sess.run([dis1_train, dis2_train, dis3_train, gen_train], \
                                             feed_dict=feed_dict, options=trace_options, \
                                             run_metadata=run_metadata)
-                writer.add_run_metadata(run_metadata, 'run_%d', train_count)
+                writer.add_run_metadata(run_metadata, 'run_%d' % train_count)
         writer.close()
 if __name__ == '__main__':
     with warnings.catch_warnings():
