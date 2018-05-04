@@ -52,6 +52,8 @@ def main():
         os.makedirs('train')
     if not os.path.exists('Samples'):
         os.makedirs('Samples')
+    if not os.path.exists('Timeline'):
+        os.makedirs('Timeline')
     
     filename = 'Dataset/dataset.tfrecord'
     dataset = tf.data.TFRecordDataset(filename, num_parallel_reads=8)
