@@ -15,7 +15,7 @@ from Model import get_noise, generator1, generator2, generator3, \
                     discriminator1, discriminator2, discriminator3, \
                     shared_gen, encoder, NOISE_LENGTH
 from Convert import unpack_sample
-from tf.python.client import timeline # pylint: disable=E0401
+from tensorflow.python.client import timeline # pylint: disable=E0611
 import memory_saving_gradients
 tf.__dict__["gradients"] = memory_saving_gradients.gradients_speed
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
