@@ -15,6 +15,7 @@ from Model import get_noise, generator1, generator2, generator3, \
                     discriminator1, discriminator2, discriminator3, \
                     shared_gen, encoder, NOISE_LENGTH
 from Convert import unpack_sample
+from tf.python.client import timeline # pylint: disable=E0401
 import memory_saving_gradients
 tf.__dict__["gradients"] = memory_saving_gradients.gradients_speed
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
@@ -255,6 +256,10 @@ def main():
                                             feed_dict=feed_dict, options=trace_options, \
                                             run_metadata=run_metadata)
                 writer.add_run_metadata(run_metadata, 'run_%d' % train_count)
+                tl = timeline.Timeline(run_metadata.step_stats) # pylint: disable=E1101
+                ctf = tl.generate_chrome_trace_format()
+                with open('Timeline/timeline_%d.json' % train_count, 'w') as f:
+                    f.write(ctf)
         writer.close()
 if __name__ == '__main__':
     with warnings.catch_warnings():
