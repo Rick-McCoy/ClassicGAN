@@ -278,6 +278,7 @@ train/
 Checkpoints/
 Dataset/
 Progress/
+Timeline/
 *.pyproj
 *.pyc
 
