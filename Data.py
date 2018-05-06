@@ -56,26 +56,26 @@ def roll(path):
         tqdm.write('No notes')
         raise Exception
     data = data > 0
-    data = (data - 0.5) * 2.0
     data = np.split(data[:, :, :length // INPUT_LENGTH * INPUT_LENGTH], indices_or_sections=length // INPUT_LENGTH, axis=-1)
-    data = np.stack(data, axis=0)
     return data
 
 def build_dataset():
-    pathlist = list(pathlib.Path('Classics').glob('**/*.mid'))
+    pathlist = list(pathlib.Path('Classics/TPD').glob('**/*.mid'))
     random.shuffle(pathlist)
     if not os.path.exists('Dataset'):
         os.mkdir('Dataset')
-    writer = tf.python_io.TFRecordWriter('Dataset/dataset.tfrecord')
+    writer = tf.python_io.TFRecordWriter('Dataset/TPDdataset.tfrecord')
     for path in tqdm(pathlist):
         try:
             data = roll(str(path))
         except:
             continue
-        feature = {'roll': tf.train.Feature(float_list=tf.train.FloatList(value=data.flatten()))}
-        example = tf.train.Example(features=tf.train.Features(feature=feature))
-        serialized = example.SerializeToString()
-        writer.write(serialized)
+        for datum in data:
+        	datum = np.packbits(datum).tostring()
+        	feature = {'roll': tf.train.Feature(bytes_list=tf.train.BytesList(value=[datum]))}
+        	example = tf.train.Example(features=tf.train.Features(feature=feature))
+        	serialized = example.SerializeToString()
+        	writer.write(serialized)
     writer.close()
 
 def main():

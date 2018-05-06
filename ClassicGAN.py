@@ -55,12 +55,17 @@ def main():
     if not os.path.exists('Timeline'):
         os.makedirs('Timeline')
     
-    filename = 'Dataset/dataset.tfrecord'
+    filename = 'Dataset/TPDdataset.tfrecord'
     dataset = tf.data.TFRecordDataset(filename, num_parallel_reads=8)
     def _parse(example_proto):
-        feature = {'roll' : tf.FixedLenFeature((6, 72, 384), tf.float32)}
+        feature = {'roll' : tf.FixedLenFeature([], tf.string)}
         parsed = tf.parse_single_example(example_proto, feature)
-        return parsed['roll']
+        data = tf.decode_raw(parsed['roll'], tf.uint8)
+        data = tf.py_func(func=np.unpackbits, inp=[data], Tout=tf.uint8)
+        data = tf.cast(data, tf.float32)
+        data = tf.reshape(data, [6, 72, 384])
+        data = data * 2 - 1
+        return data
     dataset = dataset.apply(data.shuffle_and_repeat(buffer_size=16384))
     dataset = dataset.apply(data.map_and_batch(_parse, batch_size=BATCH_SIZE, \
                                         num_parallel_batches=8, drop_remainder=True))
