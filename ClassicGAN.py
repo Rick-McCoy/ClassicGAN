@@ -99,9 +99,9 @@ def main():
                                                     data_format='channels_first', \
                                                     name='real_input_1_image')
     for i in range(CHANNEL_NUM):
-        tf.summary.image('real_input_1_' + str(i), real_input_1_image[:, i])
-        tf.summary.image('real_input_2_' + str(i), real_input_2_image[:, i])
-        tf.summary.image('real_input_3_' + str(i), real_input_3_image[:, i])
+        tf.summary.image('real_input_1_%d' % i, real_input_1_image[:, i])
+        tf.summary.image('real_input_2_%d' % i, real_input_2_image[:, i])
+        tf.summary.image('real_input_3_%d' % i, real_input_3_image[:, i])
 
     shared_output = shared_gen(noise=input_noise, encode=encode, train=train)
     # shape: [None, 64, 4, CLASS_NUM // 4, INPUT_LENGTH // 16]
@@ -169,18 +169,18 @@ def main():
     gen_var = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Shared_generator')
     gen_var += tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Encoder')
     for i in range(CHANNEL_NUM):
-        gen_var += tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Generator1_' + str(i))
-        gen_var += tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Generator2_' + str(i))
-        gen_var += tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Generator3_' + str(i))
+        gen_var += tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Generator1_%d' % i)
+        gen_var += tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Generator2_%d' % i)
+        gen_var += tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Generator3_%d' % i)
     dis1_var = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Discriminator1')
     dis2_var = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Discriminator2')
     dis3_var = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Discriminator3')
     gen_extra_update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Shared_generator')
     gen_extra_update_ops += tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Encoder')
     for i in range(CHANNEL_NUM):
-        gen_extra_update_ops += tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Generator1_' + str(i))
-        gen_extra_update_ops += tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Generator2_' + str(i))
-        gen_extra_update_ops += tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Generator3_' + str(i))
+        gen_extra_update_ops += tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Generator1_%d' % i)
+        gen_extra_update_ops += tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Generator2_%d' % i)
+        gen_extra_update_ops += tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Generator3_%d' % i)
     dis1_extra_update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Discriminator1')
     dis2_extra_update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Discriminator2')
     dis3_extra_update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Discriminator3')
@@ -250,7 +250,7 @@ def main():
             tqdm.write('Discriminator2 loss : %.7f' % loss_val_dis2, end=' ')
             tqdm.write('Discriminator3 loss : %.7f' % loss_val_dis3, end=' ')
             tqdm.write('Generator loss : %.7f' % loss_val_gen)
-            if train_count % 1000 == 0:
+            if train_count % 100 == 0:
                 feed_dict[input_noise] = get_noise([BATCH_SIZE, NOISE_LENGTH, 4])
                 samples = sess.run(output_gen3, feed_dict=feed_dict)
                 np.save(file='Samples/song_%06d' % train_count, arr=samples)

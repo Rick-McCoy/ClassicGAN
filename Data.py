@@ -60,11 +60,11 @@ def roll(path):
     return data
 
 def build_dataset():
-    pathlist = list(pathlib.Path('Classics/TPD').glob('**/*.mid'))
+    pathlist = list(pathlib.Path('Classics').glob('**/*.mid'))
     random.shuffle(pathlist)
     if not os.path.exists('Dataset'):
         os.mkdir('Dataset')
-    writer = tf.python_io.TFRecordWriter('Dataset/TPDdataset.tfrecord')
+    writer = tf.python_io.TFRecordWriter('Dataset/dataset.tfrecord')
     for path in tqdm(pathlist):
         try:
             data = roll(str(path))

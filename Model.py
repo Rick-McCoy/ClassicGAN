@@ -88,7 +88,7 @@ def encoder(inputs, train):
             output = conv(inputs=output, filters=16, \
             kernel_size=kernel, strides=tuple(kernel), \
             training=train, regularization='batch_norm_lrelu', \
-            name='conv' + str(i + 1))
+            name='conv%d' % (i + 1))
         # shape: [None, 16, 4, 1, 1]
         output = tf.squeeze(output)
         output = tf.transpose(output, perm=[0, 2, 1])
@@ -130,22 +130,22 @@ def shared_gen(noise, encode, train):
             output = conv(inputs=output, filters=1024 // 2 ** i, \
                             kernel_size=kernel, strides=tuple(kernel), \
                             training=train, regularization='batch_norm_relu', \
-                            transpose=True, name='conv' + str(i + 1))
+                            transpose=True, name='conv%d' % (i + 1))
         # shape: [None, 128, 4, 18, 24]
         output = conv(inputs=output, filters=64, training=train, \
                         regularization='batch_norm_tanh', name='conv5')
         return output
 
 def generator1(inputs, encode, num, train):
-    with tf.variable_scope('Generator1_' + str(num)):
+    with tf.variable_scope('Generator1_%d' % num):
         return genblock(inputs, encode, 128, train)
 
 def generator2(inputs, encode, num, train):
-    with tf.variable_scope('Generator2_' + str(num)):
+    with tf.variable_scope('Generator2_%d' % num):
         return genblock(inputs, encode, 64, train)
 
 def generator3(inputs, encode, num, train):
-    with tf.variable_scope('Generator3_' + str(num)):
+    with tf.variable_scope('Generator3_%d' % num):
         # shape: [None, 4, 16]
         inputs = encode_concat(inputs, encode)
         # shape: [None, 33, 4, 72, 96]
@@ -183,13 +183,13 @@ def downsample(inputs, filters, name):
         for i, kernel in enumerate(kernel_size):
             output = conv(inputs=output, filters=filters, \
                         kernel_size=kernel, strides=tuple(kernel), \
-                        name='conv' + str(i + 1))
+                        name='conv%d' % (i + 1))
             filters = filters * 2
         num = 5
         while output.get_shape().as_list()[-2] > 3:
             output = conv(inputs=output, filters=filters, \
                         kernel_size=kernel_size[3], strides=strides, \
-                        name='conv' + str(num))
+                        name='conv%d' % num)
             filters = filters * 2
             num += 1
         return output
