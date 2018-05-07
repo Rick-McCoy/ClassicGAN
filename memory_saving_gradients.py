@@ -16,7 +16,7 @@ setattr(tf.GraphKeys, "VARIABLES", "variables")
 
 # save original gradients since tf.gradient could be monkey-patched to point
 # to our version
-from tensorflow.python.ops import gradients as tf_gradients_lib
+from tensorflow.python.ops import gradients as tf_gradients_lib #pylint: disable=E0611
 tf_gradients = tf_gradients_lib.gradients
 
 MIN_CHECKPOINT_NODE_SIZE=1024    # use lower value during testing
@@ -69,7 +69,7 @@ def gradients(ys, xs, grad_ys=None, checkpoints='collection', **kwargs):
     debug_print("fwd_ops: %s", fwd_ops)
     
     # exclude ops with no inputs
-    fwd_ops = [op for op in fwd_ops if op._inputs]
+    fwd_ops = [op for op in fwd_ops if op.inputs]
 
     # don't recompute xs, remove variables
     xs_ops = _to_ops(xs)

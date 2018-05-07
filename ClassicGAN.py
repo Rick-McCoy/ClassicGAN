@@ -55,7 +55,7 @@ def main():
     if not os.path.exists('Timeline'):
         os.makedirs('Timeline')
     
-    filename = 'Dataset/TPDdataset.tfrecord'
+    filename = 'Dataset/dataset.tfrecord'
     dataset = tf.data.TFRecordDataset(filename, num_parallel_reads=8)
     def _parse(example_proto):
         feature = {'roll' : tf.FixedLenFeature([], tf.string)}
@@ -259,9 +259,8 @@ def main():
                 tqdm.write('Model Saved: %s' % save_path)
                 trace_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE) # pylint: disable=E1101
                 run_metadata = tf.RunMetadata()
-                _1, _2, _3, _4 = sess.run([dis1_train, dis2_train, dis3_train, gen_train], \
-                                            feed_dict=feed_dict, options=trace_options, \
-                                            run_metadata=run_metadata)
+                sess.run([dis1_train, dis2_train, dis3_train, gen_train], feed_dict=feed_dict, \
+                            options=trace_options, run_metadata=run_metadata)
                 writer.add_run_metadata(run_metadata, 'run_%d' % train_count)
                 tl = timeline.Timeline(run_metadata.step_stats) # pylint: disable=E1101
                 ctf = tl.generate_chrome_trace_format()
