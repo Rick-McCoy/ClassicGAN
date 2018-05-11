@@ -13,10 +13,10 @@ from tqdm import tqdm
 CHANNEL_NUM = 6
 CLASS_NUM = 72
 INPUT_LENGTH = 384
-BATCH_SIZE = 16
+BATCH_SIZE = 2
 #0 Piano: 22584
 #1 Chromatic Percussion: 216
-#2 Orgam: 500
+#2 Organ: 500
 #3 Guitar: 6691
 #4 Bass: 151
 #5 Strings: 4356

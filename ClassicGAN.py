@@ -94,12 +94,7 @@ def main():
                                                     strides=(2, 2, 1), padding='same', \
                                                     data_format='channels_first', \
                                                     name='real_input_2_image')
-    real_input_1_image = tf.layers.max_pooling3d(inputs=real_input_2_image, pool_size=[2, 2, 1], \
-                                                    strides=(2, 2, 1), padding='same', \
-                                                    data_format='channels_first', \
-                                                    name='real_input_1_image')
     for i in range(CHANNEL_NUM):
-        tf.summary.image('real_input_1_%d' % i, real_input_1_image[:, i])
         tf.summary.image('real_input_2_%d' % i, real_input_2_image[:, i])
         tf.summary.image('real_input_3_%d' % i, real_input_3_image[:, i])
 
@@ -222,13 +217,13 @@ def main():
                 print('Error while opening file.')
                 return
             feed_dict[input_noise] = get_noise([BATCH_SIZE, NOISE_LENGTH, 4])
-            feed_dict[train] = True
+            feed_dict[train] = False
             samples = sess.run(output_gen3, feed_dict=feed_dict)
             path = path.split('/')[-1]
             if not os.path.exists('Samples/sample_%s'):
                 os.mkdir('Samples/sample_%s' % path)
             np.save(file='Samples/sample_%s' % path + '/%s' % path, arr=samples)
-            unpack_sample(name='Samples/sample_%s' % path+ '/%s.npy' % path, concat=args.concat)
+            unpack_sample(name='Samples/sample_%s' % path + '/%s.npy' % path, concat=args.concat)
             return
         writer = tf.summary.FileWriter('train', sess.graph)
         run_options = tf.RunOptions(report_tensor_allocations_upon_oom=True)
@@ -250,22 +245,23 @@ def main():
             tqdm.write('Discriminator2 loss : %.7f' % loss_val_dis2, end=' ')
             tqdm.write('Discriminator3 loss : %.7f' % loss_val_dis3, end=' ')
             tqdm.write('Generator loss : %.7f' % loss_val_gen)
-            if train_count % 100 == 0:
+            if train_count % 1000 == 0:
+                feed_dict[train] = False
                 feed_dict[input_noise] = get_noise([BATCH_SIZE, NOISE_LENGTH, 4])
                 samples = sess.run(output_gen3, feed_dict=feed_dict)
                 np.save(file='Samples/song_%06d' % train_count, arr=samples)
                 unpack_sample('Samples/song_%06d' % train_count)
                 save_path = saver.save(sess, 'Checkpoints/song_%06d' % train_count + '.ckpt')
                 tqdm.write('Model Saved: %s' % save_path)
-                trace_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE) # pylint: disable=E1101
-                run_metadata = tf.RunMetadata()
-                sess.run([dis1_train, dis2_train, dis3_train, gen_train], feed_dict=feed_dict, \
-                            options=trace_options, run_metadata=run_metadata)
-                writer.add_run_metadata(run_metadata, 'run_%d' % train_count)
-                tl = timeline.Timeline(run_metadata.step_stats) # pylint: disable=E1101
-                ctf = tl.generate_chrome_trace_format()
-                with open('Timeline/timeline_%d.json' % train_count, 'w') as f:
-                    f.write(ctf)
+                #trace_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE) # pylint: disable=E1101
+                #run_metadata = tf.RunMetadata()
+                #sess.run([dis1_train, dis2_train, dis3_train, gen_train], feed_dict=feed_dict, \
+                #            options=trace_options, run_metadata=run_metadata)
+                #writer.add_run_metadata(run_metadata, 'run_%d' % train_count)
+                #tl = timeline.Timeline(run_metadata.step_stats) # pylint: disable=E1101
+                #ctf = tl.generate_chrome_trace_format()
+                #with open('Timeline/timeline_%d.json' % train_count, 'w') as f:
+                #    f.write(ctf)
         writer.close()
 if __name__ == '__main__':
     with warnings.catch_warnings():

@@ -10,20 +10,17 @@ NOISE_LENGTH = 128
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
-def conv(inputs, filters, kernel_size=[1, 3, 3], strides=(1, 1, 1), \
+def conv(inputs, filters, kernel_size=[1, 3, 3], strides=1, \
         training=True, regularization='lrelu', transpose=False, name=''):
     with tf.variable_scope(name, reuse=tf.AUTO_REUSE):
-        if regularization[-5:] == 'lrelu':
+        if 'lrelu' in regularization:
             activation_function = tf.nn.leaky_relu
-        elif regularization[-4:] == 'relu':
+        elif 'relu' in regularization:
             activation_function = tf.nn.relu
-        elif regularization[-4:] == 'tanh':
-            activation_function = tf.tanh
-        use_bias = regularization[:10] != 'batch_norm'
+        use_bias = not 'batch_norm' in regularization and not 'no_bias' in regularization
         if inputs.get_shape().ndims == 4:
-            if len(kernel_size) == 3:
-                kernel_size = [3, 3]
-                strides = (1, 1)
+            if type(kernel_size) is list and len(kernel_size) == 3:
+                kernel_size = 3
             if transpose:
                 conv_func = tf.layers.conv2d_transpose
             else:
@@ -32,27 +29,41 @@ def conv(inputs, filters, kernel_size=[1, 3, 3], strides=(1, 1, 1), \
             conv_func = tf.layers.conv3d_transpose
         else:
             conv_func = tf.layers.conv3d
-        output = conv_func(inputs=inputs, filters=filters, \
-                        kernel_size=kernel_size, strides=strides, \
-                        padding='same', data_format='channels_first', \
-                        use_bias=use_bias, name='conv')
-        if not use_bias:
-            output = tf.layers.batch_normalization(inputs=output, \
-                                        axis=1, training=training, \
-                                        name='batch_norm', fused=True)
-        output = activation_function(output)
+        if 'batch_norm' in regularization:
+            output = tf.layers.batch_normalization(inputs=inputs, \
+                                    axis=1, training=training, \
+                                    name='batch_norm', fused=True)
+            output = activation_function(output)
+            output = conv_func(inputs=output, filters=filters, \
+                            kernel_size=kernel_size, strides=strides, \
+                            padding='same', data_format='channels_first', \
+                            use_bias=False, name='conv')
+        else:
+            use_bias = not 'no_bias' in regularization
+            output = conv_func(inputs=output, filters=filters, \
+                            kernel_size=kernel_size, strides=strides, \
+                            padding='same', data_format='channels_first', \
+                            activation=activation_function, \
+                            use_bias = use_bias, name='conv')
+
         return output
 
-def residual_block(inputs, filters, training, name=''):
+def residual_block(inputs, filters, training, strides=1, name=''):
     with tf.variable_scope(name):
-        if inputs.get_shape().as_list()[1] != filters:
-            inputs = conv(inputs=inputs, filters=filters, \
-            training=training, regularization='relu', name='inputs')
-        conv1 = conv(inputs=inputs, filters=filters, training=training, \
+        conv1 = conv(inputs=inputs, filters=filters, kernel_size=1, \
+                    strides=1, training=training, \
                     regularization='batch_norm_relu', name='conv1')
         conv2 = conv(inputs=conv1, filters=filters, training=training, \
                     regularization='batch_norm_relu', name='conv2')
-        return inputs + conv2
+        conv3 = conv(inputs=conv2, filters=filters, kernel_size=1, \
+                    strides=1, training=training, \
+                    regularization='batch_norm_relu', name='conv3')
+        if inputs.get_shape().as_list()[1] != filters:
+            skip = conv(inputs=inputs, filters=filters, \
+            training=training, regularization='no_bias_relu', name='skip')
+        else:
+            skip = inputs
+        return skip + conv3
 
 def encode_concat(inputs, encode, name='encode_concat'):
     with tf.variable_scope(name):
@@ -110,8 +121,9 @@ def genblock(inputs, encode, filters, train, name='genblock'):
                             training=train, name='res2')
         upblock1 = upblock(res2, filters=filters // 2, training=train)
         conv1 = conv(inputs=upblock1, filters=1, training=train, \
-                    regularization='batch_norm_tanh', name='conv1')
-        output = tf.transpose(conv1, perm=[0, 2, 3, 4, 1])
+                    regularization='batch_norm_relu', name='conv1')
+        output = tf.tanh(conv1)
+        output = tf.transpose(output, perm=[0, 2, 3, 4, 1])
         summary_image(output[:1])
         output = tf.squeeze(output, axis=-1)
         return output, upblock1
@@ -133,7 +145,8 @@ def shared_gen(noise, encode, train):
                             transpose=True, name='conv%d' % (i + 1))
         # shape: [None, 128, 4, 18, 24]
         output = conv(inputs=output, filters=64, training=train, \
-                        regularization='batch_norm_tanh', name='conv5')
+                        regularization='batch_norm_relu', name='conv5')
+        output = tf.tanh(output)
         return output
 
 def generator1(inputs, encode, num, train):
@@ -160,7 +173,7 @@ def generator3(inputs, encode, num, train):
                             training=train, name='res2')
         # shape: [None, 16, 72, 384]
         conv1 = conv(inputs=res2, filters=1, training=train, \
-                    regularization='batch_norm_tanh', name='conv1')
+                    regularization='batch_norm_relu', name='conv1')
         # shape: [None, 1, 72, 384]
         output = tf.tanh(conv1)
         # shape: [None, 1, 72, 384]
@@ -178,7 +191,7 @@ def downsample(inputs, filters, name):
             strides = (1, 2, 2)
         else:
             kernel_size=[[1, 2], [1, 2], [2, 2], [3, 3]]
-            strides = (2, 2)
+            strides = 2
         output = inputs
         for i, kernel in enumerate(kernel_size):
             output = conv(inputs=output, filters=filters, \
