@@ -40,7 +40,7 @@ def conv(inputs, filters, kernel_size=[1, 3, 3], strides=1, \
                             use_bias=False, name='conv')
         else:
             use_bias = not 'no_bias' in regularization
-            output = conv_func(inputs=output, filters=filters, \
+            output = conv_func(inputs=inputs, filters=filters, \
                             kernel_size=kernel_size, strides=strides, \
                             padding='same', data_format='channels_first', \
                             activation=activation_function, \
