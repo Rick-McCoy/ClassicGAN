@@ -40,9 +40,13 @@ def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-s', '--sample', type=str, default='', \
-                                            help='Samples based on input song. Empty string means training.')
-    parser.add_argument('-c', '--concat', type=bool, default=False, \
-                                            help='Enable Concatenation. Defaults to False.')
+                        help='Samples based on input song. Empty string means training.')
+    parser.add_argument('-c', '--concat', dest='concat', action='store_true', help='Enable concatenation.')
+    parser.add_argument('--no-concat', dest='concat', action='store_false', help='Disable concatenation.')
+    parser.set_defaults(concat=False)
+    parser.add_argument('-r', '--record', dest='record', action='store_true', help='Enable recording.')
+    parser.add_argument('--no-record', dest='record', action='store_false', help='Disable recording.')
+    parser.set_defaults(record=False)
     args = parser.parse_args()
     sampling = args.sample != ''
 
@@ -253,15 +257,16 @@ def main():
                 unpack_sample('Samples/song_%06d' % train_count)
                 save_path = saver.save(sess, 'Checkpoints/song_%06d' % train_count + '.ckpt')
                 tqdm.write('Model Saved: %s' % save_path)
-                #trace_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE) # pylint: disable=E1101
-                #run_metadata = tf.RunMetadata()
-                #sess.run([dis1_train, dis2_train, dis3_train, gen_train], feed_dict=feed_dict, \
-                #            options=trace_options, run_metadata=run_metadata)
-                #writer.add_run_metadata(run_metadata, 'run_%d' % train_count)
-                #tl = timeline.Timeline(run_metadata.step_stats) # pylint: disable=E1101
-                #ctf = tl.generate_chrome_trace_format()
-                #with open('Timeline/timeline_%d.json' % train_count, 'w') as f:
-                #    f.write(ctf)
+                if args.record:
+                    trace_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE) # pylint: disable=E1101
+                    run_metadata = tf.RunMetadata()
+                    sess.run([dis1_train, dis2_train, dis3_train, gen_train], feed_dict=feed_dict, \
+                                options=trace_options, run_metadata=run_metadata)
+                    writer.add_run_metadata(run_metadata, 'run_%d' % train_count)
+                    tl = timeline.Timeline(run_metadata.step_stats) # pylint: disable=E1101
+                    ctf = tl.generate_chrome_trace_format()
+                    with open('Timeline/timeline_%d.json' % train_count, 'w') as f:
+                        f.write(ctf)
         writer.close()
 if __name__ == '__main__':
     with warnings.catch_warnings():
