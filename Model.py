@@ -198,11 +198,11 @@ def downsample(inputs, name='downsample'):
             else:
                 kernel = [1, 3, 3]
                 strides = [1, 2, 2]
-            output = conv(inputs=output, filters=filters * (2 ** i), \
+            output = conv(inputs=output, filters=filters * (2 ** (i // 2)), \
                         kernel_size=kernel, strides=strides, \
                         name='conv%d' % i)
             i += 1
-            output = conv(inputs=output, filters=filters * (2 ** i), \
+            output = conv(inputs=output, filters=filters * (2 ** (i // 2)), \
                         name='conv%d' % i)
             i += 1
         for j in range(3):
