@@ -14,13 +14,13 @@ def conv(inputs, filters, kernel_size=[1, 3, 3], strides=1, \
         training=True, regularization='lrelu', transpose=False, name='conv'):
     with tf.variable_scope(name, reuse=tf.AUTO_REUSE):
         if 'lrelu' in regularization:
-            activation_function = tf.nn.leaky_relu
+            activation = tf.nn.leaky_relu
         elif 'relu' in regularization:
-            activation_function = tf.nn.relu
+            activation = tf.nn.relu
         elif 'tanh' in regularization:
-            activation_function = tf.tanh
+            activation = tf.tanh
         else:
-            activation_function = None
+            activation = None
         if inputs.get_shape().ndims == 4:
             if type(kernel_size) is list and len(kernel_size) == 3:
                 kernel_size = 3
@@ -42,7 +42,7 @@ def conv(inputs, filters, kernel_size=[1, 3, 3], strides=1, \
         output = conv_func(inputs=inputs, filters=filters, \
                         kernel_size=kernel_size, strides=strides, \
                         padding='same', data_format='channels_first', \
-                        activation=activation_function, \
+                        activation=activation, \
                         use_bias = use_bias, name='conv')
 
         return output
@@ -194,19 +194,21 @@ def downsample(inputs, name='downsample'):
         while output.get_shape().as_list()[-2] > 3:
             if output.get_shape().as_list()[2] > 1 or output.get_shape().ndims == 4:
                 kernel = 3
+                strides = 2
             else:
                 kernel = [1, 3, 3]
+                strides = [1, 2, 2]
             output = conv(inputs=output, filters=filters * (2 ** i), \
-                        kernel_size=kernel, strides=kernel, \
+                        kernel_size=kernel, strides=strides, \
                         name='conv%d' % i)
             i += 1
             output = conv(inputs=output, filters=filters * (2 ** i), \
                         name='conv%d' % i)
             i += 1
-        for j in range(2):
+        for j in range(3):
             if output.get_shape().as_list()[-1] > 4:
                 output = conv(inputs=output, filters=output.get_shape().as_list()[1] // 2, \
-                                kernel_size=[1, 3], strides=(1, 3), \
+                                kernel_size=3, strides=(1, 2), \
                                 name='conv%d' % (i + j))
             else:
                 output = conv(inputs=output, filters=output.get_shape().as_list()[1] // 2, \
@@ -215,20 +217,29 @@ def downsample(inputs, name='downsample'):
 
 def conditional_output(inputs, encode, name='cond_out'):
     with tf.variable_scope(name, reuse=tf.AUTO_REUSE):
-        flatten = tf.layers.flatten(inputs=inputs)
-        enc_flat = tf.layers.flatten(inputs=encode)
-        join = tf.concat([flatten, enc_flat], axis=1)
-        dense1 = tf.layers.dense(inputs=flatten, units=1024, \
-                                activation=tf.nn.leaky_relu, \
-                                name='dense1')
-        dense2 = tf.layers.dense(inputs=join, units=1024, 
-                                activation=tf.nn.leaky_relu, \
-                                name='dense2')
-        output1 = tf.layers.dense(inputs=dense1, units=1, \
-                                name='output1')
-        output2 = tf.layers.dense(inputs=dense2, units=1, \
-                                name='output2')
-        return (output1 + output2) / 2
+        shape = inputs.get_shape().as_list()
+        output1_shape = [shape[0], shape[1], 1]
+        for i in shape[2:]:
+            output1_shape[2] *= i
+        output1 = tf.reshape(inputs, shape=output1_shape)
+        encode_flat = tf.expand_dims(tf.layers.flatten(encode), axis=-1)
+        encode_flat = tf.tile(encode_flat, multiples=(1, 1, output1.get_shape().as_list()[-1]))
+        output2 = tf.concat([output1, encode_flat], axis=1)
+        while output1.get_shape().as_list()[-1] > 1:
+            output1 = tf.layers.conv1d(output1, filters=output1.get_shape().as_list()[1], \
+                                        kernel_size=3, strides=2, padding='same', \
+                                        data_format='channels_first', \
+                                        activation=tf.nn.leaky_relu)
+        output1 = tf.layers.conv1d(output1, filters=1, kernel_size=1, strides=1, \
+                                    padding='same', data_format='channels_first')
+        while output2.get_shape().as_list()[-1] > 1:
+            output2 = tf.layers.conv1d(output2, filters=output2.get_shape().as_list()[1], \
+                                        kernel_size=3, strides=2, padding='same', \
+                                        data_format='channels_first', \
+                                        activation=tf.nn.leaky_relu)
+        output2 = tf.layers.conv1d(output2, filters=1, kernel_size=1, strides=1, \
+                                    padding='same', data_format='channels_first')
+        return (tf.layers.flatten(output1) + tf.layers.flatten(output2)) / 2
     
 def discriminator1(inputs, encode, name='Discriminator1'):
     with tf.variable_scope(name, reuse=tf.AUTO_REUSE):
