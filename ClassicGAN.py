@@ -24,7 +24,7 @@ TOTAL_TRAIN_EPOCH = 100
 LAMBDA = 10
 #LAMBDA1 = 1
 #LAMBDA2 = 5
-TRAIN_RATIO_DIS = 5
+TRAIN_RATIO_DIS = 1
 TRAIN_RATIO_GEN = 1
 
 def gradient_penalty(real, gen, encode, discriminator):
