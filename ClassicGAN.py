@@ -67,7 +67,7 @@ def main():
         data = tf.decode_raw(parsed['roll'], tf.uint8)
         data = tf.py_func(func=np.unpackbits, inp=[data], Tout=tf.uint8)
         data = tf.cast(data, tf.float32)
-        data = tf.reshape(data, [6, 72, 384])
+        data = tf.reshape(data, [CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH])
         data = data * 2 - 1
         return data
     dataset = dataset.apply(data.shuffle_and_repeat(buffer_size=16384))
@@ -83,17 +83,19 @@ def main():
     #real_input_4 = tf.placeholder(dtype=tf.float32, \
     # shape=[None, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH], name='real_input_4')
     real_input_3_split = tf.split(real_input_3, num_or_size_splits=4, axis=-1, name='real_input_3_split')
-    # shape: [4, None, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH // 4]
+    # shape: [4, None, 6, 72, 96]
     real_input_2 = tf.stack(real_input_3_split, axis=2, name='real_input_2')
-    # shape: [None, CHANNEL_NUM, 4, CLASS_NUM, INPUT_LENGTH // 4]
+    # shape: [None, 6, 4, 72, 96]
     real_input_1 = tf.layers.max_pooling3d(inputs=real_input_2, pool_size=[1, 2, 2], strides=(1, 2, 2), \
                                                 padding='same', data_format='channels_first', name='real_input_1')
-    # shape: [None, CHANNEL_NUM, 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
+    # shape: [None, 6, 4, 36, 48]
     encode = encoder(inputs=real_input_2, train=train)
     # shape: [None, 4, 2, 8]
+    tf.summary.histogram('encode', encode)
+    print('Encoder set')
 
     real_input_3_image = tf.expand_dims(real_input_3[:1], axis=-1, name='real_input_3_image_expand')
-    # shape: [1, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH, 1]
+    # shape: [1, 6, 72, 384, 1]
     real_input_2_image = tf.layers.max_pooling3d(inputs=real_input_3_image, pool_size=[2, 2, 1], \
                                                     strides=(2, 2, 1), padding='same', \
                                                     data_format='channels_first', \
@@ -103,41 +105,41 @@ def main():
         tf.summary.image('real_input_3_%d' % i, real_input_3_image[:, i])
 
     shared_output = shared_gen(noise=input_noise, encode=encode, train=train)
-    # shape: [None, 64, 4, CLASS_NUM // 4, INPUT_LENGTH // 16]
+    # shape: [None, 64, 4, 18, 24]
     output_gen1, gen1 = zip(*[generator1(inputs=shared_output, encode=encode, \
                                         num=i, train=train) for i in range(CHANNEL_NUM)])
-    # shape: [CHANNEL_NUM, None, 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
-    # shape: [CHANNEL_NUM, None, 32, 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
+    # shape: [6, None, 4, 36, 48]
+    # shape: [6, None, 32, 4, 36, 48]
     output_gen1 = tf.stack(output_gen1, axis=1, name='output_gen1_stack')
-    # shape: [None, CHANNEL_NUM, 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
+    # shape: [None, 6, 4, 36, 48]
     gen1 = [tf.concat(values=[i, output_gen1], axis=1) for i in gen1]
-    # shape: [CHANNEL_NUM, None, 38, 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
+    # shape: [6, None, 38, 4, 36, 48]
     output_gen2, gen2 = zip(*[generator2(inputs=gen1[i], encode=encode, \
                                         num=i, train=train) for i in range(CHANNEL_NUM)])
-    # shape: [CHANNEL_NUM, None, 4, CLASS_NUM, INPUT_LENGTH // 4]
-    # shape: [CHANNEL_NUM, None, 16, 4, CLASS_NUM, INPUT_LENGTH // 4]
+    # shape: [6, None, 4, 72, 96]
+    # shape: [6, None, 16, 4, 72, 96]
     output_gen2 = tf.stack(output_gen2, axis=1, name='output_gen2_stack')
-    # shape: [None, CHANNEL_NUM, 4, CLASS_NUM, INPUT_LENGTH // 4]
+    # shape: [None, 6, 4, 72, 96]
     gen2 = [tf.concat(values=[i, output_gen2], axis=1) for i in gen2]
-    # shape: [CHANNEL_NUM, None, 22, 4, CLASS_NUM, INPUT_LENGTH // 4]
+    # shape: [6, None, 22, 4, 72, 96]
     output_gen3 = [generator3(inputs=gen2[i], encode=encode, \
                                 num=i, train=train) for i in range(CHANNEL_NUM)]
-    # shape: [CHANNEL_NUM, None, CLASS_NUM, INPUT_LENGTH]
+    # shape: [6, None, 72, 384]
     output_gen3 = tf.stack(output_gen3, axis=1, name='output_gen3_stack')
-    # shape: [None, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH]
+    # shape: [None, 6, 72, 384]
     print('Generators set')
     dis1_real = discriminator1(inputs=real_input_1, encode=encode)
-    # shape: [None, CHANNEL_NUM, 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
+    # shape: [None, 6, 4, 36, 48]
     dis1_gen = discriminator1(inputs=output_gen1, encode=encode)
-    # shape: [None, CHANNEL_NUM, 4, CLASS_NUM // 2, INPUT_LENGTH // 8]
+    # shape: [None, 6, 4, 36, 48]
     dis2_real = discriminator2(inputs=real_input_2, encode=encode)
-    # shape: [None, CHANNEL_NUM, 4, CLASS_NUM, INPUT_LENGTH // 4]
+    # shape: [None, 6, 4, 72, 96]
     dis2_gen = discriminator2(inputs=output_gen2, encode=encode)
-    # shape: [None, CHANNEL_NUM, 4, CLASS_NUM, INPUT_LENGTH // 4]
+    # shape: [None, 6, 4, 72, 96]
     dis3_real = discriminator3(inputs=real_input_3, encode=encode)
-    # shape: [None, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH]
+    # shape: [None, 6, 72, 384]
     dis3_gen = discriminator3(inputs=output_gen3, encode=encode)
-    # shape: [None, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH]
+    # shape: [None, 6, 72, 384]
     print('Discriminators set')
     loss_dis1 = tf.reduce_mean(dis1_gen - dis1_real) + gradient_penalty(real=real_input_1, \
                                     gen=output_gen1, encode=encode, discriminator=discriminator1)
@@ -185,19 +187,19 @@ def main():
     dis3_extra_update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Discriminator3')
     with tf.name_scope('optimizers'):
         with tf.control_dependencies(dis1_extra_update_ops):
-            dis1_train = tf.train.AdamOptimizer(learning_rate=0.0002, beta1=0.5, beta2=0.9).minimize(\
+            dis1_train = tf.train.AdamOptimizer(learning_rate=0.0003, beta1=0.5, beta2=0.9).minimize(\
                                                     loss=loss_dis1, var_list=dis1_var, name='dis1_train')
         print('dis1_train setup')
         with tf.control_dependencies(dis2_extra_update_ops):
-            dis2_train = tf.train.AdamOptimizer(learning_rate=0.0002, beta1=0.5, beta2=0.9).minimize(\
+            dis2_train = tf.train.AdamOptimizer(learning_rate=0.0003, beta1=0.5, beta2=0.9).minimize(\
                                                     loss=loss_dis2, var_list=dis2_var, name='dis2_train')
         print('dis2_train setup')
         with tf.control_dependencies(dis3_extra_update_ops):
-            dis3_train = tf.train.AdamOptimizer(learning_rate=0.0002, beta1=0.5, beta2=0.9).minimize(\
+            dis3_train = tf.train.AdamOptimizer(learning_rate=0.0003, beta1=0.5, beta2=0.9).minimize(\
                                                     loss=loss_dis3, var_list=dis3_var, name='dis3_train')
         print('dis3_train setup')
         with tf.control_dependencies(gen_extra_update_ops):
-            gen_train = tf.train.AdamOptimizer(learning_rate=0.0002, beta1=0.5, beta2=0.9).minimize(\
+            gen_train = tf.train.AdamOptimizer(learning_rate=0.0001, beta1=0.5, beta2=0.9).minimize(\
                                                     loss=loss_gen, var_list=gen_var, name='gen_train')
         print('gen_train setup')
     print('Optimizers set')
@@ -231,14 +233,14 @@ def main():
             return
         writer = tf.summary.FileWriter('train', sess.graph)
         run_options = tf.RunOptions(report_tensor_allocations_upon_oom=True)
-        epoch_num = 1000000
+        epoch_num = 100001
         for train_count in tqdm(range(epoch_num)):
             feed_dict[train] = True
             for i in range(TRAIN_RATIO_DIS):
                 feed_dict[input_noise] = get_noise([BATCH_SIZE, NOISE_LENGTH, 4])
-                _, loss_val_dis1 = sess.run([dis1_train, loss_dis1], feed_dict=feed_dict, options=run_options)
-                _, loss_val_dis2 = sess.run([dis2_train, loss_dis2], feed_dict=feed_dict, options=run_options)
-                _, loss_val_dis3 = sess.run([dis3_train, loss_dis3], feed_dict=feed_dict, options=run_options)
+                *_, loss_val_dis1, loss_val_dis2, loss_val_dis3 = sess.run([dis1_train, \
+                            dis2_train, dis3_train, loss_dis1, loss_dis2, loss_dis3], \
+                            feed_dict=feed_dict, options=run_options)
             for i in range(TRAIN_RATIO_GEN):
                 feed_dict[input_noise] = get_noise([BATCH_SIZE, NOISE_LENGTH, 4])
                 summary, _, loss_val_gen = sess.run([merged, gen_train, loss_gen], \
