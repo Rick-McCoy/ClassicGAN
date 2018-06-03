@@ -47,7 +47,7 @@ def conv(inputs, filters, kernel_size=[1, 3, 3], strides=1, \
 
         return output
 
-def residual_block(inputs, filters, training, strides=1, name=''):
+def residual_block(inputs, filters, training, name='resblock'):
     with tf.variable_scope(name):
         conv1 = conv(inputs=inputs, filters=filters, kernel_size=1, \
                     strides=1, training=training, \
@@ -185,7 +185,14 @@ def generator3(inputs, encode, num, train):
         output = tf.squeeze(output, axis=-1, name='output')
         # shape: [None, 72, 384]
         return output
-        
+
+def downblock(inputs, filters, name='downblock'):
+    with tf.variable_scope(name, reuse=tf.AUTO_REUSE):
+        conv1 = conv(inputs, filters=filters, kernel_size=kernel, \
+                        strides=strides, name='conv1')
+        conv2 = conv(conv1, filters=filters, name='conv2')
+        return inputs + conv2
+
 def downsample(inputs, name='downsample'):
     with tf.variable_scope(name, reuse=tf.AUTO_REUSE):
         filters = 16
@@ -198,14 +205,12 @@ def downsample(inputs, name='downsample'):
             else:
                 kernel = [1, 3, 3]
                 strides = [1, 2, 2]
-            output = conv(inputs=output, filters=filters * (2 ** (i // 2)), \
-                        kernel_size=kernel, strides=strides, \
-                        name='conv%d' % i)
+            output = conv(output, filters=filters * (2 ** i), \
+                            kernel_size=kernel, strides=strides, \
+                            name='conv%d' % i)
+            output = downblock(output, filters=filters * (2 ** i), name='downblock%d' % i)
             i += 1
-            output = conv(inputs=output, filters=filters * (2 ** (i // 2)), \
-                        name='conv%d' % i)
-            i += 1
-        for j in range(3):
+        for j in range(2):
             if output.get_shape().as_list()[-1] > 4:
                 output = conv(inputs=output, filters=output.get_shape().as_list()[1] // 2, \
                                 kernel_size=3, strides=(1, 2), \
