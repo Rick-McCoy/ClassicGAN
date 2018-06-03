@@ -188,8 +188,7 @@ def generator3(inputs, encode, num, train):
 
 def downblock(inputs, filters, name='downblock'):
     with tf.variable_scope(name, reuse=tf.AUTO_REUSE):
-        conv1 = conv(inputs, filters=filters, kernel_size=kernel, \
-                        strides=strides, name='conv1')
+        conv1 = conv(inputs, filters=filters, name='conv1')
         conv2 = conv(conv1, filters=filters, name='conv2')
         return inputs + conv2
 
