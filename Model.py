@@ -55,14 +55,6 @@ def residual_block(inputs, filters, training, name='resblock'):
                     regularization='batch_norm_relu', name='conv2')
         return inputs + conv2
 
-def encode_concat(inputs, encode, name='encode_concat'):
-    with tf.variable_scope(name):
-        dim1 = inputs.get_shape().as_list()[3] // 2
-        dim2 = inputs.get_shape().as_list()[4] // 8
-        encode = tf.tile(input=encode, multiples=(1, 1, 1, dim1, dim2))
-        output = tf.concat([inputs, encode], axis=1)
-        return output
-
 def upblock(inputs, filters, training, name='upblock'):
     with tf.variable_scope(name):
         output = conv(inputs, filters=filters, kernel_size=[1, 2, 2], \
@@ -102,6 +94,14 @@ def encoder(inputs, train):
         # shape: [2, None, 1, 4, 8]
         output = tf.stack(output, axis=-2)
         # shape: [None, 1, 4, 2, 8]
+        return output
+
+def encode_concat(inputs, encode, name='encode_concat'):
+    with tf.variable_scope(name):
+        dim1 = inputs.get_shape().as_list()[3] // 2
+        dim2 = inputs.get_shape().as_list()[4] // 8
+        encode = tf.tile(input=encode, multiples=(1, 1, 1, dim1, dim2))
+        output = tf.concat([inputs, encode], axis=1)
         return output
 
 def genblock(inputs, encode, filters, train, name='genblock'):
@@ -165,7 +165,7 @@ def generator3(inputs, encode, num, train):
         conv1 = conv(inputs=inputs, filters=16, training=train, \
                     regularization='batch_norm_relu', name='conv1')
         # shape: [None, 16, 72, 384]
-        res1 = residual_block(inputs=inputs, filters=16, \
+        res1 = residual_block(inputs=conv1, filters=16, \
                             training=train, name='res1')
         # shape: [None, 16, 72, 384]
         res2 = residual_block(inputs=res1, filters=16, \
