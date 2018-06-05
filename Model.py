@@ -59,9 +59,10 @@ def upblock(inputs, filters, training, name='upblock'):
     with tf.variable_scope(name):
         size = [i * 2 for i in inputs.get_shape().as_list()[3:5]]
         skip = tf.transpose(inputs, perm=[0, 2, 3, 4, 1])
-        skip = tf.unstack(skip, axis=2)
+        skip = tf.unstack(skip, axis=1)
         skip = [tf.image.resize_bilinear(i, size=size) for i in skip]
-        skip = tf.stack(skip, axis=2)
+        skip = tf.stack(skip, axis=1)
+        skip = tf.transpose(skip, perm=[0, 4, 1, 2, 3])
         output = conv(inputs, filters=filters, kernel_size=[1, 2, 2], \
                                 strides=(1, 2, 2), training=training, \
                                 regularization='batch_norm_relu', \
