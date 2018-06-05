@@ -84,7 +84,7 @@ def encoder(inputs, train):
     with tf.variable_scope('Encoder'):
         output = inputs
         i = 0
-        while output.get_shape().as_list() > 1:
+        while output.get_shape().as_list()[-1] > 1:
             output = conv(inputs=output, filters=16, \
                 strides=(1, 3, 3), training=train, \
                 regularization='batch_norm_lrelu', \
