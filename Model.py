@@ -57,6 +57,11 @@ def residual_block(inputs, filters, training, name='resblock'):
 
 def upblock(inputs, filters, training, name='upblock'):
     with tf.variable_scope(name):
+        size = [i * 2 for i in inputs.get_shape().as_list()[3:5]]
+        skip = tf.transpose(inputs, perm=[0, 2, 3, 4, 1])
+        skip = tf.unstack(skip, axis=2)
+        skip = [tf.image.resize_bilinear(i, size=size) for i in skip]
+        skip = tf.stack(skip, axis=2)
         output = conv(inputs, filters=filters, kernel_size=[1, 2, 2], \
                                 strides=(1, 2, 2), training=training, \
                                 regularization='batch_norm_relu', \
@@ -64,7 +69,7 @@ def upblock(inputs, filters, training, name='upblock'):
         output = conv(output, filters=filters, training=training, \
                                 regularization='batch_norm_relu', \
                                 name='conv2')
-        return output
+        return output + skip
 
 def summary_image(inputs, name='summary_image'):
     with tf.variable_scope(name):
@@ -111,15 +116,15 @@ def genblock(inputs, encode, filters, train, name='genblock'):
                         regularization='batch_norm_relu', name='conv1')
         res1 = residual_block(inputs=conv1, filters=filters, \
                             training=train, name='res1')
-        res2 = residual_block(inputs=res1, filters=filters, \
+        upblock1 = upblock(res1, filters=filters, training=train)
+        res2 = residual_block(inputs=upblock1, filters=filters // 2, \
                             training=train, name='res2')
-        upblock1 = upblock(res2, filters=filters // 2, training=train)
-        conv2 = conv(inputs=upblock1, filters=1, training=train, \
+        conv2 = conv(inputs=res2, filters=1, training=train, \
                     regularization='batch_norm_tanh', name='conv2')
         output = tf.transpose(conv2, perm=[0, 2, 3, 4, 1])
         summary_image(output[:1])
         output = tf.squeeze(output, axis=-1)
-        return output, upblock1
+        return output, res2
 
 def shared_gen(noise, encode, train):
     with tf.variable_scope('Shared_generator'):
