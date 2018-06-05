@@ -118,7 +118,7 @@ def genblock(inputs, encode, filters, train, name='genblock'):
         res1 = residual_block(inputs=conv1, filters=filters, \
                             training=train, name='res1')
         upblock1 = upblock(res1, filters=filters, training=train)
-        res2 = residual_block(inputs=upblock1, filters=filters // 2, \
+        res2 = residual_block(inputs=upblock1, filters=filters, \
                             training=train, name='res2')
         conv2 = conv(inputs=res2, filters=1, training=train, \
                     regularization='batch_norm_tanh', name='conv2')
