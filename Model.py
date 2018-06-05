@@ -174,7 +174,7 @@ def generator3(inputs, encode, num, train):
         conv2 = conv(inputs=res2, filters=1, training=train, \
                     regularization='batch_norm_tanh', name='conv2')
         # shape: [None, 1, 72, 384]
-        output = tf.transpose(output, perm=[0, 2, 3, 1], name='image')
+        output = tf.transpose(conv2, perm=[0, 2, 3, 1], name='image')
         # shape: [None, 72, 384, 1]
         tf.summary.image(name='piano_roll', tensor=output[:1])
         output = tf.squeeze(output, axis=-1, name='output')
