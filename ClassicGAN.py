@@ -16,8 +16,8 @@ from Model import get_noise, generator1, generator2, generator3, \
                     shared_gen, encoder, NOISE_LENGTH
 from Convert import unpack_sample
 from tensorflow.python.client import timeline # pylint: disable=E0611
-import memory_saving_gradients
-tf.__dict__["gradients"] = memory_saving_gradients.gradients_speed
+#import memory_saving_gradients
+#tf.__dict__["gradients"] = memory_saving_gradients.gradients_memory
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 TOTAL_TRAIN_EPOCH = 100
@@ -46,7 +46,7 @@ def main():
     parser.set_defaults(concat=False)
     parser.add_argument('-r', '--record', dest='record', action='store_true', help='Enable recording.')
     parser.add_argument('--no-record', dest='record', action='store_false', help='Disable recording.')
-    parser.set_defaults(record=False)
+    parser.set_defaults(record=False) # Warning: Windows kills python if enabled.
     args = parser.parse_args()
     sampling = args.sample != ''
 
