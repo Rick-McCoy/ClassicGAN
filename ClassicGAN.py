@@ -77,69 +77,68 @@ def main():
     iterator = dataset.make_one_shot_iterator()
     real_input_3 = iterator.get_next()
 
-    input_noise = tf.placeholder(dtype=tf.float32, shape=[None, NOISE_LENGTH, 4], name='input_noise')
+    input_noise = tf.placeholder(dtype=tf.float32, shape=[None, NOISE_LENGTH], name='input_noise')
 
     train = tf.placeholder(dtype=tf.bool, name='traintest')
-    #real_input_4 = tf.placeholder(dtype=tf.float32, \
+    # real_input_4 = tf.placeholder(dtype=tf.float32, \
     # shape=[None, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH], name='real_input_4')
-    real_input_3_split = tf.split(real_input_3, num_or_size_splits=4, axis=-1, name='real_input_3_split')
-    # shape: [4, None, 6, 72, 96]
-    real_input_2 = tf.stack(real_input_3_split, axis=2, name='real_input_2')
-    # shape: [None, 6, 4, 72, 96]
-    real_input_1 = tf.layers.max_pooling3d(inputs=real_input_2, pool_size=[1, 2, 2], strides=(1, 2, 2), \
-                                                padding='same', data_format='channels_first', name='real_input_1')
-    # shape: [None, 6, 4, 36, 48]
-    encode = encoder(inputs=real_input_2, train=train)
-    # shape: [None, 4, 2, 8]
+    real_input_2 = tf.layers.max_pooling2d(inputs=real_input_3, pool_size=2, strides=2, \
+                                        padding='same', data_format='channels_first', name='real_input_2')
+    real_input_1 = tf.layers.max_pooling2d(inputs=real_input_2, pool_size=2, strides=2, \
+                                        padding='same', data_format='channels_first', name='real_input_1')
+    # shape: [None, 6, 64, 256]
+    encode = encoder(inputs=real_input_3, train=train)
+    # shape: [None, 64]
     tf.summary.histogram('encode', encode)
     print('Encoder set')
 
-    real_input_3_image = tf.expand_dims(real_input_3[:1], axis=-1, name='real_input_3_image_expand')
-    # shape: [1, 6, 72, 384, 1]
-    real_input_2_image = tf.layers.max_pooling3d(inputs=real_input_3_image, pool_size=[2, 2, 1], \
-                                                    strides=(2, 2, 1), padding='same', \
-                                                    data_format='channels_first', \
-                                                    name='real_input_2_image')
+    real_input_3_image = tf.expand_dims(real_input_2[:1], axis=-1, name='real_input_3_image')
+    # shape: [1, 6, 128, 512, 1]
+    real_input_2_image = tf.expand_dims(real_input_1[:1], axis=-1, name='real_input_2_image')
+    # shape: [1, 6, 64, 256, 1]
+    real_input_1_image = tf.expand_dims(real_input_1[:1], axis=-1, name='real_input_1_image')
+    # shape: [1, 6, 32, 128, 1]
     for i in range(CHANNEL_NUM):
+        tf.summary.image('real_input_1_%d' % i, real_input_1_image[:, i])
         tf.summary.image('real_input_2_%d' % i, real_input_2_image[:, i])
         tf.summary.image('real_input_3_%d' % i, real_input_3_image[:, i])
 
     shared_output = shared_gen(noise=input_noise, encode=encode, train=train)
-    # shape: [None, 64, 4, 18, 24]
+    # shape: [None, 64, 16, 64]
     output_gen1, gen1 = zip(*[generator1(inputs=shared_output, encode=encode, \
                                         num=i, train=train) for i in range(CHANNEL_NUM)])
-    # shape: [6, None, 4, 36, 48]
-    # shape: [6, None, 32, 4, 36, 48]
+    # shape: [6, None, 32, 128]
+    # shape: [6, None, 32, 32, 128]
     output_gen1 = tf.stack(output_gen1, axis=1, name='output_gen1_stack')
-    # shape: [None, 6, 4, 36, 48]
+    # shape: [None, 6, 32, 128]
     gen1 = [tf.concat(values=[i, output_gen1], axis=1) for i in gen1]
-    # shape: [6, None, 38, 4, 36, 48]
+    # shape: [6, None, 38, 32, 128]
     output_gen2, gen2 = zip(*[generator2(inputs=gen1[i], encode=encode, \
                                         num=i, train=train) for i in range(CHANNEL_NUM)])
-    # shape: [6, None, 4, 72, 96]
-    # shape: [6, None, 16, 4, 72, 96]
+    # shape: [6, None, 64, 256]
+    # shape: [6, None, 16, 64, 256]
     output_gen2 = tf.stack(output_gen2, axis=1, name='output_gen2_stack')
-    # shape: [None, 6, 4, 72, 96]
+    # shape: [None, 6, 64, 256]
     gen2 = [tf.concat(values=[i, output_gen2], axis=1) for i in gen2]
-    # shape: [6, None, 22, 4, 72, 96]
+    # shape: [6, None, 22, 64, 256]
     output_gen3 = [generator3(inputs=gen2[i], encode=encode, \
                                 num=i, train=train) for i in range(CHANNEL_NUM)]
-    # shape: [6, None, 72, 384]
+    # shape: [6, None, 128, 512]
     output_gen3 = tf.stack(output_gen3, axis=1, name='output_gen3_stack')
-    # shape: [None, 6, 72, 384]
+    # shape: [None, 6, 128, 512]
     print('Generators set')
     dis1_real = discriminator1(inputs=real_input_1, encode=encode)
-    # shape: [None, 6, 4, 36, 48]
+    # shape: [None, 6, 32, 128]
     dis1_gen = discriminator1(inputs=output_gen1, encode=encode)
-    # shape: [None, 6, 4, 36, 48]
+    # shape: [None, 6, 32, 128]
     dis2_real = discriminator2(inputs=real_input_2, encode=encode)
-    # shape: [None, 6, 4, 72, 96]
+    # shape: [None, 6, 64, 256]
     dis2_gen = discriminator2(inputs=output_gen2, encode=encode)
-    # shape: [None, 6, 4, 72, 96]
+    # shape: [None, 6, 64, 256]
     dis3_real = discriminator3(inputs=real_input_3, encode=encode)
-    # shape: [None, 6, 72, 384]
+    # shape: [None, 6, 128, 512]
     dis3_gen = discriminator3(inputs=output_gen3, encode=encode)
-    # shape: [None, 6, 72, 384]
+    # shape: [None, 6, 128, 512]
     print('Discriminators set')
     loss_dis1 = tf.reduce_mean(dis1_gen - dis1_real) + gradient_penalty(real=real_input_1, \
                                     gen=output_gen1, encode=encode, discriminator=discriminator1)
@@ -222,7 +221,7 @@ def main():
             except:
                 print('Error while opening file.')
                 return
-            feed_dict[input_noise] = get_noise([BATCH_SIZE, NOISE_LENGTH, 4])
+            feed_dict[input_noise] = get_noise([BATCH_SIZE, NOISE_LENGTH])
             feed_dict[train] = False
             samples = sess.run(output_gen3, feed_dict=feed_dict)
             path = path.split('/')[-1]
@@ -237,7 +236,7 @@ def main():
         for train_count in tqdm(range(epoch_num)):
             feed_dict[train] = True
             for i in range(TRAIN_RATIO_DIS):
-                feed_dict[input_noise] = get_noise([BATCH_SIZE, NOISE_LENGTH, 4])
+                feed_dict[input_noise] = get_noise([BATCH_SIZE, NOISE_LENGTH])
                 *_, loss_val_dis1, loss_val_dis2, loss_val_dis3 = sess.run([dis1_train, \
                             dis2_train, dis3_train, loss_dis1, loss_dis2, loss_dis3], \
                             feed_dict=feed_dict, options=run_options)

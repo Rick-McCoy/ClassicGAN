@@ -11,9 +11,9 @@ import os
 from tqdm import tqdm
 
 CHANNEL_NUM = 6
-CLASS_NUM = 72
-INPUT_LENGTH = 384
-BATCH_SIZE = 4
+CLASS_NUM = 128
+INPUT_LENGTH = 512
+BATCH_SIZE = 2
 #0 Piano: 22584
 #1 Chromatic Percussion: 216
 #2 Organ: 500
@@ -39,18 +39,15 @@ def roll(path):
         tqdm.write('Error while opening')
         raise Exception
     index = [0, 3, 5, 7, 8, 9]
-    piano_rolls = [i.get_piano_roll()[24:96] for i in song.instruments]
+    piano_rolls = [i.get_piano_roll() for i in song.instruments]
     length = np.min([i.shape[1] for i in piano_rolls])
     if length < INPUT_LENGTH:
         tqdm.write('Too short')
         raise Exception
     data = np.zeros(shape=(CHANNEL_NUM, CLASS_NUM, length))
     for piano_roll, instrument in zip(piano_rolls, song.instruments):
-        if not instrument.is_drum:
-            try:
-                id = index.index(instrument.program // 8)
-            except:
-                continue
+        if not instrument.is_drum and instrument.program // 8 in index:
+            id = index.index(instrument.program // 8)
             data[id] = np.add(data[id], piano_roll[:, :length])
     if np.max(data) == 0:
         tqdm.write('No notes')
@@ -71,8 +68,8 @@ def build_dataset():
         except:
             continue
         for datum in data:
-        	datum = np.packbits(datum).tostring()
-        	feature = {'roll': tf.train.Feature(bytes_list=tf.train.BytesList(value=[datum]))}
+        	packed = np.packbits(datum).tostring()
+        	feature = {'roll': tf.train.Feature(bytes_list=tf.train.BytesList(value=[packed]))}
         	example = tf.train.Example(features=tf.train.Features(feature=feature))
         	serialized = example.SerializeToString()
         	writer.write(serialized)
