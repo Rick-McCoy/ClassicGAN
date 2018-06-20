@@ -104,7 +104,6 @@ def main():
         tf.summary.image('real_input_3_%d' % i, real_input_3_image[:, i])
 
     shared_output = shared_gen(noise=input_noise, encode=encode, train=train)
-    print(shared_output.get_shape().as_list())
     # shape: [None, 64, 16, 64]
     output_gen1, gen1 = zip(*[generator1(inputs=shared_output, encode=encode, \
                                         num=i, train=train) for i in range(CHANNEL_NUM)])
@@ -242,7 +241,7 @@ def main():
                             dis2_train, dis3_train, loss_dis1, loss_dis2, loss_dis3], \
                             feed_dict=feed_dict, options=run_options)
             for i in range(TRAIN_RATIO_GEN):
-                feed_dict[input_noise] = get_noise([BATCH_SIZE, NOISE_LENGTH, 4])
+                feed_dict[input_noise] = get_noise([BATCH_SIZE, NOISE_LENGTH])
                 summary, _, loss_val_gen = sess.run([merged, gen_train, loss_gen], \
                                                     feed_dict=feed_dict, options=run_options)
             writer.add_summary(summary, train_count)
@@ -253,7 +252,7 @@ def main():
             tqdm.write('Generator loss : %.7f' % loss_val_gen)
             if train_count % 1000 == 0:
                 feed_dict[train] = False
-                feed_dict[input_noise] = get_noise([BATCH_SIZE, NOISE_LENGTH, 4])
+                feed_dict[input_noise] = get_noise([BATCH_SIZE, NOISE_LENGTH])
                 samples = sess.run(output_gen3, feed_dict=feed_dict)
                 np.save(file='Samples/song_%06d' % train_count, arr=samples)
                 unpack_sample('Samples/song_%06d' % train_count)
