@@ -91,7 +91,8 @@ def shared_gen(noise, encode, train):
         output = tf.expand_dims(tf.expand_dims(noise, axis=-1), axis=-1)
         # shape: [None, 192, 1, 1]
         for i in range(4):
-            output = upsample(output, filters=1024 // 2 ** i, training=train)
+            output = upsample(output, filters=1024 // 2 ** i, \
+                            training=train, name='gneblock%d' % (i + 1))
         # shape: [None, 128, 16, 16]
         output = conv(inputs=output, filters=64, strides=(1, 2), \
                     training=train, regularization='batch_norm_relu', \
