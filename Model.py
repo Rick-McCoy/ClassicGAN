@@ -32,7 +32,7 @@ def conv(inputs, filters, kernel_size=3, strides=1, \
                         activation=activation, \
                         use_bias = use_bias, name='conv')
         if 'batch_norm' in regularization:
-            inputs = tf.layers.batch_normalization(inputs=inputs, \
+            output = tf.layers.batch_normalization(inputs=output, \
                                     axis=1, training=training, \
                                     name='batch_norm')
         return output
