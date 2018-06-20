@@ -104,6 +104,7 @@ def main():
         tf.summary.image('real_input_3_%d' % i, real_input_3_image[:, i])
 
     shared_output = shared_gen(noise=input_noise, encode=encode, train=train)
+    print(shared_output.get_shape().as_list())
     # shape: [None, 64, 16, 64]
     output_gen1, gen1 = zip(*[generator1(inputs=shared_output, encode=encode, \
                                         num=i, train=train) for i in range(CHANNEL_NUM)])

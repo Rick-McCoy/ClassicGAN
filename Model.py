@@ -96,10 +96,10 @@ def shared_gen(noise, encode, train):
         # shape: [None, 128, 16, 16]
         output = conv(inputs=output, filters=64, strides=(1, 2), \
                     training=train, regularization='batch_norm_relu', \
-                    name='conv5')
+                    transpose=True, name='conv5')
         output = conv(inputs=output, filters=64, strides=(1, 2), \
                     training=train, regularization='batch_norm_relu', \
-                    name='conv6')
+                    transpose=True, name='conv6')
         output = conv(inputs=output, filters=64, training=train, \
                         regularization='tanh', name='conv7')
         return output
