@@ -86,10 +86,12 @@ def main():
     real_input_2 = tf.layers.average_pooling2d(inputs=real_input_3, pool_size=2, strides=2, \
                                         padding='same', data_format='channels_first', name='real_input_2')
     real_input_2 -= tf.reduce_min(real_input_2)
+    real_input_2 /= tf.reduce_max(real_input_2)
     real_input_2 = 2 * real_input_2 - 1
     real_input_1 = tf.layers.max_pooling2d(inputs=real_input_2, pool_size=2, strides=2, \
                                         padding='same', data_format='channels_first', name='real_input_1')
     real_input_1 -= tf.reduce_min(real_input_1)
+    real_input_1 /= tf.reduce_max(real_input_1)
     real_input_1 = 2 * real_input_1 - 1
     # shape: [None, 6, 64, 256]
     encode = encoder(inputs=real_input_3, train=train)
