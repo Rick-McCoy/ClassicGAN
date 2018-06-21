@@ -128,7 +128,8 @@ def downblock(inputs, filters, name='downblock'):
 def downsample(inputs, name='downsample'):
     with tf.variable_scope(name, reuse=tf.AUTO_REUSE):
         filters = 16
-        output = inputs
+        output = conv(inputs, filters=filters, name='conv1')
+        output = conv(output, filters=filters, name='conv2')
         i = 1
         while output.get_shape().as_list()[-2] > 1:
             output = downblock(output, filters=filters * (2 ** i), name='downblock%d' % i)

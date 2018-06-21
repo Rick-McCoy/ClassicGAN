@@ -119,16 +119,12 @@ def main():
     # shape: [6, None, 32, 32, 128]
     output_gen1 = tf.stack(output_gen1, axis=1, name='output_gen1_stack')
     # shape: [None, 6, 32, 128]
-    gen1 = [tf.concat(values=[i, output_gen1], axis=1) for i in gen1]
-    # shape: [6, None, 38, 32, 128]
     output_gen2, gen2 = zip(*[generator2(inputs=gen1[i], encode=encode, \
                                         num=i, train=train) for i in range(CHANNEL_NUM)])
     # shape: [6, None, 64, 256]
     # shape: [6, None, 16, 64, 256]
     output_gen2 = tf.stack(output_gen2, axis=1, name='output_gen2_stack')
     # shape: [None, 6, 64, 256]
-    gen2 = [tf.concat(values=[i, output_gen2], axis=1) for i in gen2]
-    # shape: [6, None, 22, 64, 256]
     output_gen3 = [generator3(inputs=gen2[i], encode=encode, \
                                 num=i, train=train) for i in range(CHANNEL_NUM)]
     # shape: [6, None, 128, 512]
