@@ -19,6 +19,7 @@ from tensorflow.python.client import timeline # pylint: disable=E0611
 #import memory_saving_gradients
 #tf.__dict__["gradients"] = memory_saving_gradients.gradients_memory
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
 TOTAL_TRAIN_EPOCH = 100
 LAMBDA = 10
