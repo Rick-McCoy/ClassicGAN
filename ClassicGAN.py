@@ -99,9 +99,9 @@ def main():
     tf.summary.histogram('encode', encode)
     print('Encoder set')
 
-    real_input_3_image = tf.expand_dims(real_input_2[:1], axis=-1, name='real_input_3_image')
+    real_input_3_image = tf.expand_dims(real_input_3[:1], axis=-1, name='real_input_3_image')
     # shape: [1, 6, 128, 512, 1]
-    real_input_2_image = tf.expand_dims(real_input_1[:1], axis=-1, name='real_input_2_image')
+    real_input_2_image = tf.expand_dims(real_input_2[:1], axis=-1, name='real_input_2_image')
     # shape: [1, 6, 64, 256, 1]
     real_input_1_image = tf.expand_dims(real_input_1[:1], axis=-1, name='real_input_1_image')
     # shape: [1, 6, 32, 128, 1]
