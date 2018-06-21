@@ -17,7 +17,7 @@ def set_piano_roll_to_instrument(piano_roll, instrument, velocity=100, tempo=120
     # Calculate time per pixel
     time_per_pixel = 60.0 / tempo / float(beat_resolution)
     # Create piano_roll_search that captures note onsets and offsets
-    piano_roll = np.pad(piano_roll, ((0, ), (1, 1)), 'constant', constant_values=0)
+    piano_roll = np.pad(piano_roll, ((0, 0), (1, 1)), 'constant', constant_values=0)
     # add padding for diff
     piano_roll_search = np.diff(piano_roll.astype(int), axis=1)
     # Iterate through all possible(128) pitches
