@@ -17,8 +17,6 @@ def set_piano_roll_to_instrument(piano_roll, instrument, velocity=100, tempo=120
     # Calculate time per pixel
     time_per_pixel = 60.0 / tempo / float(beat_resolution)
     # Create piano_roll_search that captures note onsets and offsets
-    piano_roll = np.pad(piano_roll, ((24, 32), (1, 1)), 'constant', constant_values=0)
-    # shape: [128, 386]
     piano_roll_search = np.diff(piano_roll.astype(int), axis=1)
     # Iterate through all possible(128) pitches
     for note_num in range(128):
@@ -60,7 +58,7 @@ def unpack_sample(name='', concat=False):
     if not os.path.exists(name):
         os.mkdir(name)
     savename = name + '/' + name.split('/')[-1]
-    if not name[-4:] == '.npy':
+    if not '.npy' in name:
         name = name + '.npy'
     samples = np.load(name) > 0
     program_nums = [0, 24, 40, 56, 64, 72]
