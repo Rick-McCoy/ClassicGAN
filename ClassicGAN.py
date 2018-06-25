@@ -13,7 +13,7 @@ from tqdm import tqdm
 from Data import roll, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH, BATCH_SIZE
 from Model import get_noise, generator1, generator2, generator3, \
                     discriminator1, discriminator2, discriminator3, \
-                    shared_gen, encoder, NOISE_LENGTH
+                    shared_gen, encoder, NOISE_LENGTH, NO_OPS
 from Convert import unpack_sample
 from tensorflow.python.client import timeline # pylint: disable=E0611
 #import memory_saving_gradients
@@ -33,7 +33,7 @@ def gradient_penalty(real, gen, encode, discriminator):
     with tf.name_scope('gradient_penalty'):
         alpha = tf.random_uniform(shape=[BATCH_SIZE] + [1] * (gen.shape.ndims - 1), minval=0., maxval=1.)
         interpolate = real + alpha * (gen - real)
-        gradients = tf.gradients(discriminator(inputs=interpolate, encode=encode), interpolate)[0]
+        gradients = tf.gradients(discriminator(inputs=interpolate, encode=encode, update_collection=NO_OPS), interpolate)[0]
         slopes = tf.sqrt(1e-10 + tf.reduce_sum(tf.square(gradients), axis=list(range(1, gradients.shape.ndims))))
         output = tf.reduce_mean((slopes - 1.) ** 2)
         return LAMBDA * output
@@ -81,7 +81,6 @@ def main():
 
     input_noise = tf.placeholder(dtype=tf.float32, shape=[None, NOISE_LENGTH], name='input_noise')
 
-    train = tf.placeholder(dtype=tf.bool, name='traintest')
     # real_input_4 = tf.placeholder(dtype=tf.float32, \
     # shape=[None, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH], name='real_input_4')
     real_input_2 = tf.layers.average_pooling2d(inputs=real_input_3, pool_size=2, strides=2, \
@@ -95,7 +94,7 @@ def main():
     real_input_1 /= (tf.reduce_max(real_input_1) + epsilon)
     real_input_1 = 2 * real_input_1 - 1
     # shape: [None, 6, 64, 256]
-    encode = encoder(inputs=real_input_3, train=train)
+    encode = encoder(inputs=real_input_3, update_collection=None)
     # shape: [None, 64]
     tf.summary.histogram('encode', encode)
     print('Encoder set')
@@ -111,37 +110,37 @@ def main():
         tf.summary.image('real_input_2_%d' % i, real_input_2_image[:, i])
         tf.summary.image('real_input_3_%d' % i, real_input_3_image[:, i])
 
-    shared_output = shared_gen(noise=input_noise, encode=encode, train=train)
+    shared_output = shared_gen(noise=input_noise, encode=encode, update_collection=None)
     # shape: [None, 64, 16, 64]
     output_gen1, gen1 = zip(*[generator1(inputs=shared_output, encode=encode, \
-                                        num=i, train=train) for i in range(CHANNEL_NUM)])
+                                        num=i, update_collection=None) for i in range(CHANNEL_NUM)])
     # shape: [6, None, 32, 128]
     # shape: [6, None, 32, 32, 128]
     output_gen1 = tf.stack(output_gen1, axis=1, name='output_gen1_stack')
     # shape: [None, 6, 32, 128]
     output_gen2, gen2 = zip(*[generator2(inputs=gen1[i], encode=encode, \
-                                        num=i, train=train) for i in range(CHANNEL_NUM)])
+                                        num=i, update_collection=None) for i in range(CHANNEL_NUM)])
     # shape: [6, None, 64, 256]
     # shape: [6, None, 16, 64, 256]
     output_gen2 = tf.stack(output_gen2, axis=1, name='output_gen2_stack')
     # shape: [None, 6, 64, 256]
     output_gen3 = [generator3(inputs=gen2[i], encode=encode, \
-                                num=i, train=train) for i in range(CHANNEL_NUM)]
+                                num=i, update_collection=None) for i in range(CHANNEL_NUM)]
     # shape: [6, None, 128, 512]
     output_gen3 = tf.stack(output_gen3, axis=1, name='output_gen3_stack')
     # shape: [None, 6, 128, 512]
     print('Generators set')
-    dis1_real = discriminator1(inputs=real_input_1, encode=encode)
+    dis1_real = discriminator1(inputs=real_input_1, encode=encode, update_collection=None)
     # shape: [None, 6, 32, 128]
-    dis1_gen = discriminator1(inputs=output_gen1, encode=encode)
+    dis1_gen = discriminator1(inputs=output_gen1, encode=encode, update_collection=NO_OPS)
     # shape: [None, 6, 32, 128]
-    dis2_real = discriminator2(inputs=real_input_2, encode=encode)
+    dis2_real = discriminator2(inputs=real_input_2, encode=encode, update_collection=None)
     # shape: [None, 6, 64, 256]
-    dis2_gen = discriminator2(inputs=output_gen2, encode=encode)
+    dis2_gen = discriminator2(inputs=output_gen2, encode=encode, update_collection=NO_OPS)
     # shape: [None, 6, 64, 256]
-    dis3_real = discriminator3(inputs=real_input_3, encode=encode)
+    dis3_real = discriminator3(inputs=real_input_3, encode=encode, update_collection=None)
     # shape: [None, 6, 128, 512]
-    dis3_gen = discriminator3(inputs=output_gen3, encode=encode)
+    dis3_gen = discriminator3(inputs=output_gen3, encode=encode, update_collection=NO_OPS)
     # shape: [None, 6, 128, 512]
     print('Discriminators set')
     loss_dis1 = tf.reduce_mean(dis1_gen - dis1_real) + gradient_penalty(real=real_input_1, \
@@ -215,10 +214,10 @@ def main():
         if tf.train.latest_checkpoint('Checkpoints') is not None:
             print('Restoring...')
             saver.restore(sess, tf.train.latest_checkpoint('Checkpoints'))
-        feed_dict = {input_noise: None, train: True}
+        feed_dict = {input_noise: None}
         print('preparing complete')
         if sampling:
-            feed_dict = {input_noise: None, real_input_3: None, train: True}
+            feed_dict = {input_noise: None, real_input_3: None}
             path = args.sample
             try:
                 feed_dict[real_input_3] = roll(path)[:BATCH_SIZE]
@@ -226,7 +225,6 @@ def main():
                 print('Error while opening file.')
                 return
             feed_dict[input_noise] = get_noise([BATCH_SIZE, NOISE_LENGTH])
-            feed_dict[train] = False
             samples = sess.run(output_gen3, feed_dict=feed_dict)
             path = path.split('/')[-1]
             if not os.path.exists('Samples/sample_%s'):
@@ -238,7 +236,6 @@ def main():
         run_options = tf.RunOptions(report_tensor_allocations_upon_oom=True)
         epoch_num = 100001
         for train_count in tqdm(range(epoch_num)):
-            feed_dict[train] = True
             for i in range(TRAIN_RATIO_DIS):
                 feed_dict[input_noise] = get_noise([BATCH_SIZE, NOISE_LENGTH])
                 *_, loss_val_dis1, loss_val_dis2, loss_val_dis3 = sess.run([dis1_train, \
@@ -255,7 +252,6 @@ def main():
             tqdm.write('Discriminator3 loss : %.7f' % loss_val_dis3, end=' ')
             tqdm.write('Generator loss : %.7f' % loss_val_gen)
             if train_count % 1000 == 0:
-                feed_dict[train] = False
                 feed_dict[input_noise] = get_noise([BATCH_SIZE, NOISE_LENGTH])
                 samples = sess.run(output_gen3, feed_dict=feed_dict)
                 np.save(file='Samples/song_%06d' % train_count, arr=samples)
