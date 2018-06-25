@@ -16,8 +16,8 @@ def spectral_norm(inputs, update_collection=None):
     w = tf.reshape(inputs, [-1, input_shape[-1]])
     u = tf.get_variable('u', shape=[1, input_shape[-1]], dtype=tf.float32, \
                         initializer=tf.random_normal_initializer(), trainable=False)
-    v_final = tf.nn.l2_normalize(tf.matmul(u, tf.transpose(w)), axis=0)
-    u_final = tf.nn.l2_normalize(tf.matmul(v_final, w), axis=0)
+    v_final = tf.nn.l2_normalize(tf.matmul(u, tf.transpose(w)), axis=1)
+    u_final = tf.nn.l2_normalize(tf.matmul(v_final, w), axis=1)
     norm = tf.matmul(tf.matmul(v_final, w), tf.transpose(u_final))[0, 0]
     if update_collection is None:
         with tf.control_dependencies([u.assign(u_final)]):
