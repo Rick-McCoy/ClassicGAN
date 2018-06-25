@@ -178,13 +178,6 @@ def main():
     dis1_var = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Discriminator1')
     dis2_var = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Discriminator2')
     dis3_var = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Discriminator3')
-    print(len(gen_var))
-    print(len(dis1_var))
-    print(dis1_var)
-    print(len(dis2_var))
-    print(dis2_var)
-    print(len(dis3_var))
-    print(dis3_var)
     gen_extra_update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Shared_generator')
     gen_extra_update_ops += tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Encoder')
     for i in range(CHANNEL_NUM):
