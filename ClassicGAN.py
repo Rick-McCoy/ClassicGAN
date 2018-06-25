@@ -13,7 +13,7 @@ from tqdm import tqdm
 from Data import roll, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH, BATCH_SIZE
 from Model import get_noise, generator1, generator2, generator3, \
                     discriminator1, discriminator2, discriminator3, \
-                    shared_gen, encoder, NOISE_LENGTH, NO_OPS
+                    shared_gen, encoder, NOISE_LENGTH, NO_OPS, SPECTRAL_UPDATE_OPS
 from Convert import unpack_sample
 from tensorflow.python.client import timeline # pylint: disable=E0611
 #import memory_saving_gradients
@@ -130,18 +130,12 @@ def main():
     output_gen3 = tf.stack(output_gen3, axis=1, name='output_gen3_stack')
     # shape: [None, 6, 128, 512]
     print('Generators set')
-    dis1_real = discriminator1(inputs=real_input_1, encode=encode, update_collection=None)
-    # shape: [None, 6, 32, 128]
+    dis1_real = discriminator1(inputs=real_input_1, encode=encode, update_collection=SPECTRAL_UPDATE_OPS)
     dis1_gen = discriminator1(inputs=output_gen1, encode=encode, update_collection=NO_OPS)
-    # shape: [None, 6, 32, 128]
-    dis2_real = discriminator2(inputs=real_input_2, encode=encode, update_collection=None)
-    # shape: [None, 6, 64, 256]
+    dis2_real = discriminator2(inputs=real_input_2, encode=encode, update_collection=SPECTRAL_UPDATE_OPS)
     dis2_gen = discriminator2(inputs=output_gen2, encode=encode, update_collection=NO_OPS)
-    # shape: [None, 6, 64, 256]
-    dis3_real = discriminator3(inputs=real_input_3, encode=encode, update_collection=None)
-    # shape: [None, 6, 128, 512]
+    dis3_real = discriminator3(inputs=real_input_3, encode=encode, update_collection=SPECTRAL_UPDATE_OPS)
     dis3_gen = discriminator3(inputs=output_gen3, encode=encode, update_collection=NO_OPS)
-    # shape: [None, 6, 128, 512]
     print('Discriminators set')
     loss_dis1 = tf.reduce_mean(dis1_gen - dis1_real) + gradient_penalty(real=real_input_1, \
                                     gen=output_gen1, encode=encode, discriminator=discriminator1)
@@ -187,6 +181,7 @@ def main():
     dis1_extra_update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Discriminator1')
     dis2_extra_update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Discriminator2')
     dis3_extra_update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Discriminator3')
+    spectral_norm_update_ops = tf.get_collection(SPECTRAL_UPDATE_OPS)
     with tf.name_scope('optimizers'):
         with tf.control_dependencies(dis1_extra_update_ops):
             dis1_train = tf.train.AdamOptimizer(learning_rate=0.0003, beta1=0.5, beta2=0.9).minimize(\
@@ -245,6 +240,7 @@ def main():
                 feed_dict[input_noise] = get_noise([BATCH_SIZE, NOISE_LENGTH])
                 summary, _, loss_val_gen = sess.run([merged, gen_train, loss_gen], \
                                                     feed_dict=feed_dict, options=run_options)
+            sess.run(spectral_norm_update_ops)
             writer.add_summary(summary, train_count)
             tqdm.write('%06d' % train_count, end=' ')
             tqdm.write('Discriminator1 loss : %.7f' % loss_val_dis1, end=' ')

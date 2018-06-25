@@ -7,7 +7,8 @@ import tensorflow as tf
 from numpy.random import normal
 
 NOISE_LENGTH = 128
-NO_OPS = None
+SPECTRAL_UPDATE_OPS = 'spectral_update_ops'
+NO_OPS = 'no_ops'
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
