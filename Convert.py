@@ -29,8 +29,6 @@ def set_piano_roll_to_instrument(piano_roll, instrument, velocity=100, tempo=120
         end_time = time_per_pixel * (end_idx[0].astype(float))
         # Iterate through all the searched notes
         for idx in range(len(start_time)):
-            if end_idx[idx][0] - start_idx[idx][0] < 6:
-                continue
             # Create an Note object with corresponding note number, start time and end time
             note = pm.Note(velocity=velocity, pitch=note_num, start=start_time[idx], end=end_time[idx])
             # Add the note to the Instrument object
