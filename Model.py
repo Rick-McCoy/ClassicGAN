@@ -86,7 +86,7 @@ def encoder(inputs, update_collection):
                 name='conv%d' % (i + 1))
             i += 1
         output = tf.squeeze(output)
-        output = tf.layers.dense(inputs=output, units=64, \
+        output = dense(inputs=output, units=64, \
                                 update_collection=update_collection, name='dense1')
         # shape: [None, 64]
         return output
