@@ -94,7 +94,7 @@ def main():
     real_input_1 /= (tf.reduce_max(real_input_1) + epsilon)
     real_input_1 = 2 * real_input_1 - 1
     # shape: [None, 6, 64, 256]
-    encode = encoder(inputs=real_input_3, update_collection=None)
+    encode = encoder(inputs=real_input_3, update_collection=SPECTRAL_UPDATE_OPS)
     # shape: [None, 64]
     tf.summary.histogram('encode', encode)
     print('Encoder set')
@@ -110,22 +110,22 @@ def main():
         tf.summary.image('real_input_2_%d' % i, real_input_2_image[:, i])
         tf.summary.image('real_input_3_%d' % i, real_input_3_image[:, i])
 
-    shared_output = shared_gen(noise=input_noise, encode=encode, update_collection=None)
+    shared_output = shared_gen(noise=input_noise, encode=encode, update_collection=SPECTRAL_UPDATE_OPS)
     # shape: [None, 64, 16, 64]
     output_gen1, gen1 = zip(*[generator1(inputs=shared_output, encode=encode, \
-                                        num=i, update_collection=None) for i in range(CHANNEL_NUM)])
+                                        num=i, update_collection=SPECTRAL_UPDATE_OPS) for i in range(CHANNEL_NUM)])
     # shape: [6, None, 32, 128]
     # shape: [6, None, 32, 32, 128]
     output_gen1 = tf.stack(output_gen1, axis=1, name='output_gen1_stack')
     # shape: [None, 6, 32, 128]
     output_gen2, gen2 = zip(*[generator2(inputs=gen1[i], encode=encode, \
-                                        num=i, update_collection=None) for i in range(CHANNEL_NUM)])
+                                        num=i, update_collection=SPECTRAL_UPDATE_OPS) for i in range(CHANNEL_NUM)])
     # shape: [6, None, 64, 256]
     # shape: [6, None, 16, 64, 256]
     output_gen2 = tf.stack(output_gen2, axis=1, name='output_gen2_stack')
     # shape: [None, 6, 64, 256]
     output_gen3 = [generator3(inputs=gen2[i], encode=encode, \
-                                num=i, update_collection=None) for i in range(CHANNEL_NUM)]
+                                num=i, update_collection=SPECTRAL_UPDATE_OPS) for i in range(CHANNEL_NUM)]
     # shape: [6, None, 128, 512]
     output_gen3 = tf.stack(output_gen3, axis=1, name='output_gen3_stack')
     # shape: [None, 6, 128, 512]
