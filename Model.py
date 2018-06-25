@@ -55,7 +55,7 @@ def conv(inputs, channels, kernel_size_h=3, kernel_size_w=3, strides_h=1, stride
             filters = tf.get_variable(name='filters', shape=[kernel_size_h, kernel_size_w, \
                                     inputs.get_shape().as_list()[1], channels], dtype=tf.float32, \
                                     initializer=tf.random_normal_initializer())
-            filters = spectral_norm(filters)
+            filters = spectral_norm(filters, update_collection=update_collection)
             output = tf.nn.conv2d(input=inputs, filter=filters, strides=[1, 1, strides_h, strides_w], \
                                 padding='SAME', data_format='NCHW', name='conv')
         if not 'no_bias' in regularization:
