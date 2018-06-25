@@ -15,7 +15,7 @@ def spectral_norm(inputs, update_collection=None):
     input_shape = inputs.get_shape().as_list()
     w = tf.reshape(inputs, [-1, input_shape[-1]])
     u = tf.get_variable('u', shape=[1, input_shape[-1]], dtype=tf.float32, \
-                        initializer=tf.random_normal_initializer())
+                        initializer=tf.random_normal_initializer(), trainable=False)
     v_final = tf.nn.l2_normalize(tf.matmul(u, tf.transpose(w)), axis=0)
     u_final = tf.nn.l2_normalize(tf.matmul(v_final, w), axis=0)
     norm = tf.matmul(tf.matmul(v_final, w), tf.transpose(u_final))[0, 0]
@@ -86,7 +86,8 @@ def encoder(inputs, update_collection):
                 name='conv%d' % (i + 1))
             i += 1
         output = tf.squeeze(output)
-        output = tf.layers.dense(inputs=output, units=64, name='dense1')
+        output = tf.layers.dense(inputs=output, units=64, \
+                                update_collection=update_collection, name='dense1')
         # shape: [None, 64]
         return output
 
