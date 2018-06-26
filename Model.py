@@ -195,7 +195,7 @@ def conditional_output(inputs, encode, update_collection, name='cond_out'):
         output1 = tf.layers.flatten(inputs)
         output2 = tf.concat([output1, encode], axis=1)
         output1 = dense(output1, units=1, update_collection=update_collection, name='output1')
-        output2 = dense(output1, units=1, update_collection=update_collection, name='output2')
+        output2 = dense(output2, units=1, update_collection=update_collection, name='output2')
         return (output1 + output2) / 2
     
 def discriminator1(inputs, encode, update_collection, name='Discriminator1'):
