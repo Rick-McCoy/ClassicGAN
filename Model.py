@@ -9,22 +9,34 @@ from numpy.random import normal
 NOISE_LENGTH = 128
 SPECTRAL_UPDATE_OPS = 'spectral_update_ops'
 NO_OPS = 'no_ops'
+ITERS = 1
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+
+def _l2_normalize(inputs):
+    return inputs / (tf.reduce_sum(inputs ** 2) ** 0.5 + 1e-12)
 
 def spectral_norm(inputs, update_collection=None):
     input_shape = inputs.get_shape().as_list()
     w = tf.reshape(inputs, [-1, input_shape[-1]])
     u = tf.get_variable('u', shape=[1, input_shape[-1]], dtype=tf.float32, \
                         initializer=tf.random_normal_initializer(), trainable=False)
-    v_final = tf.nn.l2_normalize(tf.matmul(u, tf.transpose(w)))
-    u_final = tf.nn.l2_normalize(tf.matmul(v_final, w))
-    norm = tf.matmul(tf.matmul(v_final, w), tf.transpose(u_final))[0, 0]
+    def power_iteration(i, u_i, v_i):
+        v_ip1 = _l2_normalize(tf.matmul(u_i, tf.transpose(w)))
+        u_ip1 = _l2_normalize(tf.matmul(v_ip1, w))
+        return i + 1, u_ip1, v_ip1
+    _, u_final, v_final = tf.while_loop(
+        cond=lambda i, _1, _2: i < ITERS,
+        body=power_iteration,
+        loop_vars=(tf.constant(0, dtype=tf.int32),
+                u, tf.zeros(dtype=tf.float32, shape=[1, w.shape.as_list()[0]]))
+    )
+    w = w / tf.matmul(tf.matmul(v_final, w), tf.transpose(u_final))[0, 0]
     if update_collection is None:
         with tf.control_dependencies([u.assign(u_final)]):
-            w_norm = tf.reshape(w / norm, input_shape)
+            w_norm = tf.reshape(w, input_shape)
     else:
-        w_norm = tf.reshape(w / norm, input_shape)
+        w_norm = tf.reshape(w, input_shape)
         if update_collection is not NO_OPS:
             tf.add_to_collection(update_collection, u.assign(u_final))
     return w_norm

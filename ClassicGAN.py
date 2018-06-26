@@ -184,19 +184,19 @@ def main():
     spectral_norm_update_ops = tf.get_collection(SPECTRAL_UPDATE_OPS)
     with tf.name_scope('optimizers'):
         with tf.control_dependencies(dis1_extra_update_ops):
-            dis1_train = tf.train.AdamOptimizer(learning_rate=0.0003, beta1=0.5, beta2=0.9).minimize(\
+            dis1_train = tf.train.AdamOptimizer(learning_rate=0.0004, beta1=0, beta2=0.9).minimize(\
                                                     loss=loss_dis1, var_list=dis1_var, name='dis1_train')
         print('dis1_train setup')
         with tf.control_dependencies(dis2_extra_update_ops):
-            dis2_train = tf.train.AdamOptimizer(learning_rate=0.0003, beta1=0.5, beta2=0.9).minimize(\
+            dis2_train = tf.train.AdamOptimizer(learning_rate=0.0004, beta1=0, beta2=0.9).minimize(\
                                                     loss=loss_dis2, var_list=dis2_var, name='dis2_train')
         print('dis2_train setup')
         with tf.control_dependencies(dis3_extra_update_ops):
-            dis3_train = tf.train.AdamOptimizer(learning_rate=0.0003, beta1=0.5, beta2=0.9).minimize(\
+            dis3_train = tf.train.AdamOptimizer(learning_rate=0.0004, beta1=0, beta2=0.9).minimize(\
                                                     loss=loss_dis3, var_list=dis3_var, name='dis3_train')
         print('dis3_train setup')
         with tf.control_dependencies(gen_extra_update_ops):
-            gen_train = tf.train.AdamOptimizer(learning_rate=0.0001, beta1=0.5, beta2=0.9).minimize(\
+            gen_train = tf.train.AdamOptimizer(learning_rate=0.0001, beta1=0, beta2=0.9).minimize(\
                                                     loss=loss_gen, var_list=gen_var, name='gen_train')
         print('gen_train setup')
     print('Optimizers set')
