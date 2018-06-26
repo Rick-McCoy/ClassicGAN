@@ -153,7 +153,7 @@ def shared_gen(noise, encode, update_collection):
                     update_collection=update_collection, regularization='relu', \
                     transpose=True, name='conv6')
         output = conv(inputs=output, channels=64, update_collection=update_collection, \
-                        regularization='tanh', name='conv7')
+                        regularization='relu', name='conv7')
         return output
 
 def generator1(inputs, encode, num, update_collection):

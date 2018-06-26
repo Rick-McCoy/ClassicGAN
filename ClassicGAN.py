@@ -240,8 +240,7 @@ def main():
                 feed_dict[input_noise] = get_noise([BATCH_SIZE, NOISE_LENGTH])
                 summary, _, loss_val_gen = sess.run([merged, gen_train, loss_gen], \
                                                     feed_dict=feed_dict, options=run_options)
-            for op in spectral_norm_update_ops:
-                sess.run(op)
+            sess.run(spectral_norm_update_ops)
             writer.add_summary(summary, train_count)
             tqdm.write('%06d' % train_count, end=' ')
             tqdm.write('Discriminator1 loss : %.7f' % loss_val_dis1, end=' ')
