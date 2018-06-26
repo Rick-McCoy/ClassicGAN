@@ -16,15 +16,11 @@ from Model import get_noise, generator1, generator2, generator3, \
                     shared_gen, encoder, NOISE_LENGTH, NO_OPS, SPECTRAL_UPDATE_OPS
 from Convert import unpack_sample
 from tensorflow.python.client import timeline # pylint: disable=E0611
-#import memory_saving_gradients
-#tf.__dict__["gradients"] = memory_saving_gradients.gradients_memory
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
 TOTAL_TRAIN_EPOCH = 100
 LAMBDA = 10
-#LAMBDA1 = 1
-#LAMBDA2 = 5
 TRAIN_RATIO_DIS = 1
 TRAIN_RATIO_GEN = 1
 epsilon = 1e-8
@@ -81,8 +77,6 @@ def main():
 
     input_noise = tf.placeholder(dtype=tf.float32, shape=[None, NOISE_LENGTH], name='input_noise')
 
-    # real_input_4 = tf.placeholder(dtype=tf.float32, \
-    # shape=[None, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH], name='real_input_4')
     real_input_2 = tf.layers.average_pooling2d(inputs=real_input_3, pool_size=2, strides=2, \
                                         padding='same', data_format='channels_first', name='real_input_2')
     real_input_2 -= tf.reduce_min(real_input_2)
@@ -139,18 +133,13 @@ def main():
     print('Discriminators set')
     loss_dis1 = tf.reduce_mean(dis1_gen - dis1_real) + gradient_penalty(real=real_input_1, \
                                     gen=output_gen1, encode=encode, discriminator=discriminator1)
-    #mean_gen1, dev_gen1 = tf.nn.moments(output_gen1, axes=list(range(2, output_gen1.shape.ndims)))
     loss_gen1 = -tf.reduce_mean(dis1_gen)
     loss_dis2 = tf.reduce_mean(dis2_gen - dis2_real) + gradient_penalty(real=real_input_2, \
                                     gen=output_gen2, encode=encode, discriminator=discriminator2)
-    #mean_gen2, dev_gen2 = tf.nn.moments(output_gen2, axes=list(range(2, output_gen2.shape.ndims)))
-    loss_gen2 = -tf.reduce_mean(dis2_gen)# + LAMBDA1 * tf.reduce_mean(tf.squared_difference(mean_gen1, mean_gen2)) \
-                                        #    + LAMBDA2 * tf.reduce_mean(tf.squared_difference(dev_gen1, dev_gen2))
+    loss_gen2 = -tf.reduce_mean(dis2_gen)
     loss_dis3 = tf.reduce_mean(dis3_gen - dis3_real) + gradient_penalty(real=real_input_3, \
                                     gen=output_gen3, encode=encode, discriminator=discriminator3)
-    #mean_gen3, dev_gen3 = tf.nn.moments(output_gen3, axes=list(range(2, output_gen3.shape.ndims)))
-    loss_gen3 = -tf.reduce_mean(dis3_gen)# + LAMBDA1 * tf.reduce_mean(tf.squared_difference(mean_gen2, mean_gen3)) \
-                                        #    + LAMBDA2 * tf.reduce_mean(tf.squared_difference(dev_gen2, dev_gen3))
+    loss_gen3 = -tf.reduce_mean(dis3_gen)
     loss_gen = tf.add_n([loss_gen1, loss_gen2, loss_gen3]) / 3
     tf.summary.scalar('loss_dis1', loss_dis1)
     tf.summary.scalar('loss_gen1', loss_gen1)
