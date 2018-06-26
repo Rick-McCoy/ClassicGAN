@@ -1,6 +1,6 @@
 # ClassicGAN
 
-Generates classical MIDI files. Stacks 6 Generators, 4 levels deep, StackGAN++ style.
+A GAN for generating classical music. Works with piano rolls of midi files. Basic structure is a mixture of MuseGAN and StackGAN++.
 
 ## Getting Started
 
@@ -12,26 +12,15 @@ tqdm
 numpy
 pretty-midi
 matplotlib
-toposort
-networkx
-pytest
 ```
-
-Last three are for memory saving gradients.
 
 ### Installing
 
-None necessary.
+None necessary. Clone this repository.
 
-### Training
+### Dataset Generation
 
-Git clone this repository, then run
-
-```
-python3 ClassicGAN.py
-```
-
-For your own datasets, put all midi files under /Classics or /TPD.
+For your own datasets, put all midi files under /Classics.
 
 Then run
 
@@ -39,13 +28,28 @@ Then run
 python3 Data.py
 ```
 
-to convert them into .npy files.
+to convert them into .tfrecord files.
 
-**Warning**: These are extremely large, as on average, roughly 15 midi files gets converted into 1GB .npy files.
+Efficient compression has been integrated, tfrecord files are now generated at a ratio of approximately 1:100.
+(Ex: 220MB of midi files are converted into a single 20GB tfrecord file.)
+
+Note: these tfrecord files are highly compressible, and the entire tfrecord file compresses to a 56MB .7z file.
+
+### Training
+
+Run
+
+```
+python3 ClassicGAN.py
+```
+
+For timeline file generations, add ```-r```.
+
+For concatenation of all generated midi files, add ```-c```.
 
 ### Sampling
 
-Make sure your checkpoints are all under /Checkpoints.
+Make sure your checkpoint is under /Checkpoints.
 
 Select a midi file for encoding.
 
@@ -55,18 +59,19 @@ Then, run
 python3 ClassicGAN.py -s /path/to/midi
 ```
 
-Add ```-c True``` for concatenation of all generated 16 midi files.
-
-
 ## TODOs
 
-Integrate [Gradient Checkpointing](https://github.com/openai/gradient-checkpointing) - Completed.
+~~Integrate [Gradient Checkpointing](https://github.com/openai/gradient-checkpointing) - Completed.~~ Removed after benchmarks showed no significant speedup/memory advantage.
 
 Convert generated results to midi - Completed.
 
 Faster datasets using tf.data.Dataset - Completed.
 
-Integrate VAEs - Completed.
+~~Integrate VAEs - Completed.~~ Removed after training unstability.
+
+TTUR - Completed
+
+Currently tinkering with Spectral Normalization.
 
 ## Authors
 
@@ -83,5 +88,8 @@ This project is licensed under the MIT License.
 * **MuseGAN: Multi-track Sequential Generative Adversarial Networks for Symbolic Music Generation and Accompaniment, Hao-Wen Dong et al.** - *Idea of stacking generators* - [link](http://arxiv.org/abs/1709.06298v2)
 * **StackGAN++: Realistic Image Synthesis with Stacked Generative Adversarial Networks, Han Zhang et al.** - *Idea of multiple levels* - [link](http://arxiv.org/abs/1710.10916v2)
 * **Improved Training of Wasserstein GANs, Ishaan Gulrajani et al.** - *WGAN-GP used.* - [link](http://arxiv.org/abs/1704.00028v3)
+* **SPECTRAL NORMALIZATION FOR GENERATIVE ADVERSARIAL NETWORKS, Takeru Miyato et al.** - *Spectral normalization* - [link](http://arxiv.org/abs/1802.05957v1)
+* **GANs Trained by a Two Time-Scale Update Rule Converge to a Local Nash Equilibrium, Martin Heusel et al.** - *TTUR* - [link](http://arxiv.org/abs/1706.08500v6)
+* **Nhat M. Nguyen** - *Spectral Normalization code used* - [minhnhat93](https://github.com/minhnhat93)
 * **Amazon** - *Provider of funding*
 * **Everyone Else I Questioned** - *Thanks!*
