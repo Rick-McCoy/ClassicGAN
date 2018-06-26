@@ -67,9 +67,9 @@ Convert generated results to midi - Completed.
 
 Faster datasets using tf.data.Dataset - Completed.
 
-~~Integrate VAEs - Completed.~~ Removed after training unstability.
+~~Integrate VAEs - Completed.~~ Removed after training instability.
 
-TTUR - Completed
+TTUR - Completed.
 
 Currently tinkering with Spectral Normalization.
 
