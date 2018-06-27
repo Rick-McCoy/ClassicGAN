@@ -19,8 +19,7 @@ def _l2_normalize(inputs):
 def spectral_norm(inputs, update_collection=None):
     input_shape = inputs.get_shape().as_list()
     w = tf.reshape(inputs, [-1, input_shape[-1]])
-    u = tf.get_variable('u', shape=[1, input_shape[-1]], dtype=tf.float32, \
-                        initializer=tf.random_normal_initializer(), trainable=False)
+    u = tf.get_variable('u', shape=[1, input_shape[-1]], dtype=tf.float32, trainable=False)
     def power_iteration(i, u_i, v_i):
         v_ip1 = _l2_normalize(tf.matmul(u_i, tf.transpose(w)))
         u_ip1 = _l2_normalize(tf.matmul(v_ip1, w))
@@ -54,8 +53,7 @@ def conv(inputs, channels, kernel_size_h=3, kernel_size_w=3, strides_h=1, stride
             activation = None
         if transpose:
             filters = tf.get_variable(name='filters', shape=[kernel_size_h, kernel_size_w, \
-                                    channels, inputs.get_shape().as_list()[1]], dtype=tf.float32, \
-                                    initializer=tf.random_normal_initializer())
+                                    channels, inputs.get_shape().as_list()[1]], dtype=tf.float32)
             #filters = spectral_norm(filters, update_collection=update_collection)
             out_shape = inputs.get_shape().as_list()
             out_shape[1] = channels
@@ -66,8 +64,7 @@ def conv(inputs, channels, kernel_size_h=3, kernel_size_w=3, strides_h=1, stride
                                         data_format='NCHW', name='conv_trans')
         else:
             filters = tf.get_variable(name='filters', shape=[kernel_size_h, kernel_size_w, \
-                                    inputs.get_shape().as_list()[1], channels], dtype=tf.float32, \
-                                    initializer=tf.random_normal_initializer())
+                                    inputs.get_shape().as_list()[1], channels], dtype=tf.float32)
             #filters = spectral_norm(filters, update_collection=update_collection)
             output = tf.nn.conv2d(input=inputs, filter=filters, strides=[1, 1, strides_h, strides_w], \
                                 padding='SAME', data_format='NCHW', name='conv')
@@ -82,7 +79,7 @@ def conv(inputs, channels, kernel_size_h=3, kernel_size_w=3, strides_h=1, stride
 def dense(inputs, units, update_collection, name='dense'):
     with tf.variable_scope(name, reuse=tf.AUTO_REUSE):
         w = tf.get_variable(name='weight', shape=[inputs.get_shape().as_list()[1], units], \
-                            dtype=tf.float32, initializer=tf.random_normal_initializer())
+                            dtype=tf.float32)
         #w = spectral_norm(w, update_collection=update_collection)
         b = tf.get_variable(name='bias', shape=[units], dtype=tf.float32, \
                             initializer=tf.zeros_initializer())
@@ -146,17 +143,17 @@ def shared_gen(noise, encode, update_collection, train):
         # shape: [None, 192]
         output = tf.expand_dims(tf.expand_dims(noise, axis=-1), axis=-1)
         # shape: [None, 192, 1, 1]
+        output = conv(inputs=output, channels=256, strides_h=1, strides_w=2, \
+                    update_collection=update_collection, regularization='relu', \
+                    transpose=True, name='conv1')
+        output = conv(inputs=output, channels=256, strides_h=1, strides_w=2, \
+                    update_collection=update_collection, regularization='relu', \
+                    transpose=True, name='conv2')
         for i in range(4):
             output = upsample(output, channels=1024 // 2 ** i, \
-                            update_collection=update_collection, name='genblock%d' % (i + 1))
+                            update_collection=update_collection, name='genblock%d' % (i + 3))
             output = tf.layers.batch_normalization(output, axis=1, training=train)
-        # shape: [None, 128, 16, 16]
-        output = conv(inputs=output, channels=64, strides_h=1, strides_w=2, \
-                    update_collection=update_collection, regularization='relu', \
-                    transpose=True, name='conv5')
-        output = conv(inputs=output, channels=64, strides_h=1, strides_w=2, \
-                    update_collection=update_collection, regularization='relu', \
-                    transpose=True, name='conv6')
+        # shape: [None, 128, 16, 64]
         output = conv(inputs=output, channels=64, update_collection=update_collection, \
                         regularization='relu', name='conv7')
         return output
