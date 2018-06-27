@@ -88,7 +88,7 @@ def dense(inputs, units, update_collection, name='dense'):
                             initializer=tf.zeros_initializer())
         return tf.nn.bias_add(tf.matmul(inputs, w), b)
 
-def encoder(inputs, update_collection):
+def encoder(inputs, update_collection, train=True):
     with tf.variable_scope('Encoder'):
         output = inputs
         i = 0
@@ -97,6 +97,8 @@ def encoder(inputs, update_collection):
                 strides_h=2, strides_w=2, update_collection=update_collection, \
                 regularization='lrelu', \
                 name='conv%d' % (i + 1))
+            if i % 2 == 0:
+                output = tf.layers.batch_normalization(output, axis=1, training=train)
             i += 1
         output = tf.squeeze(output)
         output = dense(inputs=output, units=64, \
@@ -125,10 +127,12 @@ def encode_concat(inputs, encode, name='encode_concat'):
         output = tf.concat([inputs, encode], axis=1)
         return output
 
-def genblock(inputs, encode, channels, update_collection, name='genblock'):
+def genblock(inputs, encode, channels, update_collection, train, name='genblock'):
     with tf.variable_scope(name):
         inputs = encode_concat(inputs, encode)
+        inputs = tf.layers.batch_normalization(inputs, axis=1, training=train)
         upsample1 = upsample(inputs, channels=channels, update_collection=update_collection)
+        upsample1 = tf.layers.batch_normalization(upsample1, axis=1, training=train)
         conv1 = conv(inputs=upsample1, channels=1, update_collection=update_collection, \
                     regularization='tanh', name='conv1')
         output = tf.transpose(conv1, perm=[0, 2, 3, 1])
@@ -136,7 +140,7 @@ def genblock(inputs, encode, channels, update_collection, name='genblock'):
         output = tf.squeeze(output, axis=-1)
         return output, upsample1
 
-def shared_gen(noise, encode, update_collection):
+def shared_gen(noise, encode, update_collection, train):
     with tf.variable_scope('Shared_generator'):
         noise = tf.concat([noise, encode], axis=1)
         # shape: [None, 192]
@@ -145,6 +149,7 @@ def shared_gen(noise, encode, update_collection):
         for i in range(4):
             output = upsample(output, channels=1024 // 2 ** i, \
                             update_collection=update_collection, name='genblock%d' % (i + 1))
+            output = tf.layers.batch_normalization(output, axis=1, training=train)
         # shape: [None, 128, 16, 16]
         output = conv(inputs=output, channels=64, strides_h=1, strides_w=2, \
                     update_collection=update_collection, regularization='relu', \
@@ -156,17 +161,17 @@ def shared_gen(noise, encode, update_collection):
                         regularization='relu', name='conv7')
         return output
 
-def generator1(inputs, encode, num, update_collection):
+def generator1(inputs, encode, num, update_collection, train):
     with tf.variable_scope('Generator1_%d' % num):
-        return genblock(inputs, encode, 64, update_collection)
+        return genblock(inputs, encode, 64, update_collection, train)
 
-def generator2(inputs, encode, num, update_collection):
+def generator2(inputs, encode, num, update_collection, train):
     with tf.variable_scope('Generator2_%d' % num):
-        return genblock(inputs, encode, 32, update_collection)
+        return genblock(inputs, encode, 32, update_collection, train)
 
-def generator3(inputs, encode, num, update_collection):
+def generator3(inputs, encode, num, update_collection, train):
     with tf.variable_scope('Generator3_%d' % num):
-        output, _ = genblock(inputs, encode, 16, update_collection)
+        output, _ = genblock(inputs, encode, 16, update_collection, train)
         return output
 
 def downblock(inputs, channels, update_collection, name='downblock'):

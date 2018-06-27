@@ -87,8 +87,9 @@ def main():
     real_input_1 -= tf.reduce_min(real_input_1)
     real_input_1 /= (tf.reduce_max(real_input_1) + epsilon)
     real_input_1 = 2 * real_input_1 - 1
+    train = tf.placeholder(dtype=tf.bool, name='train')
     # shape: [None, 6, 64, 256]
-    encode = encoder(inputs=real_input_3, update_collection=SPECTRAL_UPDATE_OPS)
+    encode = encoder(inputs=real_input_3, update_collection=SPECTRAL_UPDATE_OPS, train=train)
     # shape: [None, 64]
     tf.summary.histogram('encode', encode)
     print('Encoder set')
@@ -104,22 +105,22 @@ def main():
         tf.summary.image('real_input_2_%d' % i, real_input_2_image[:, i])
         tf.summary.image('real_input_3_%d' % i, real_input_3_image[:, i])
 
-    shared_output = shared_gen(noise=input_noise, encode=encode, update_collection=SPECTRAL_UPDATE_OPS)
+    shared_output = shared_gen(noise=input_noise, encode=encode, update_collection=SPECTRAL_UPDATE_OPS, train=train)
     # shape: [None, 64, 16, 64]
     output_gen1, gen1 = zip(*[generator1(inputs=shared_output, encode=encode, \
-                                        num=i, update_collection=SPECTRAL_UPDATE_OPS) for i in range(CHANNEL_NUM)])
+                                        num=i, update_collection=SPECTRAL_UPDATE_OPS, train=train) for i in range(CHANNEL_NUM)])
     # shape: [6, None, 32, 128]
     # shape: [6, None, 32, 32, 128]
     output_gen1 = tf.stack(output_gen1, axis=1, name='output_gen1_stack')
     # shape: [None, 6, 32, 128]
     output_gen2, gen2 = zip(*[generator2(inputs=gen1[i], encode=encode, \
-                                        num=i, update_collection=SPECTRAL_UPDATE_OPS) for i in range(CHANNEL_NUM)])
+                                        num=i, update_collection=SPECTRAL_UPDATE_OPS, train=train) for i in range(CHANNEL_NUM)])
     # shape: [6, None, 64, 256]
     # shape: [6, None, 16, 64, 256]
     output_gen2 = tf.stack(output_gen2, axis=1, name='output_gen2_stack')
     # shape: [None, 6, 64, 256]
     output_gen3 = [generator3(inputs=gen2[i], encode=encode, \
-                                num=i, update_collection=SPECTRAL_UPDATE_OPS) for i in range(CHANNEL_NUM)]
+                                num=i, update_collection=SPECTRAL_UPDATE_OPS, train=train) for i in range(CHANNEL_NUM)]
     # shape: [6, None, 128, 512]
     output_gen3 = tf.stack(output_gen3, axis=1, name='output_gen3_stack')
     # shape: [None, 6, 128, 512]
@@ -198,10 +199,10 @@ def main():
         if tf.train.latest_checkpoint('Checkpoints') is not None:
             print('Restoring...')
             saver.restore(sess, tf.train.latest_checkpoint('Checkpoints'))
-        feed_dict = {input_noise: None}
+        feed_dict = {input_noise: None, train: True}
         print('preparing complete')
         if sampling:
-            feed_dict = {input_noise: None, real_input_3: None}
+            feed_dict = {input_noise: None, real_input_3: None, train: False}
             path = args.sample
             try:
                 feed_dict[real_input_3] = roll(path)[:BATCH_SIZE]
@@ -222,11 +223,13 @@ def main():
         for train_count in tqdm(range(epoch_num)):
             for i in range(TRAIN_RATIO_DIS):
                 feed_dict[input_noise] = get_noise([BATCH_SIZE, NOISE_LENGTH])
+                feed_dict[train] = True
                 *_, loss_val_dis1, loss_val_dis2, loss_val_dis3 = sess.run([dis1_train, \
                             dis2_train, dis3_train, loss_dis1, loss_dis2, loss_dis3], \
                             feed_dict=feed_dict, options=run_options)
             for i in range(TRAIN_RATIO_GEN):
                 feed_dict[input_noise] = get_noise([BATCH_SIZE, NOISE_LENGTH])
+                feed_dict[train] = True
                 summary, _, loss_val_gen = sess.run([merged, gen_train, loss_gen], \
                                                     feed_dict=feed_dict, options=run_options)
             sess.run(spectral_norm_update_ops)
@@ -238,6 +241,7 @@ def main():
             tqdm.write('Generator loss : %.7f' % loss_val_gen)
             if train_count % 1000 == 0:
                 feed_dict[input_noise] = get_noise([BATCH_SIZE, NOISE_LENGTH])
+                feed_dict[train] = True
                 samples = sess.run(output_gen3, feed_dict=feed_dict)
                 np.save(file='Samples/song_%06d' % train_count, arr=samples)
                 unpack_sample('Samples/song_%06d' % train_count)
