@@ -247,7 +247,7 @@ def main():
             tqdm.write('Generator loss : %.7f' % loss_val_gen)
             if train_count % 1000 == 0:
                 feed_dict[input_noise] = get_noise([BATCH_SIZE, NOISE_LENGTH])
-                feed_dict[train] = True
+                feed_dict[train] = False
                 samples = sess.run(output_gen3, feed_dict=feed_dict)
                 np.save(file='Samples/song_%06d' % train_count, arr=samples)
                 unpack_sample('Samples/song_%06d' % train_count)
