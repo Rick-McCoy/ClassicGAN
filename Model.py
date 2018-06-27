@@ -56,7 +56,7 @@ def conv(inputs, channels, kernel_size_h=3, kernel_size_w=3, strides_h=1, stride
             filters = tf.get_variable(name='filters', shape=[kernel_size_h, kernel_size_w, \
                                     channels, inputs.get_shape().as_list()[1]], dtype=tf.float32, \
                                     initializer=tf.random_normal_initializer())
-            filters = spectral_norm(filters, update_collection=update_collection)
+            #filters = spectral_norm(filters, update_collection=update_collection)
             out_shape = inputs.get_shape().as_list()
             out_shape[1] = channels
             out_shape[2] *= strides_h
@@ -68,7 +68,7 @@ def conv(inputs, channels, kernel_size_h=3, kernel_size_w=3, strides_h=1, stride
             filters = tf.get_variable(name='filters', shape=[kernel_size_h, kernel_size_w, \
                                     inputs.get_shape().as_list()[1], channels], dtype=tf.float32, \
                                     initializer=tf.random_normal_initializer())
-            filters = spectral_norm(filters, update_collection=update_collection)
+            #filters = spectral_norm(filters, update_collection=update_collection)
             output = tf.nn.conv2d(input=inputs, filter=filters, strides=[1, 1, strides_h, strides_w], \
                                 padding='SAME', data_format='NCHW', name='conv')
         if not 'no_bias' in regularization:
@@ -83,7 +83,7 @@ def dense(inputs, units, update_collection, name='dense'):
     with tf.variable_scope(name, reuse=tf.AUTO_REUSE):
         w = tf.get_variable(name='weight', shape=[inputs.get_shape().as_list()[1], units], \
                             dtype=tf.float32, initializer=tf.random_normal_initializer())
-        w = spectral_norm(w, update_collection=update_collection)
+        #w = spectral_norm(w, update_collection=update_collection)
         b = tf.get_variable(name='bias', shape=[units], dtype=tf.float32, \
                             initializer=tf.zeros_initializer())
         return tf.nn.bias_add(tf.matmul(inputs, w), b)
