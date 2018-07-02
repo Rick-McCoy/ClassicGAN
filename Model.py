@@ -51,9 +51,12 @@ def conv(inputs, channels, kernel_size_h=3, kernel_size_w=3, strides_h=1, stride
             activation = tf.tanh
         else:
             activation = None
+        if name == 'skip':
+            kernel_size_h = kernel_size_w = 1
         if transpose:
             filters = tf.get_variable(name='filters', shape=[kernel_size_h, kernel_size_w, \
-                                    channels, inputs.get_shape().as_list()[1]], dtype=tf.float32)
+                                    channels, inputs.get_shape().as_list()[1]], dtype=tf.float32, \
+                                    initializer=tf.contrib.layers.variance_scaling_initializer()) # pylint: disable=E1101
             #filters = spectral_norm(filters, update_collection=update_collection)
             out_shape = inputs.get_shape().as_list()
             out_shape[1] = channels
@@ -64,7 +67,8 @@ def conv(inputs, channels, kernel_size_h=3, kernel_size_w=3, strides_h=1, stride
                                         data_format='NCHW', name='conv_trans')
         else:
             filters = tf.get_variable(name='filters', shape=[kernel_size_h, kernel_size_w, \
-                                    inputs.get_shape().as_list()[1], channels], dtype=tf.float32)
+                                    inputs.get_shape().as_list()[1], channels], dtype=tf.float32, \
+                                    initializer=tf.contrib.layers.variance_scaling_initializer()) # pylint: disable=E1101
             #filters = spectral_norm(filters, update_collection=update_collection)
             output = tf.nn.conv2d(input=inputs, filter=filters, strides=[1, 1, strides_h, strides_w], \
                                 padding='SAME', data_format='NCHW', name='conv')
@@ -79,7 +83,7 @@ def conv(inputs, channels, kernel_size_h=3, kernel_size_w=3, strides_h=1, stride
 def dense(inputs, units, update_collection, name='dense'):
     with tf.variable_scope(name, reuse=tf.AUTO_REUSE):
         w = tf.get_variable(name='weight', shape=[inputs.get_shape().as_list()[1], units], \
-                            dtype=tf.float32)
+                            dtype=tf.float32, initializer=tf.contrib.layers.variance_scaling_initializer()) # pylint: disable=E1101
         #w = spectral_norm(w, update_collection=update_collection)
         b = tf.get_variable(name='bias', shape=[units], dtype=tf.float32, \
                             initializer=tf.zeros_initializer())
@@ -94,26 +98,14 @@ def encoder(inputs, update_collection, train=True):
                 strides_h=2, strides_w=2, update_collection=update_collection, \
                 regularization='lrelu', \
                 name='conv%d' % (i + 1))
-            if i % 2 == 0:
-                output = tf.layers.batch_normalization(output, axis=1, training=train)
+            #if i % 2 == 0:
+            #    output = tf.layers.batch_normalization(output, axis=1, training=train)
             i += 1
         output = tf.squeeze(output)
         output = dense(inputs=output, units=64, \
                                 update_collection=update_collection, name='dense1')
         # shape: [None, 64]
-        return output
-
-def upsample(inputs, channels, update_collection, name='upsample'):
-    with tf.variable_scope(name):
-        size = [i * 2 for i in inputs.get_shape().as_list()[-2:]]
-        output = tf.transpose(inputs, [0, 2, 3, 1])
-        output = tf.image.resize_bilinear(output, size)
-        output = tf.transpose(output, [0, 3, 1, 2])
-        output = conv(output, channels=channels, update_collection=update_collection, \
-                    regularization='relu', name='conv1')
-        output = conv(output, channels=channels, update_collection=update_collection, \
-                    regularization='relu', name='conv2')
-        return output
+        return tf.tanh(output)
 
 def encode_concat(inputs, encode, name='encode_concat'):
     with tf.variable_scope(name):
@@ -124,12 +116,26 @@ def encode_concat(inputs, encode, name='encode_concat'):
         output = tf.concat([inputs, encode], axis=1)
         return output
 
+def upsample(inputs, channels, update_collection, name='upsample'):
+    with tf.variable_scope(name):
+        size = [i * 2 for i in inputs.get_shape().as_list()[-2:]]
+        output = tf.transpose(inputs, [0, 2, 3, 1])
+        output = tf.image.resize_bilinear(output, size)
+        skip = tf.transpose(output, [0, 3, 1, 2])
+        output = conv(skip, channels=channels, update_collection=update_collection, \
+                    regularization='relu', name='conv1')
+        output = conv(output, channels=channels, update_collection=update_collection, \
+                    regularization='relu', name='conv2')
+        skip = conv(skip, channels=channels, update_collection=update_collection, \
+                    regularization='relu', name='skip')
+        return output + skip
+
 def genblock(inputs, encode, channels, update_collection, train, name='genblock'):
     with tf.variable_scope(name):
         inputs = encode_concat(inputs, encode)
-        inputs = tf.layers.batch_normalization(inputs, axis=1, training=train)
+        #inputs = tf.layers.batch_normalization(inputs, axis=1, training=train)
         upsample1 = upsample(inputs, channels=channels, update_collection=update_collection)
-        upsample1 = tf.layers.batch_normalization(upsample1, axis=1, training=train)
+        #upsample1 = tf.layers.batch_normalization(upsample1, axis=1, training=train)
         conv1 = conv(inputs=upsample1, channels=1, update_collection=update_collection, \
                     regularization='tanh', name='conv1')
         output = tf.transpose(conv1, perm=[0, 2, 3, 1])
@@ -152,7 +158,7 @@ def shared_gen(noise, encode, update_collection, train):
         for i in range(4):
             output = upsample(output, channels=1024 // 2 ** i, \
                             update_collection=update_collection, name='genblock%d' % (i + 3))
-            output = tf.layers.batch_normalization(output, axis=1, training=train)
+            #output = tf.layers.batch_normalization(output, axis=1, training=train)
         # shape: [None, 128, 16, 64]
         output = conv(inputs=output, channels=64, update_collection=update_collection, \
                         regularization='relu', name='conv7')
@@ -173,18 +179,21 @@ def generator3(inputs, encode, num, update_collection, train):
 
 def downblock(inputs, channels, update_collection, name='downblock'):
     with tf.variable_scope(name, reuse=tf.AUTO_REUSE):
-        output = tf.layers.average_pooling2d(inputs, pool_size=2, \
+        skip = tf.layers.average_pooling2d(inputs, pool_size=2, \
                                     strides=2, padding='same', \
                                     data_format='channels_first')
-        output = conv(output, channels=channels, update_collection=update_collection, name='conv1')
+        output = conv(skip, channels=channels, update_collection=update_collection, name='conv1')
         output = conv(output, channels=channels, update_collection=update_collection, name='conv2')
-        return output
+        skip = conv(skip, channels=channels, update_collection=update_collection, name='skip')
+        return output + skip
 
 def downsample(inputs, update_collection, name='downsample'):
     with tf.variable_scope(name, reuse=tf.AUTO_REUSE):
         channels = 16
         output = conv(inputs, channels=channels, update_collection=update_collection, name='conv1')
         output = conv(output, channels=channels, update_collection=update_collection, name='conv2')
+        skip = conv(inputs, channels=channels, update_collection=update_collection, name='skip')
+        output = output + skip
         i = 1
         while output.get_shape().as_list()[-2] > 1:
             output = downblock(output, channels=channels * (2 ** i), \
