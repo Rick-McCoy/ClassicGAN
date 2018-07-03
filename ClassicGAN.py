@@ -70,7 +70,7 @@ def main():
         return data
     dataset = dataset.apply(data.shuffle_and_repeat(buffer_size=16384))
     dataset = dataset.apply(data.map_and_batch(_parse, batch_size=BATCH_SIZE, \
-                                        num_parallel_batches=8, drop_remainder=True))
+                                        num_parallel_batches=16, drop_remainder=True))
     dataset = dataset.prefetch(16)
     iterator = dataset.make_one_shot_iterator()
     real_input_3 = iterator.get_next()
@@ -154,29 +154,29 @@ def main():
     tf.summary.scalar('loss_gen', loss_gen)
     print('Losses set')
     gen_var = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Shared_generator')
-    gen_var += tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Encoder')
+    #gen_var += tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Encoder')
     for i in range(CHANNEL_NUM):
         gen_var += tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Generator1_%d' % i)
         gen_var += tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Generator2_%d' % i)
         gen_var += tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Generator3_%d' % i)
     dis1_var = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Discriminator1')
-    #dis1_var += tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Encoder')
+    dis1_var += tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Encoder')
     dis2_var = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Discriminator2')
-    #dis2_var += tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Encoder')
+    dis2_var += tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Encoder')
     dis3_var = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Discriminator3')
-    #dis3_var += tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Encoder')
+    dis3_var += tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Encoder')
     gen_extra_update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Shared_generator')
-    gen_extra_update_ops += tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Encoder')
+    #gen_extra_update_ops += tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Encoder')
     for i in range(CHANNEL_NUM):
         gen_extra_update_ops += tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Generator1_%d' % i)
         gen_extra_update_ops += tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Generator2_%d' % i)
         gen_extra_update_ops += tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Generator3_%d' % i)
     dis1_extra_update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Discriminator1')
-    #dis1_extra_update_ops += tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Encoder')
+    dis1_extra_update_ops += tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Encoder')
     dis2_extra_update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Discriminator2')
-    #dis2_extra_update_ops += tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Encoder')
+    dis2_extra_update_ops += tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Encoder')
     dis3_extra_update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Discriminator3')
-    #dis3_extra_update_ops += tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Encoder')
+    dis3_extra_update_ops += tf.get_collection(tf.GraphKeys.UPDATE_OPS, scope='Encoder')
     spectral_norm_update_ops = tf.get_collection(SPECTRAL_UPDATE_OPS)
     with tf.name_scope('optimizers'):
         with tf.control_dependencies(dis1_extra_update_ops):
@@ -214,7 +214,7 @@ def main():
                 feed_dict[real_input_3] = roll(path)[:BATCH_SIZE]
             except:
                 print('Error while opening file.')
-                return
+                exit()
             feed_dict[input_noise] = get_noise([BATCH_SIZE, NOISE_LENGTH])
             samples = sess.run(output_gen3, feed_dict=feed_dict)
             path = path.split('/')[-1]
@@ -222,7 +222,7 @@ def main():
                 os.mkdir('Samples/sample_%s' % path)
             np.save(file='Samples/sample_%s' % path + '/%s' % path, arr=samples)
             unpack_sample(name='Samples/sample_%s' % path + '/%s.npy' % path, concat=args.concat)
-            return
+            exit()
         writer = tf.summary.FileWriter('train', sess.graph)
         run_options = tf.RunOptions(report_tensor_allocations_upon_oom=True)
         epoch_num = 100001
