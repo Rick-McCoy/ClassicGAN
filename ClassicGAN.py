@@ -7,6 +7,7 @@ import random
 import warnings
 import tensorflow as tf
 from tensorflow.contrib import data
+from tensorflow.python.client import timeline # pylint: disable=E0611
 import numpy as np
 import argparse
 from tqdm import tqdm
@@ -15,7 +16,6 @@ from Model import get_noise, generator1, generator2, generator3, \
                     discriminator1, discriminator2, discriminator3, \
                     shared_gen, encoder, NOISE_LENGTH, NO_OPS, SPECTRAL_UPDATE_OPS
 from Convert import unpack_sample
-from tensorflow.python.client import timeline # pylint: disable=E0611
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
@@ -32,6 +32,15 @@ def gradient_penalty(real, gen, encode, discriminator):
         gradients = tf.gradients(discriminator(inputs=interpolate, encode=encode, update_collection=NO_OPS), interpolate)[0]
         slopes = tf.sqrt(1e-10 + tf.reduce_sum(tf.square(gradients), axis=list(range(1, gradients.shape.ndims))))
         output = tf.reduce_mean((slopes - 1.) ** 2)
+        return LAMBDA * output
+
+def lipschitz_penalty(real, gen, encode, discriminator):
+    with tf.name_scope('lipschitz_penalty'):
+        alpha = tf.random_uniform(shape=[BATCH_SIZE] + [1] * (gen.shape.ndims - 1), minval=0., maxval=1.)
+        interpolate = real + alpha * (gen - real)
+        gradients = tf.gradients(discriminator(inputs=interpolate, encode=encode, update_collection=NO_OPS), interpolate)[0]
+        slopes = tf.sqrt(1e-10 + tf.reduce_sum(tf.square(gradients), axis=list(range(1, gradients.shape.ndims))))
+        output = tf.reduce_mean(tf.maximum(0, slopes - 1.) ** 2)
         return LAMBDA * output
 
 def main():

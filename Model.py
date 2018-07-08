@@ -64,7 +64,7 @@ def conv(inputs, channels, kernel_size_h=3, kernel_size_w=3, strides_h=1, stride
             out_shape[3] *= strides_w
             output = tf.nn.conv2d_transpose(inputs, filter=filters, output_shape=out_shape, \
                                         strides=[1, 1, strides_h, strides_w], padding='SAME', \
-                                        data_format='NCHW', name='conv_trans')
+                                        data_format='NCHW', name='conv_transpose')
         else:
             filters = tf.get_variable(name='filters', shape=[kernel_size_h, kernel_size_w, \
                                     inputs.get_shape().as_list()[1], channels], dtype=tf.float32, \
@@ -120,7 +120,7 @@ def upsample(inputs, channels, update_collection, name='upsample'):
     with tf.variable_scope(name):
         size = [i * 2 for i in inputs.get_shape().as_list()[-2:]]
         output = tf.transpose(inputs, [0, 2, 3, 1])
-        output = tf.image.resize_bilinear(output, size)
+        output = tf.image.resize_nearest_neighbor(output, size)
         skip = tf.transpose(output, [0, 3, 1, 2])
         output = conv(skip, channels=channels, update_collection=update_collection, \
                     regularization='relu', name='conv1')
@@ -149,12 +149,8 @@ def shared_gen(noise, encode, update_collection, train):
         # shape: [None, 192]
         output = tf.expand_dims(tf.expand_dims(noise, axis=-1), axis=-1)
         # shape: [None, 192, 1, 1]
-        output = conv(inputs=output, channels=256, strides_h=1, strides_w=2, \
-                    update_collection=update_collection, regularization='relu', \
-                    transpose=True, name='conv1')
-        output = conv(inputs=output, channels=256, strides_h=1, strides_w=2, \
-                    update_collection=update_collection, regularization='relu', \
-                    transpose=True, name='conv2')
+        output = tf.tile(output, multiples=(1, 1, 1, 4))
+        # shape: [None, 192, 1, 4]
         for i in range(4):
             output = upsample(output, channels=1024 // 2 ** i, \
                             update_collection=update_collection, name='genblock%d' % (i + 3))
