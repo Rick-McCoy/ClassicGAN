@@ -24,7 +24,8 @@ class ClassicGAN:
             epsilon=0.001, 
             z_length=512, 
             n_imgs=80000, 
-            lipschitz_penalty=True
+            lipschitz_penalty=True, 
+            args=None
         ):
         self.channels = [512, 512, 512, 512, 256, 128, 64, 32]
         self.batch_size = [16, 16, 16, 16, 16, 16, 8, 4]
@@ -40,6 +41,8 @@ class ClassicGAN:
         self.channel_num = 6
         self.class_num = 128
         self.input_length = 512
+        self.sampling = args.sample != ''
+        self.record = args.record
 
         with tf.variable_scope('image_count'):
             self.total_imgs = tf.Variable(0.0, name='image_step', trainable=False)
@@ -302,6 +305,15 @@ class ClassicGAN:
                 print('Saving...')
                 self.saver.save(self.sess, 'Checkpoints/{}.ckpt'.format(gs))
                 print('Model saved.')
+                if self.record:
+                    trace_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE) # pylint: disable=E1101
+                    run_metadata = tf.RunMetadata()
+                    self.sess.run([g_train, d_train], feed_dict=feed_dict, options=trace_options, run_metadata=run_metadata)
+                    self.writer.add_run_metadata(run_metadata, 'run_%d' % gs)
+                    tl = timeline.Timeline(run_metadata.step_stats) # pylint: disable=E1101
+                    ctf = tl.generate_chrome_trace_format()
+                    with open('Timeline/%d.json' % gs, 'w') as f:
+                        f.write(ctf)
 
             img_count = self.batch_size[layer]
             self.sess.run(self.img_step_op, {self.img_count_placeholder: img_count})
@@ -309,7 +321,18 @@ class ClassicGAN:
         self.sess.close()
         print('Training complete.')
 
-if __name__ == '__main__':
-    classicgan = ClassicGAN()
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-s', '--sample', type=str, default='', \
+                        help='Samples based on input song. Empty string means training.')
+    parser.add_argument('-r', '--record', dest='record', action='store_true', help='Enable recording.')
+    parser.add_argument('--no-record', dest='record', action='store_false', help='Disable recording.')
+    parser.set_defaults(record=False) # Warning: Windows kills python if enabled.
+    args = parser.parse_args()
+
+    classicgan = ClassicGAN(args=args)
     classicgan.train()
+
+if __name__ == '__main__':
+    main()
 
