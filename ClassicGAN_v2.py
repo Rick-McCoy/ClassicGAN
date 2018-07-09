@@ -256,7 +256,7 @@ class ClassicGAN:
     def train(self):
 
         total_imgs = self.sess.run(self.total_imgs)
-        prev_layer = 0
+        layer = prev_layer = 0
         running_average_time = None
 
         while total_imgs < (self.n_layers - 0.5) * self.n_imgs * 2:
@@ -269,6 +269,9 @@ class ClassicGAN:
             if layer != prev_layer:
                 running_average_time = None
                 prev_layer = layer
+            
+            if layer > self.n_layers:
+                break
 
             save_interval = max(1000, 10000 // 2 ** layer)
 
@@ -320,6 +323,10 @@ class ClassicGAN:
 
             img_count = self.batch_size[layer]
             self.sess.run(self.img_step_op, {self.img_count_placeholder: img_count})
+        
+        print('Saving...')
+        self.saver.save(self.sess, 'Checkpoints/{}.ckpt'.format(gs))
+        print('Model saved.')
 
         self.sess.close()
         print('Training complete.')
