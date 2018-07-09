@@ -154,7 +154,7 @@ class ClassicGAN:
                 else:
                     x = resize(self.x, (dim1, dim2))
             x = x[:self.batch_size[layers]]
-            z = z[:self.batch_size[layers]]
+            self.z = self.z[:self.batch_size[layers]]
             G = generator(self.z)
             Dz = discriminator(G)
             Dx = discriminator(x)
