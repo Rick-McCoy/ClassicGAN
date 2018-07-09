@@ -274,11 +274,11 @@ paket-files/
 __pycache__/
 .vscode/
 Samples/
-train/
 Checkpoints/
 Dataset/
 Progress/
-Timeline/
+Logs/
+Timelines/
 *.pyproj
 *.pyc
 

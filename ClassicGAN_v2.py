@@ -67,7 +67,7 @@ class ClassicGAN:
         self.config = tf.ConfigProto(allow_soft_placement=True, gpu_options=self.GPU_options)
         self.sess = tf.Session(config=self.config)
         self.sess.run(tf.global_variables_initializer())
-        self.writer = tf.summary.FileWriter(logdir='Log', graph=self.sess.graph)
+        self.writer = tf.summary.FileWriter(logdir='Logs', graph=self.sess.graph)
         self.saver = tf.train.Saver()
 
         if tf.train.latest_checkpoint('Checkpoints') is not None:
@@ -177,7 +177,7 @@ class ClassicGAN:
 
             g_loss = tf.reduce_mean(-Dz)
             d_loss = tf.reduce_mean(WD + GP_scaled + drift)
-            WD = tf.abs(tf.reduce_mean(WD))
+            WD = tf.reduce_mean(WD)
             GP = tf.reduce_mean(GP)
             
             WD_sum = tf.summary.scalar('Wasserstein_distance_{}x{}'.format(dim1, dim2), WD)
@@ -198,7 +198,7 @@ class ClassicGAN:
 
         with tf.variable_scope('Optimize'):
             g_train = self.g_optimizer.minimize(g_loss, var_list=g_vars, global_step=self.global_step)
-            d_train = self.d_optimizer.minimize(d_loss, var_list=d_vars, global_step=self.global_step)
+            d_train = self.d_optimizer.minimize(d_loss, var_list=d_vars)
         
         with tf.variable_scope('Sample'):
             fake_imgs = G[:1]
@@ -253,23 +253,19 @@ class ClassicGAN:
 
     def train(self):
 
-        if not os.path.exists('Log'):
-            os.mkdir('Log')
-        if not os.path.exists('Checkpoints'):
-            os.mkdir('Checkpoints')
-
         total_imgs = self.sess.run(self.total_imgs)
         prev_layer = 0
-        start_time = datetime.datetime.now()
+        running_average_time = None
 
         while total_imgs < (self.n_layers - 0.5) * self.n_imgs * 2:
+            start_time = datetime.datetime.now()
 
             layer, gs, alpha, total_imgs = self.sess.run([
                 self.layer, self.global_step, self.alpha, self.total_imgs
             ])
             layer = int(layer)
             if layer != prev_layer:
-                start_time = datetime.datetime.now()
+                running_average_time = None
                 prev_layer = layer
 
             save_interval = max(1000, 10000 // 2 ** layer)
@@ -277,7 +273,7 @@ class ClassicGAN:
             (dim1, dim2, WD, GP, WD_sum, GP_sum, g_train, d_train, 
             fake_img_sum, real_img_sum, *_) = self.networks[layer]
             feed_dict = {self.z: self._z(self.batch_size[layer])}
-        
+
             self.sess.run(g_train, feed_dict)
             self.sess.run(d_train, feed_dict)
 
@@ -287,10 +283,15 @@ class ClassicGAN:
             ], feed_dict)
 
             current_time = datetime.datetime.now()
-            percentage = ((gs + 1) % (self.n_imgs * 2 / self.batch_size[layer])) / (self.n_imgs * 2 / self.batch_size[layer]) * 100
-            remain_time = (100 - percentage) / percentage * (current_time - start_time)
+            if running_average_time is not None:
+                running_average_time = running_average_time * 0.8 + (current_time - start_time) * 0.2
+            else:
+                running_average_time = current_time - start_time
+            total_step = self.n_imgs * 2 // self.batch_size[layer]
+            percentage = ((gs + 1) % total_step) / total_step * 100
+            remain_time = (1 - percentage / 100) * running_average_time * total_step
 
-            print('Step: {}, size: {}x{}, alpha: {:.7f}, WD: {:.7f}, GP: {:.7f}, percentage: {:.2f}%, remaining time: {:.2f}'.format(
+            print('Step: {}, size: {}x{}, alpha: {:.7f}, WD: {:.7f}, GP: {:.7f}, percentage: {:.2f}%, remaining time: {}'.format(
                 gs, dim1, dim2, alpha, WD_, GP_, percentage, remain_time
             ))
 
@@ -312,7 +313,7 @@ class ClassicGAN:
                     self.writer.add_run_metadata(run_metadata, 'run_%d' % gs)
                     tl = timeline.Timeline(run_metadata.step_stats) # pylint: disable=E1101
                     ctf = tl.generate_chrome_trace_format()
-                    with open('Timeline/%d.json' % gs, 'w') as f:
+                    with open('Timelines/%d.json' % gs, 'w') as f:
                         f.write(ctf)
 
             img_count = self.batch_size[layer]
@@ -329,6 +330,15 @@ def main():
     parser.add_argument('--no-record', dest='record', action='store_false', help='Disable recording.')
     parser.set_defaults(record=False) # Warning: Windows kills python if enabled.
     args = parser.parse_args()
+
+    if not os.path.exists('Logs'):
+        os.mkdir('Logs')
+    if not os.path.exists('Checkpoints'):
+        os.mkdir('Checkpoints')
+    if not os.path.exists('Timelines'):
+        os.mkdir('Timelines')
+    if not os.path.exists('Samples'):
+        os.mkdir('Samples')
 
     classicgan = ClassicGAN(args=args)
     classicgan.train()
