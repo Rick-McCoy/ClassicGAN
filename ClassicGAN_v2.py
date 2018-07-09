@@ -88,6 +88,7 @@ class ClassicGAN:
 
         def generator(z):
             with tf.variable_scope('Generator'):
+                z = z[:self.batch_size[layers]]
                 with tf.variable_scope('latent_vector'):
                     g1 = tf.expand_dims(tf.expand_dims(z, axis=-1), axis=-1)
                 for i in range(layers):
@@ -154,7 +155,6 @@ class ClassicGAN:
                 else:
                     x = resize(self.x, (dim1, dim2))
             x = x[:self.batch_size[layers]]
-            self.z = self.z[:self.batch_size[layers]]
             G = generator(self.z)
             Dz = discriminator(G)
             Dx = discriminator(x)
