@@ -23,12 +23,12 @@ class ClassicGAN:
             p_gamma=1.0, 
             epsilon=0.001, 
             z_length=512, 
-            n_imgs=80000, 
+            n_imgs=160000, 
             lipschitz_penalty=True, 
             args=None
         ):
         self.channels = [512, 512, 512, 512, 256, 128, 64, 32]
-        self.batch_size = [16, 16, 16, 16, 16, 16, 8, 4]
+        self.batch_size = [64, 128, 64, 32, 16, 16, 8, 4]
         self.learning_rate_d = learning_rate_d
         self.learning_rate_g = learning_rate_g
         self.p_lambda = p_lambda
@@ -87,6 +87,7 @@ class ClassicGAN:
     def _create_network(self, layers):
 
         def generator(z):
+            z = z[:self.batch_size[layers]]
             with tf.variable_scope('Generator'):
                 with tf.variable_scope('latent_vector'):
                     g1 = tf.expand_dims(tf.expand_dims(z, axis=-1), axis=-1)
