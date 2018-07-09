@@ -87,7 +87,6 @@ class ClassicGAN:
     def _create_network(self, layers):
 
         def generator(z):
-            z = z[:self.batch_size[layers]]
             with tf.variable_scope('Generator'):
                 with tf.variable_scope('latent_vector'):
                     g1 = tf.expand_dims(tf.expand_dims(z, axis=-1), axis=-1)
@@ -146,8 +145,6 @@ class ClassicGAN:
         dim1, dim2 = 2 ** layers, 2 ** (layers + 2)
 
         with tf.variable_scope('Network', reuse=tf.AUTO_REUSE):
-            G = generator(self.z)
-            Dz = discriminator(G)
             with tf.variable_scope('reshape'):
                 if layers > 1:
                     x0 = resize(self.x, (dim1 // 2, dim2 // 2))
@@ -156,7 +153,11 @@ class ClassicGAN:
                     x = self._reparameterize(x0, x1)
                 else:
                     x = resize(self.x, (dim1, dim2))
-            Dx = discriminator(x[:Dz.get_shape().as_list()[0]])
+            x = x[:self.batch_size[layers]]
+            z = z[:self.batch_size[layers]]
+            G = generator(self.z)
+            Dz = discriminator(G)
+            Dx = discriminator(x)
 
             alpha = tf.random_uniform(shape=[tf.shape(Dz)[0], 1, 1, 1], minval=0., maxval=1.)
             interpolate = alpha * x + (1 - alpha) * G
