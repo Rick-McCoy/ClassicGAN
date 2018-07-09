@@ -240,9 +240,9 @@ class ClassicGAN:
             data = data * 2 - 1
             return data
         self.dataset = self.dataset.apply(data.shuffle_and_repeat(buffer_size=16384))
-        self.dataset = self.dataset.apply(data.map_and_batch(_parse, batch_size=16, 
+        self.dataset = self.dataset.apply(data.map_and_batch(_parse, batch_size=128, 
                                             num_parallel_batches=16, drop_remainder=True))
-        self.dataset = self.dataset.prefetch(16)
+        self.dataset = self.dataset.prefetch(128)
         self.iterator = self.dataset.make_one_shot_iterator()
         batch = self.iterator.get_next()
 
