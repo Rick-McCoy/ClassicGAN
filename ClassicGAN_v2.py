@@ -107,10 +107,10 @@ class ClassicGAN:
                         with tf.variable_scope('2'):
                             g1 = pixelwise_norm(leaky_relu(conv2d(g1, self.channels[i])))
                 with tf.variable_scope('rgb_layer_{}'.format(layers - 1)):
-                    g1 = conv2d(g1, 6, 1, weight_norm=False)
+                    g1 = conv2d(g1, self.channel_num, 1, weight_norm=False)
                 if layers > 1:
                     with tf.variable_scope('rgb_layer_{}'.format(layers - 2)):
-                        g0 = conv2d(g0, 6, 1, weight_norm=False)
+                        g0 = conv2d(g0, self.channel_num, 1, weight_norm=False)
                         g = self._reparameterize(g0, g1)
                 else:
                     g = g1
