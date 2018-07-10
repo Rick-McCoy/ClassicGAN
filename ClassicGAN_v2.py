@@ -270,7 +270,7 @@ class ClassicGAN:
                 running_average_time = None
                 prev_layer = layer
             
-            if layer > self.n_layers:
+            if layer >= self.n_layers:
                 break
 
             save_interval = max(1000, 10000 // 2 ** layer)
@@ -293,11 +293,11 @@ class ClassicGAN:
             else:
                 running_average_time = current_time - start_time
             total_step = self.n_imgs * 2 // self.batch_size[layer]
-            percentage = ((gs + 1) % total_step) / total_step * 100
-            remain_time = (1 - percentage / 100) * running_average_time * total_step
+            p = ((gs + 1) % total_step) / total_step * 100
+            remain_time = (1 - p / 100) * running_average_time * total_step
 
-            print('Step: {}, size: {}x{}, alpha: {:.7f}, WD: {:.7f}, GP: {:.7f}, percentage: {:.2f}%, remaining time: {}'.format(
-                gs, dim1, dim2, alpha, WD_, GP_, percentage, remain_time
+            print('Step: {}, size: {}x{}, alpha: {:.5f}, WD: {:.7f}, GP: {:.7f}, p: {:.2f}%, ETA: {}, layer: {}'.format(
+                gs, dim1, dim2, alpha, WD_, GP_, p, remain_time, layer
             ))
 
             if gs % 20 == 0:
