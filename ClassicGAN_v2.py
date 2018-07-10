@@ -341,7 +341,7 @@ class ClassicGAN:
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-s', '--sample', dest='record', action='store_true', help='Enable sampling.')
+    parser.add_argument('-s', '--sample', dest='sample', action='store_true', help='Enable sampling.')
     parser.add_argument('--no-sample', dest='sample', action='store_false', help='Disable sampling.')
     parser.set_defaults(sample=False)
     parser.add_argument('-r', '--record', dest='record', action='store_true', help='Enable recording.')
@@ -361,8 +361,8 @@ def main():
     classicgan = ClassicGAN(args=args)
     if args.sample:
         classicgan.sample()
-    else:
-        classicgan.train()
+        exit()
+    classicgan.train()
 
 if __name__ == '__main__':
     main()
