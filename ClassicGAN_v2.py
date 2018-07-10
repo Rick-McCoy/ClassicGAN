@@ -359,7 +359,7 @@ def main():
         os.mkdir('Samples')
 
     classicgan = ClassicGAN(args=args)
-    if args.sample():
+    if args.sample:
         classicgan.sample()
     else:
         classicgan.train()
