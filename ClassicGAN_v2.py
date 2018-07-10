@@ -12,6 +12,7 @@ import argparse
 from tqdm import tqdm, trange
 from ops import (conv2d, conv2d_transpose, pool, dense_layer, 
                 leaky_relu, minibatch_stddev, pixelwise_norm, resize)
+from Convert import unpack_sample
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
@@ -41,7 +42,7 @@ class ClassicGAN:
         self.channel_num = 6
         self.class_num = 128
         self.input_length = 512
-        self.sampling = args.sample != ''
+        self.sampling = args.sample
         self.record = args.record
 
         with tf.variable_scope('image_count'):
@@ -220,7 +221,7 @@ class ClassicGAN:
         print('Stage {}x{} setup complete.'.format(dim1, dim2))
 
         return (dim1, dim2, WD, GP, WD_sum, GP_sum, g_train, d_train, 
-                fake_img_sum, real_img_sum, G, discriminator)
+                fake_img_sum, real_img_sum, G, generator, discriminator)
 
     def _add_summary(self, string, global_step):
         self.writer.add_summary(string, global_step)
@@ -330,11 +331,19 @@ class ClassicGAN:
 
         self.sess.close()
         print('Training complete.')
+    
+    def sample(self):
+        *_, generator, _ = self.networks[-1]
+        feed_dict = {self.z: self._z(self.batch_size[-1])}
+        gs, samples = self.sess.run([self.global_step, generator(self.z)], feed_dict)
+        np.save('Samples/{}'.format(gs), samples)
+        unpack_sample('Samples/{}'.format(gs))
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-s', '--sample', type=str, default='', \
-                        help='Samples based on input song. Empty string means training.')
+    parser.add_argument('-s', '--sample', dest='record', action='store_true', help='Enable sampling.')
+    parser.add_argument('--no-sample', dest='sample', action='store_false', help='Disable sampling.')
+    parser.set_defaults(sample=False)
     parser.add_argument('-r', '--record', dest='record', action='store_true', help='Enable recording.')
     parser.add_argument('--no-record', dest='record', action='store_false', help='Disable recording.')
     parser.set_defaults(record=False) # Warning: Windows kills python if enabled.
@@ -350,7 +359,10 @@ def main():
         os.mkdir('Samples')
 
     classicgan = ClassicGAN(args=args)
-    classicgan.train()
+    if args.sample():
+        classicgan.sample()
+    else:
+        classicgan.train()
 
 if __name__ == '__main__':
     main()
