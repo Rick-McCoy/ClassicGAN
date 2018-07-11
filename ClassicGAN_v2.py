@@ -14,7 +14,7 @@ from ops import (conv2d, conv2d_transpose, pool, dense_layer,
                 leaky_relu, minibatch_stddev, pixelwise_norm, resize)
 from Convert import unpack_sample
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 
 class ClassicGAN:
     def __init__(self, 
@@ -24,12 +24,12 @@ class ClassicGAN:
             p_gamma=1.0, 
             epsilon=0.001, 
             z_length=512, 
-            n_imgs=160000, 
+            n_imgs=800000, 
             lipschitz_penalty=True, 
             args=None
         ):
         self.channels = [512, 512, 512, 512, 256, 128, 64, 32]
-        self.batch_size = [128, 128, 64, 32, 16, 16, 8, 4]
+        self.batch_size = [256, 256, 128, 64, 32, 16, 8, 4]
         self.learning_rate_d = learning_rate_d
         self.learning_rate_g = learning_rate_g
         self.p_lambda = p_lambda
@@ -221,7 +221,7 @@ class ClassicGAN:
         print('Stage {}x{} setup complete.'.format(dim1, dim2))
 
         return (dim1, dim2, WD, GP, WD_sum, GP_sum, g_train, d_train, 
-                fake_img_sum, real_img_sum, G, generator, discriminator)
+                fake_img_sum, real_img_sum, G, discriminator)
 
     def _add_summary(self, string, global_step):
         self.writer.add_summary(string, global_step)
@@ -242,7 +242,7 @@ class ClassicGAN:
             data = data * 2 - 1
             return data
         self.dataset = self.dataset.apply(data.shuffle_and_repeat(buffer_size=16384))
-        self.dataset = self.dataset.apply(data.map_and_batch(_parse, batch_size=128, 
+        self.dataset = self.dataset.apply(data.map_and_batch(_parse, batch_size=256, 
                                             num_parallel_batches=16, drop_remainder=True))
         self.dataset = self.dataset.prefetch(128)
         self.iterator = self.dataset.make_one_shot_iterator()
@@ -333,9 +333,10 @@ class ClassicGAN:
         print('Training complete.')
     
     def sample(self):
-        *_, generator, _ = self.networks[-1]
-        feed_dict = {self.z: self._z(self.batch_size[-1])}
-        gs, samples = self.sess.run([self.global_step, generator(self.z)], feed_dict)
+        cur_layer = int(self.sess.run(self.layer))
+        *_, G, _ = self.networks[cur_layer]
+        feed_dict = {self.z: self._z(self.batch_size[cur_layer])}
+        gs, samples = self.sess.run([self.global_step, G], feed_dict)
         np.save('Samples/{}'.format(gs), samples)
         unpack_sample('Samples/{}'.format(gs))
 
