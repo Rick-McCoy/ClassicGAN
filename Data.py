@@ -13,7 +13,7 @@ from tqdm import tqdm
 CHANNEL_NUM = 6
 CLASS_NUM = 128
 INPUT_LENGTH = 512
-BATCH_SIZE = 2
+BATCH_SIZE = 16
 #0 Piano: 22584
 #1 Chromatic Percussion: 216
 #2 Organ: 500
@@ -63,7 +63,7 @@ def build_dataset():
     if not os.path.exists('Dataset'):
         os.mkdir('Dataset')
     writer = tf.python_io.TFRecordWriter('Dataset/cond_dataset.tfrecord')
-    for path in tqdm(pathlist):
+    for path in tqdm(pathlist[:10]):
         try:
             data, onoff = roll(str(path))
         except:
@@ -72,8 +72,8 @@ def build_dataset():
             packed_data = np.packbits(datum).tostring()
             packed_act = np.packbits(act)
             feature = {
-                'roll': tf.train.Feature(bytes_list=tf.train.BytesList(value=[packed_data])), 
-                'onoff': tf.train.Feature(int64_list=tf.train.Int64List(value=[packed_act]))
+                'data': tf.train.Feature(bytes_list=tf.train.BytesList(value=[packed_data])), 
+                'label': tf.train.Feature(int64_list=tf.train.Int64List(value=[packed_act]))
             }
             example = tf.train.Example(features=tf.train.Features(feature=feature))
             serialized = example.SerializeToString()

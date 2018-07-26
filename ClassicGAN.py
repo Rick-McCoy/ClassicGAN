@@ -84,29 +84,31 @@ def main():
     dataset = tf.data.TFRecordDataset(filename, num_parallel_reads=8)
     def _parse(example_proto):
         feature = {
-            'roll': tf.FixedLenFeature([], tf.string), 
-            'onoff': tf.FixedLenFeature([], tf.int64)
+            'label': tf.FixedLenFeature([], tf.int64), 
+            'data': tf.FixedLenFeature([], tf.string)
         }
         parsed = tf.parse_single_example(example_proto, feature)
-        data = tf.decode_raw(parsed['roll'], tf.uint8)
-        label = tf.cast(parsed['onoff'], tf.uint8)
+        data = tf.decode_raw(parsed['data'], tf.uint8)
+        label = tf.cast(parsed['label'], tf.uint8)
         data = tf.py_func(func=np.unpackbits, inp=[data], Tout=tf.uint8)
         label = tf.py_func(func=np.unpackbits, inp=[label], Tout=tf.uint8)
         data = tf.cast(data, tf.float32)
-        label = tf.cast(label, tf.bool)
         data = tf.reshape(data, [CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH])
         label.set_shape([8])
         label = label[:CHANNEL_NUM]
         data = data * 2 - 1
-        return data, label
+        return {'data': data, 'label': label}
 
     dataset = dataset.apply(data.shuffle_and_repeat(buffer_size=16384))
     dataset = dataset.apply(
         data.map_and_batch(_parse, batch_size=BATCH_SIZE, num_parallel_batches=16, drop_remainder=True)
     )
-    dataset = dataset.prefetch(16)
+    dataset = dataset.prefetch(128)
     iterator = dataset.make_one_shot_iterator()
-    real_input_3, label = iterator.get_next()
+    next_data = iterator.get_next()
+    real_input_3 = next_data['data']
+    label = next_data['label']
+    label = tf.cast(label, tf.bool)
 
     input_noise = tf.placeholder(dtype=tf.float32, shape=[None, NOISE_LENGTH], name='input_noise')
 
