@@ -18,7 +18,7 @@ from Model import (get_noise, generator1, generator2, generator3,
                     NOISE_LENGTH, NO_OPS, SPECTRAL_UPDATE_OPS)
 from Convert import unpack_sample
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-#os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 
 TOTAL_TRAIN_EPOCH = 100
 LAMBDA = 10
