@@ -243,15 +243,15 @@ def main():
     dis3_real = discriminator3(inputs=real_input_3, encode=encode, update_collection=SPECTRAL_UPDATE_OPS)
     dis3_gen = discriminator3(inputs=output_gen3, encode=encode, update_collection=NO_OPS)
     print('Discriminators set')
-    loss_dis1 = tf.reduce_mean(dis1_gen - dis1_real) + gradient_penalty(
+    loss_dis1 = tf.reduce_mean(dis1_gen - dis1_real) + lipschitz_penalty(
         real=real_input_1, gen=output_gen1, encode=encode, discriminator=discriminator1
     )
     loss_gen1 = -tf.reduce_mean(dis1_gen)
-    loss_dis2 = tf.reduce_mean(dis2_gen - dis2_real) + gradient_penalty(
+    loss_dis2 = tf.reduce_mean(dis2_gen - dis2_real) + lipschitz_penalty(
         real=real_input_2, gen=output_gen2, encode=encode, discriminator=discriminator2
     )
     loss_gen2 = -tf.reduce_mean(dis2_gen)
-    loss_dis3 = tf.reduce_mean(dis3_gen - dis3_real) + gradient_penalty(
+    loss_dis3 = tf.reduce_mean(dis3_gen - dis3_real) + lipschitz_penalty(
         real=real_input_3, gen=output_gen3, encode=encode, discriminator=discriminator3
     )
     loss_gen3 = -tf.reduce_mean(dis3_gen)
