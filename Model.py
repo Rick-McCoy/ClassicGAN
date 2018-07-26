@@ -219,7 +219,7 @@ def shared_gen(noise, encode, label, update_collection, train):
         # shape: [None, 198, 1, 4]
         for i in range(4):
             output = upsample(
-                output, channels=1024 // 2 ** i, update_collection=update_collection, train=train, name='upsample_%d' % (i + 3)
+                output, channels=1024 // 2 ** i, update_collection=update_collection, train=train, name='upsample_%d' % (i + 1)
             )
             #output = tf.layers.batch_normalization(output, axis=1, training=train)
         # shape: [None, 128, 16, 64]
