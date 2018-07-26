@@ -73,7 +73,7 @@ def build_dataset():
             packed_act = np.packbits(act)
             feature = {
                 'roll': tf.train.Feature(bytes_list=tf.train.BytesList(value=[packed_data])), 
-                'onoff': tf.train.Feature(Int64_list=tf.train.Int64List(value=[packed_act]))
+                'onoff': tf.train.Feature(int64_list=tf.train.Int64List(value=[packed_act]))
             }
             example = tf.train.Example(features=tf.train.Features(feature=feature))
             serialized = example.SerializeToString()
