@@ -96,6 +96,7 @@ def main():
         label = tf.cast(label, tf.bool)
         data = tf.reshape(data, [CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH])
         label.set_shape([8])
+        label = label[:CHANNEL_NUM]
         data = data * 2 - 1
         return data, label
 
@@ -140,7 +141,7 @@ def main():
         tf.summary.image('real_input_3_%d' % i, real_input_3_image[:, i])
 
     shared_output = shared_gen(
-        noise=input_noise, encode=encode, label=label[:CHANNEL_NUM], update_collection=SPECTRAL_UPDATE_OPS, train=train
+        noise=input_noise, encode=encode, label=label, update_collection=SPECTRAL_UPDATE_OPS, train=train
     )
     # shape: [None, 64, 16, 64]
     gen1 = [
