@@ -45,7 +45,7 @@ def lipschitz_penalty(real, gen, encode, discriminator):
             discriminator(inputs=interpolate, encode=encode, update_collection=NO_OPS), interpolate
         )[0]
         slopes = tf.sqrt(1e-10 + tf.reduce_sum(tf.square(gradients), axis=list(range(1, gradients.shape.ndims))))
-        output = tf.reduce_mean(tf.maximum(0, slopes - 1.) ** 2)
+        output = tf.reduce_mean(tf.maximum(0., slopes - 1.) ** 2)
         return LAMBDA * output
 
 def main():
