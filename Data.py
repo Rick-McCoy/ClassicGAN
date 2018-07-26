@@ -63,7 +63,7 @@ def build_dataset():
     if not os.path.exists('Dataset'):
         os.mkdir('Dataset')
     writer = tf.python_io.TFRecordWriter('Dataset/cond_dataset.tfrecord')
-    for path in tqdm(pathlist[:10]):
+    for path in tqdm(pathlist):
         try:
             data, onoff = roll(str(path))
         except:
