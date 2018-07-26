@@ -18,7 +18,7 @@ from Model import (get_noise, generator1, generator2, generator3,
                     NOISE_LENGTH, NO_OPS, SPECTRAL_UPDATE_OPS)
 from Convert import unpack_sample
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-os.environ['CUDA_VISIBLE_DEVICES'] = '1'
+#os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 
 TOTAL_TRAIN_EPOCH = 100
 LAMBDA = 10
@@ -77,8 +77,8 @@ def main():
         os.makedirs('Logs_v1')
     if not os.path.exists('Samples_v1'):
         os.makedirs('Samples_v1')
-    if not os.path.exists('Timeline_v1'):
-        os.makedirs('Timeline_v1')
+    if not os.path.exists('Timelines_v1'):
+        os.makedirs('Timelines_v1')
     
     filename = 'Dataset/cond_dataset.tfrecord'
     dataset = tf.data.TFRecordDataset(filename, num_parallel_reads=8)
@@ -395,7 +395,7 @@ def main():
                     writer.add_run_metadata(run_metadata, 'run_%d' % train_count)
                     tl = timeline.Timeline(run_metadata.step_stats) # pylint: disable=E1101
                     ctf = tl.generate_chrome_trace_format()
-                    with open('Timeline_v1/timeline_%d.json' % train_count, 'w') as f:
+                    with open('Timelines_v1/timeline_%d.json' % train_count, 'w') as f:
                         f.write(ctf)
         writer.close()
 if __name__ == '__main__':

@@ -273,12 +273,12 @@ paket-files/
 # Python Tools for Visual Studio (PTVS)
 __pycache__/
 .vscode/
-Samples/
-Checkpoints/
-Dataset/
-Progress/
-Logs/
-Timelines/
+Samples*/
+Checkpoints*/
+Dataset*/
+Progress*/
+Logs*/
+Timelines*/
 *.pyproj
 *.pyc
 
