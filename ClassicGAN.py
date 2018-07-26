@@ -71,14 +71,14 @@ def main():
     args = parser.parse_args()
     sampling = args.sample != ''
 
-    if not os.path.exists('Checkpoints'):
-        os.makedirs('Checkpoints')
-    if not os.path.exists('Logs'):
-        os.makedirs('Logs')
-    if not os.path.exists('Samples'):
-        os.makedirs('Samples')
-    if not os.path.exists('Timeline'):
-        os.makedirs('Timeline')
+    if not os.path.exists('Checkpoints_v1'):
+        os.makedirs('Checkpoints_v1')
+    if not os.path.exists('Logs_v1'):
+        os.makedirs('Logs_v1')
+    if not os.path.exists('Samples_v1'):
+        os.makedirs('Samples_v1')
+    if not os.path.exists('Timeline_v1'):
+        os.makedirs('Timeline_v1')
     
     filename = 'Dataset/cond_dataset.tfrecord'
     dataset = tf.data.TFRecordDataset(filename, num_parallel_reads=8)
@@ -328,9 +328,9 @@ def main():
     with tf.Session(config=config) as sess:
         merged = tf.summary.merge_all()
         sess.run(tf.global_variables_initializer())
-        if tf.train.latest_checkpoint('Checkpoints') is not None:
+        if tf.train.latest_checkpoint('Checkpoints_v1') is not None:
             print('Restoring...')
-            saver.restore(sess, tf.train.latest_checkpoint('Checkpoints'))
+            saver.restore(sess, tf.train.latest_checkpoint('Checkpoints_v1'))
         feed_dict = {input_noise: None, train: True}
         print('preparing complete')
         if sampling:
@@ -344,12 +344,12 @@ def main():
             feed_dict[input_noise] = get_noise([BATCH_SIZE, NOISE_LENGTH])
             samples = sess.run(output_gen3, feed_dict=feed_dict)
             path = path.split('/')[-1]
-            if not os.path.exists('Samples/sample_%s'):
-                os.mkdir('Samples/sample_%s' % path)
-            np.save(file='Samples/sample_%s' % path + '/%s' % path, arr=samples)
-            unpack_sample(name='Samples/sample_%s' % path + '/%s.npy' % path, concat=args.concat)
+            if not os.path.exists('Samples_v1/sample_%s'):
+                os.mkdir('Samples_v1/sample_%s' % path)
+            np.save(file='Samples_v1/sample_%s' % path + '/%s' % path, arr=samples)
+            unpack_sample(name='Samples_v1/sample_%s' % path + '/%s.npy' % path, concat=args.concat)
             exit()
-        writer = tf.summary.FileWriter('Logs', sess.graph)
+        writer = tf.summary.FileWriter('Logs_v1', sess.graph)
         run_options = tf.RunOptions(report_tensor_allocations_upon_oom=True)
         epoch_num = 100001
         for train_count in tqdm(range(epoch_num)):
@@ -378,9 +378,9 @@ def main():
                 feed_dict[input_noise] = get_noise([BATCH_SIZE, NOISE_LENGTH])
                 feed_dict[train] = False
                 samples = sess.run(output_gen3, feed_dict=feed_dict)
-                np.save(file='Samples/song_%06d' % train_count, arr=samples)
-                unpack_sample('Samples/song_%06d' % train_count)
-                save_path = saver.save(sess, 'Checkpoints/song_%06d' % train_count + '.ckpt')
+                np.save(file='Samples_v1/song_%06d' % train_count, arr=samples)
+                unpack_sample('Samples_v1/song_%06d' % train_count)
+                save_path = saver.save(sess, 'Checkpoints_v1/song_%06d' % train_count + '.ckpt')
                 tqdm.write('Model Saved: %s' % save_path)
                 if args.record:
                     trace_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE) # pylint: disable=E1101
@@ -392,7 +392,7 @@ def main():
                     writer.add_run_metadata(run_metadata, 'run_%d' % train_count)
                     tl = timeline.Timeline(run_metadata.step_stats) # pylint: disable=E1101
                     ctf = tl.generate_chrome_trace_format()
-                    with open('Timeline/timeline_%d.json' % train_count, 'w') as f:
+                    with open('Timeline_v1/timeline_%d.json' % train_count, 'w') as f:
                         f.write(ctf)
         writer.close()
 if __name__ == '__main__':
