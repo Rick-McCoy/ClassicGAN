@@ -12,12 +12,13 @@ import numpy as np
 import argparse
 from tqdm import tqdm
 from Data import roll, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH, BATCH_SIZE
-from Model import get_noise, generator1, generator2, generator3, \
-                    discriminator1, discriminator2, discriminator3, \
-                    shared_gen, encoder, NOISE_LENGTH, NO_OPS, SPECTRAL_UPDATE_OPS
+from Model import (get_noise, generator1, generator2, generator3, 
+                    discriminator1, discriminator2, discriminator3, 
+                    process1, process2, process3, shared_gen, encoder, 
+                    NOISE_LENGTH, NO_OPS, SPECTRAL_UPDATE_OPS)
 from Convert import unpack_sample
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+#os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
 TOTAL_TRAIN_EPOCH = 100
 LAMBDA = 10
@@ -29,7 +30,9 @@ def gradient_penalty(real, gen, encode, discriminator):
     with tf.name_scope('gradient_penalty'):
         alpha = tf.random_uniform(shape=[BATCH_SIZE] + [1] * (gen.shape.ndims - 1), minval=0., maxval=1.)
         interpolate = real + alpha * (gen - real)
-        gradients = tf.gradients(discriminator(inputs=interpolate, encode=encode, update_collection=NO_OPS), interpolate)[0]
+        gradients = tf.gradients(
+            discriminator(inputs=interpolate, encode=encode, update_collection=NO_OPS), interpolate
+        )[0]
         slopes = tf.sqrt(1e-10 + tf.reduce_sum(tf.square(gradients), axis=list(range(1, gradients.shape.ndims))))
         output = tf.reduce_mean((slopes - 1.) ** 2)
         return LAMBDA * output
@@ -38,7 +41,9 @@ def lipschitz_penalty(real, gen, encode, discriminator):
     with tf.name_scope('lipschitz_penalty'):
         alpha = tf.random_uniform(shape=[BATCH_SIZE] + [1] * (gen.shape.ndims - 1), minval=0., maxval=1.)
         interpolate = real + alpha * (gen - real)
-        gradients = tf.gradients(discriminator(inputs=interpolate, encode=encode, update_collection=NO_OPS), interpolate)[0]
+        gradients = tf.gradients(
+            discriminator(inputs=interpolate, encode=encode, update_collection=NO_OPS), interpolate
+        )[0]
         slopes = tf.sqrt(1e-10 + tf.reduce_sum(tf.square(gradients), axis=list(range(1, gradients.shape.ndims))))
         output = tf.reduce_mean(tf.maximum(0, slopes - 1.) ** 2)
         return LAMBDA * output
@@ -46,53 +51,73 @@ def lipschitz_penalty(real, gen, encode, discriminator):
 def main():
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('-s', '--sample', type=str, default='', \
-                        help='Samples based on input song. Empty string means training.')
-    parser.add_argument('-c', '--concat', dest='concat', action='store_true', help='Enable concatenation.')
-    parser.add_argument('--no-concat', dest='concat', action='store_false', help='Disable concatenation.')
+    parser.add_argument(
+        '-s', '--sample', type=str, default='', help='Samples based on input song. Empty string means training.'
+    )
+    parser.add_argument(
+        '-c', '--concat', dest='concat', action='store_true', help='Enable concatenation.'
+    )
+    parser.add_argument(
+        '--no-concat', dest='concat', action='store_false', help='Disable concatenation.'
+    )
     parser.set_defaults(concat=False)
-    parser.add_argument('-r', '--record', dest='record', action='store_true', help='Enable recording.')
-    parser.add_argument('--no-record', dest='record', action='store_false', help='Disable recording.')
+    parser.add_argument(
+        '-r', '--record', dest='record', action='store_true', help='Enable recording.'
+    )
+    parser.add_argument(
+        '--no-record', dest='record', action='store_false', help='Disable recording.'
+    )
     parser.set_defaults(record=False) # Warning: Windows kills python if enabled.
     args = parser.parse_args()
     sampling = args.sample != ''
 
     if not os.path.exists('Checkpoints'):
         os.makedirs('Checkpoints')
-    if not os.path.exists('train'):
-        os.makedirs('train')
+    if not os.path.exists('Logs'):
+        os.makedirs('Logs')
     if not os.path.exists('Samples'):
         os.makedirs('Samples')
     if not os.path.exists('Timeline'):
         os.makedirs('Timeline')
     
-    filename = 'Dataset/dataset.tfrecord'
+    filename = 'Dataset/cond_dataset.tfrecord'
     dataset = tf.data.TFRecordDataset(filename, num_parallel_reads=8)
     def _parse(example_proto):
-        feature = {'roll' : tf.FixedLenFeature([], tf.string)}
+        feature = {
+            'roll': tf.FixedLenFeature([], tf.string), 
+            'onoff': tf.FixedLenFeature([], tf.int64)
+        }
         parsed = tf.parse_single_example(example_proto, feature)
         data = tf.decode_raw(parsed['roll'], tf.uint8)
+        label = tf.cast(parsed['onoff'], tf.uint8)
         data = tf.py_func(func=np.unpackbits, inp=[data], Tout=tf.uint8)
+        label = tf.py_func(func=np.unpackbits, inp=[label], Tout=tf.uint8)
         data = tf.cast(data, tf.float32)
+        label = tf.cast(label, tf.bool)
         data = tf.reshape(data, [CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH])
+        label.set_shape([8])
         data = data * 2 - 1
-        return data
+        return data, label
+
     dataset = dataset.apply(data.shuffle_and_repeat(buffer_size=16384))
-    dataset = dataset.apply(data.map_and_batch(_parse, batch_size=BATCH_SIZE, \
-                                        num_parallel_batches=16, drop_remainder=True))
+    dataset = dataset.apply(
+        data.map_and_batch(_parse, batch_size=BATCH_SIZE, num_parallel_batches=16, drop_remainder=True)
+    )
     dataset = dataset.prefetch(16)
     iterator = dataset.make_one_shot_iterator()
-    real_input_3 = iterator.get_next()
+    real_input_3, label = iterator.get_next()
 
     input_noise = tf.placeholder(dtype=tf.float32, shape=[None, NOISE_LENGTH], name='input_noise')
 
-    real_input_2 = tf.layers.average_pooling2d(inputs=real_input_3, pool_size=2, strides=2, \
-                                        padding='same', data_format='channels_first', name='real_input_2')
+    real_input_2 = tf.layers.average_pooling2d(
+        inputs=real_input_3, pool_size=2, strides=2, padding='same', data_format='channels_first', name='real_input_2'
+    )
     real_input_2 -= tf.reduce_min(real_input_2)
     real_input_2 /= (tf.reduce_max(real_input_2) + epsilon)
     real_input_2 = 2 * real_input_2 - 1
-    real_input_1 = tf.layers.average_pooling2d(inputs=real_input_2, pool_size=2, strides=2, \
-                                        padding='same', data_format='channels_first', name='real_input_1')
+    real_input_1 = tf.layers.average_pooling2d(
+        inputs=real_input_2, pool_size=2, strides=2, padding='same', data_format='channels_first', name='real_input_1'
+    )
     real_input_1 -= tf.reduce_min(real_input_1)
     real_input_1 /= (tf.reduce_max(real_input_1) + epsilon)
     real_input_1 = 2 * real_input_1 - 1
@@ -114,22 +139,99 @@ def main():
         tf.summary.image('real_input_2_%d' % i, real_input_2_image[:, i])
         tf.summary.image('real_input_3_%d' % i, real_input_3_image[:, i])
 
-    shared_output = shared_gen(noise=input_noise, encode=encode, update_collection=SPECTRAL_UPDATE_OPS, train=train)
+    shared_output = shared_gen(
+        noise=input_noise, encode=encode, label=label[:CHANNEL_NUM], update_collection=SPECTRAL_UPDATE_OPS, train=train
+    )
     # shape: [None, 64, 16, 64]
-    output_gen1, gen1 = zip(*[generator1(inputs=shared_output, encode=encode, \
-                                        num=i, update_collection=SPECTRAL_UPDATE_OPS, train=train) for i in range(CHANNEL_NUM)])
+    gen1 = [
+        tf.where(
+            label[:, i], 
+            generator1(
+                inputs=shared_output, encode=encode, num=i, update_collection=SPECTRAL_UPDATE_OPS, train=train
+            ), 
+            tf.constant(
+                0., dtype=tf.float32, shape=[BATCH_SIZE, 64, CLASS_NUM // 4, INPUT_LENGTH // 4]
+            )
+        ) for i in range(CHANNEL_NUM)
+    ]
+    output_gen1 = [
+        tf.where(
+            label[:, i], 
+            process1(
+                inputs=gen1[i], num=i, update_collection=SPECTRAL_UPDATE_OPS
+            ), 
+            tf.constant(
+                0., dtype=tf.float32, shape=[BATCH_SIZE, CLASS_NUM // 4, INPUT_LENGTH // 4]
+            )
+        ) for i in range(CHANNEL_NUM)
+    ]
+    #output_gen1, gen1 = zip(*[
+    #    generator1(
+    #        inputs=shared_output, encode=encode, num=i, update_collection=SPECTRAL_UPDATE_OPS, train=train
+    #    ) for i in range(CHANNEL_NUM)
+    #])
     # shape: [6, None, 32, 128]
     # shape: [6, None, 32, 32, 128]
     output_gen1 = tf.stack(output_gen1, axis=1, name='output_gen1_stack')
     # shape: [None, 6, 32, 128]
-    output_gen2, gen2 = zip(*[generator2(inputs=gen1[i], encode=encode, \
-                                        num=i, update_collection=SPECTRAL_UPDATE_OPS, train=train) for i in range(CHANNEL_NUM)])
+    gen2 = [
+        tf.where(
+            label[:, i], 
+            generator2(
+                inputs=gen1[i], encode=encode, num=i, update_collection=SPECTRAL_UPDATE_OPS, train=train
+            ), 
+            tf.constant(
+                0., dtype=tf.float32, shape=[BATCH_SIZE, 32, CLASS_NUM // 2, INPUT_LENGTH // 2]
+            )
+        ) for i in range(CHANNEL_NUM)
+    ]
+    output_gen2 = [
+        tf.where(
+            label[:, i], 
+            process2(
+                inputs=gen2[i], num=i, update_collection=SPECTRAL_UPDATE_OPS
+            ), 
+            tf.constant(
+                0., dtype=tf.float32, shape=[BATCH_SIZE, CLASS_NUM // 2, INPUT_LENGTH // 2]
+            )
+        ) for i in range(CHANNEL_NUM)
+    ]
+    #output_gen2, gen2 = zip(*[
+    #    generator2(
+    #        inputs=gen1[i], encode=encode, num=i, update_collection=SPECTRAL_UPDATE_OPS, train=train
+    #    ) for i in range(CHANNEL_NUM)
+    #])
     # shape: [6, None, 64, 256]
     # shape: [6, None, 16, 64, 256]
     output_gen2 = tf.stack(output_gen2, axis=1, name='output_gen2_stack')
     # shape: [None, 6, 64, 256]
-    output_gen3 = [generator3(inputs=gen2[i], encode=encode, \
-                                num=i, update_collection=SPECTRAL_UPDATE_OPS, train=train) for i in range(CHANNEL_NUM)]
+    gen3 = [
+        tf.where(
+            label[:, i], 
+            generator3(
+                inputs=gen2[i], encode=encode, num=i, update_collection=SPECTRAL_UPDATE_OPS, train=train
+            ), 
+            tf.constant(
+                0., dtype=tf.float32, shape=[BATCH_SIZE, 16, CLASS_NUM, INPUT_LENGTH]
+            )
+        ) for i in range(CHANNEL_NUM)
+    ]
+    output_gen3 = [
+        tf.where(
+            label[:, i], 
+            process3(
+                inputs=gen3[i], num=i, update_collection=SPECTRAL_UPDATE_OPS
+            ), 
+            tf.constant(
+                0., dtype=tf.float32, shape=[BATCH_SIZE, CLASS_NUM, INPUT_LENGTH]
+            )
+        ) for i in range(CHANNEL_NUM)
+    ]
+    #output_gen3 = [
+    #    generator3(
+    #        inputs=gen2[i], encode=encode, num=i, update_collection=SPECTRAL_UPDATE_OPS, train=train
+    #    ) for i in range(CHANNEL_NUM)
+    #]
     # shape: [6, None, 128, 512]
     output_gen3 = tf.stack(output_gen3, axis=1, name='output_gen3_stack')
     # shape: [None, 6, 128, 512]
@@ -141,14 +243,17 @@ def main():
     dis3_real = discriminator3(inputs=real_input_3, encode=encode, update_collection=SPECTRAL_UPDATE_OPS)
     dis3_gen = discriminator3(inputs=output_gen3, encode=encode, update_collection=NO_OPS)
     print('Discriminators set')
-    loss_dis1 = tf.reduce_mean(dis1_gen - dis1_real) + gradient_penalty(real=real_input_1, \
-                                    gen=output_gen1, encode=encode, discriminator=discriminator1)
+    loss_dis1 = tf.reduce_mean(dis1_gen - dis1_real) + gradient_penalty(
+        real=real_input_1, gen=output_gen1, encode=encode, discriminator=discriminator1
+    )
     loss_gen1 = -tf.reduce_mean(dis1_gen)
-    loss_dis2 = tf.reduce_mean(dis2_gen - dis2_real) + gradient_penalty(real=real_input_2, \
-                                    gen=output_gen2, encode=encode, discriminator=discriminator2)
+    loss_dis2 = tf.reduce_mean(dis2_gen - dis2_real) + gradient_penalty(
+        real=real_input_2, gen=output_gen2, encode=encode, discriminator=discriminator2
+    )
     loss_gen2 = -tf.reduce_mean(dis2_gen)
-    loss_dis3 = tf.reduce_mean(dis3_gen - dis3_real) + gradient_penalty(real=real_input_3, \
-                                    gen=output_gen3, encode=encode, discriminator=discriminator3)
+    loss_dis3 = tf.reduce_mean(dis3_gen - dis3_real) + gradient_penalty(
+        real=real_input_3, gen=output_gen3, encode=encode, discriminator=discriminator3
+    )
     loss_gen3 = -tf.reduce_mean(dis3_gen)
     loss_gen = tf.add_n([loss_gen1, loss_gen2, loss_gen3]) / 3
     tf.summary.scalar('loss_dis1', loss_dis1)
@@ -189,20 +294,32 @@ def main():
     spectral_norm_update_ops = tf.get_collection(SPECTRAL_UPDATE_OPS)
     with tf.name_scope('optimizers'):
         with tf.control_dependencies(dis1_extra_update_ops):
-            dis1_train = tf.train.AdamOptimizer(learning_rate=0.0004, beta1=0, beta2=0.9).minimize(\
-                                                    loss=loss_dis1, var_list=dis1_var, name='dis1_train')
+            dis1_train = tf.train.AdamOptimizer(
+                learning_rate=0.0004, beta1=0, beta2=0.9
+            ).minimize(
+                loss=loss_dis1, var_list=dis1_var, name='dis1_train'
+            )
         print('dis1_train setup')
         with tf.control_dependencies(dis2_extra_update_ops):
-            dis2_train = tf.train.AdamOptimizer(learning_rate=0.0004, beta1=0, beta2=0.9).minimize(\
-                                                    loss=loss_dis2, var_list=dis2_var, name='dis2_train')
+            dis2_train = tf.train.AdamOptimizer(
+                learning_rate=0.0004, beta1=0, beta2=0.9
+            ).minimize(
+                loss=loss_dis2, var_list=dis2_var, name='dis2_train'
+            )
         print('dis2_train setup')
         with tf.control_dependencies(dis3_extra_update_ops):
-            dis3_train = tf.train.AdamOptimizer(learning_rate=0.0004, beta1=0, beta2=0.9).minimize(\
-                                                    loss=loss_dis3, var_list=dis3_var, name='dis3_train')
+            dis3_train = tf.train.AdamOptimizer(
+                learning_rate=0.0004, beta1=0, beta2=0.9
+            ).minimize(
+                loss=loss_dis3, var_list=dis3_var, name='dis3_train'
+            )
         print('dis3_train setup')
         with tf.control_dependencies(gen_extra_update_ops):
-            gen_train = tf.train.AdamOptimizer(learning_rate=0.0001, beta1=0, beta2=0.9).minimize(\
-                                                    loss=loss_gen, var_list=gen_var, name='gen_train')
+            gen_train = tf.train.AdamOptimizer(
+                learning_rate=0.0001, beta1=0, beta2=0.9
+            ).minimize(
+                loss=loss_gen, var_list=gen_var, name='gen_train'
+            )
         print('gen_train setup')
     print('Optimizers set')
     gpu_options = tf.GPUOptions(allow_growth=True, allocator_type='BFC')
@@ -232,21 +349,24 @@ def main():
             np.save(file='Samples/sample_%s' % path + '/%s' % path, arr=samples)
             unpack_sample(name='Samples/sample_%s' % path + '/%s.npy' % path, concat=args.concat)
             exit()
-        writer = tf.summary.FileWriter('train', sess.graph)
+        writer = tf.summary.FileWriter('Logs', sess.graph)
         run_options = tf.RunOptions(report_tensor_allocations_upon_oom=True)
         epoch_num = 100001
         for train_count in tqdm(range(epoch_num)):
             for i in range(TRAIN_RATIO_DIS):
                 feed_dict[input_noise] = get_noise([BATCH_SIZE, NOISE_LENGTH])
                 feed_dict[train] = True
-                *_, loss_val_dis1, loss_val_dis2, loss_val_dis3 = sess.run([dis1_train, \
-                            dis2_train, dis3_train, loss_dis1, loss_dis2, loss_dis3], \
-                            feed_dict=feed_dict, options=run_options)
+                *_, loss_val_dis1, loss_val_dis2, loss_val_dis3 = sess.run([
+                        dis1_train, dis2_train, dis3_train, loss_dis1, loss_dis2, loss_dis3
+                    ], feed_dict=feed_dict, options=run_options
+                )
             for i in range(TRAIN_RATIO_GEN):
                 feed_dict[input_noise] = get_noise([BATCH_SIZE, NOISE_LENGTH])
                 feed_dict[train] = True
-                summary, _, loss_val_gen = sess.run([merged, gen_train, loss_gen], \
-                                                    feed_dict=feed_dict, options=run_options)
+                summary, _, loss_val_gen = sess.run([
+                        merged, gen_train, loss_gen
+                    ], feed_dict=feed_dict, options=run_options
+                )
             sess.run(spectral_norm_update_ops)
             writer.add_summary(summary, train_count)
             tqdm.write('%06d' % train_count, end=' ')
@@ -265,8 +385,10 @@ def main():
                 if args.record:
                     trace_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE) # pylint: disable=E1101
                     run_metadata = tf.RunMetadata()
-                    sess.run([dis1_train, dis2_train, dis3_train, gen_train], feed_dict=feed_dict, \
-                                options=trace_options, run_metadata=run_metadata)
+                    sess.run([
+                            dis1_train, dis2_train, dis3_train, gen_train
+                        ], feed_dict=feed_dict, options=trace_options, run_metadata=run_metadata
+                    )
                     writer.add_run_metadata(run_metadata, 'run_%d' % train_count)
                     tl = timeline.Timeline(run_metadata.step_stats) # pylint: disable=E1101
                     ctf = tl.generate_chrome_trace_format()

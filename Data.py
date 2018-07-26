@@ -38,7 +38,7 @@ def roll(path):
     except:
         tqdm.write('Error while opening')
         raise Exception
-    index = [0, 3, 5, 7, 8, 9]
+    classes = [0, 3, 5, 7, 8, 9]
     piano_rolls = [i.get_piano_roll() for i in song.instruments]
     length = np.min([i.shape[1] for i in piano_rolls])
     if length < INPUT_LENGTH:
@@ -46,33 +46,38 @@ def roll(path):
         raise Exception
     data = np.zeros(shape=(CHANNEL_NUM, CLASS_NUM, length))
     for piano_roll, instrument in zip(piano_rolls, song.instruments):
-        if not instrument.is_drum and instrument.program // 8 in index:
-            id = index.index(instrument.program // 8)
+        if not instrument.is_drum and instrument.program // 8 in classes:
+            id = classes.index(instrument.program // 8)
             data[id] = np.add(data[id], piano_roll[:, :length])
-    if np.max(data) == 0:
+    if np.amax(data) == 0:
         tqdm.write('No notes')
         raise Exception
     data = data > 0
     data = np.split(data[:, :, :length // INPUT_LENGTH * INPUT_LENGTH], indices_or_sections=length // INPUT_LENGTH, axis=-1)
-    return data
+    onoff = [np.array([np.amax(track) > 0 for track in datum]) for datum in data]
+    return data, onoff
 
 def build_dataset():
     pathlist = list(pathlib.Path('Classics').glob('**/*.mid'))
     random.shuffle(pathlist)
     if not os.path.exists('Dataset'):
         os.mkdir('Dataset')
-    writer = tf.python_io.TFRecordWriter('Dataset/dataset.tfrecord')
+    writer = tf.python_io.TFRecordWriter('Dataset/cond_dataset.tfrecord')
     for path in tqdm(pathlist):
         try:
-            data = roll(str(path))
+            data, onoff = roll(str(path))
         except:
             continue
-        for datum in data:
-        	packed = np.packbits(datum).tostring()
-        	feature = {'roll': tf.train.Feature(bytes_list=tf.train.BytesList(value=[packed]))}
-        	example = tf.train.Example(features=tf.train.Features(feature=feature))
-        	serialized = example.SerializeToString()
-        	writer.write(serialized)
+        for datum, act in zip(data, onoff):
+            packed_data = np.packbits(datum).tostring()
+            packed_act = np.packbits(act)
+            feature = {
+                'roll': tf.train.Feature(bytes_list=tf.train.BytesList(value=[packed_data])), 
+                'onoff': tf.train.Feature(Int64_list=tf.train.Int64List(value=[packed_act]))
+            }
+            example = tf.train.Example(features=tf.train.Features(feature=feature))
+            serialized = example.SerializeToString()
+            writer.write(serialized)
     writer.close()
 
 def main():

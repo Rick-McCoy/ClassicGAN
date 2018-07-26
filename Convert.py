@@ -85,11 +85,13 @@ def unpack_sample(name='', concat=False):
             plt.title(savename + '_' + pm.program_to_instrument_name(program_nums[i]))
             fig.savefig(savename + '_' + str(id) + '_' + str(i) + '.png')
             plt.close(fig)
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-s', '--sample', type=str, default='', help='Determines which npy file to sample. Defaults to last file.')
     parser.add_argument('-c', '--concat', type=bool, default=False, help='Enable Concatenation. Defaults to False.')
     args = parser.parse_args()
     unpack_sample(name=args.sample, concat=args.concat)
+
 if __name__ == '__main__':
     main()
