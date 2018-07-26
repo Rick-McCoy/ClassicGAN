@@ -24,7 +24,8 @@ TOTAL_TRAIN_EPOCH = 100
 LAMBDA = 10
 TRAIN_RATIO_DIS = 1
 TRAIN_RATIO_GEN = 1
-epsilon = 1e-8
+EPSILON = 1e-8
+DRIFT = 1e-3
 
 def gradient_penalty(real, gen, encode, discriminator):
     with tf.name_scope('gradient_penalty'):
@@ -109,20 +110,31 @@ def main():
     real_input_3 = next_data['data']
     label = next_data['label']
     label = tf.cast(label, tf.bool)
+    label = tf.unstack(label, axis=-1)
 
     input_noise = tf.placeholder(dtype=tf.float32, shape=[None, NOISE_LENGTH], name='input_noise')
 
     real_input_2 = tf.layers.average_pooling2d(
-        inputs=real_input_3, pool_size=2, strides=2, padding='same', data_format='channels_first', name='real_input_2'
+        inputs=real_input_3, 
+        pool_size=2, 
+        strides=2, 
+        padding='same', 
+        data_format='channels_first', 
+        name='real_input_2'
     )
     real_input_2 -= tf.reduce_min(real_input_2)
-    real_input_2 /= (tf.reduce_max(real_input_2) + epsilon)
+    real_input_2 /= (tf.reduce_max(real_input_2) + EPSILON)
     real_input_2 = 2 * real_input_2 - 1
     real_input_1 = tf.layers.average_pooling2d(
-        inputs=real_input_2, pool_size=2, strides=2, padding='same', data_format='channels_first', name='real_input_1'
+        inputs=real_input_2, 
+        pool_size=2, 
+        strides=2, 
+        padding='same', 
+        data_format='channels_first', 
+        name='real_input_1'
     )
     real_input_1 -= tf.reduce_min(real_input_1)
-    real_input_1 /= (tf.reduce_max(real_input_1) + epsilon)
+    real_input_1 /= (tf.reduce_max(real_input_1) + EPSILON)
     real_input_1 = 2 * real_input_1 - 1
     train = tf.placeholder(dtype=tf.bool, name='train')
     # shape: [None, 6, 64, 256]
@@ -143,98 +155,97 @@ def main():
         tf.summary.image('real_input_3_%d' % i, real_input_3_image[:, i])
 
     shared_output = shared_gen(
-        noise=input_noise, encode=encode, label=label, update_collection=SPECTRAL_UPDATE_OPS, train=train
+        noise=input_noise, 
+        encode=encode, 
+        label=tf.stack(label, axis=1), 
+        update_collection=SPECTRAL_UPDATE_OPS, 
+        train=train
     )
     # shape: [None, 64, 16, 64]
+    gen1_stack = [
+        generator1(
+            inputs=shared_output, 
+            encode=encode, 
+            num=i, 
+            update_collection=SPECTRAL_UPDATE_OPS, 
+            train=train
+        ) for i in range(CHANNEL_NUM)
+    ]
+    gen1_stack_masked = [tf.boolean_mask(gen1_stack[i], label[i]) for i in range(CHANNEL_NUM)]
+    label_indice = [tf.where(tf.equal(mask, True)) for mask in label]
     gen1 = [
-        tf.where(
-            label[:, i], 
-            generator1(
-                inputs=shared_output, encode=encode, num=i, update_collection=SPECTRAL_UPDATE_OPS, train=train
-            ), 
-            tf.constant(
-                0., dtype=tf.float32, shape=[BATCH_SIZE, 64, CLASS_NUM // 4, INPUT_LENGTH // 4]
-            )
+        tf.scatter_nd(
+            label_indice[i], 
+            gen1_stack_masked[i], 
+            [BATCH_SIZE, 64, CLASS_NUM // 4, INPUT_LENGTH // 4]
         ) for i in range(CHANNEL_NUM)
     ]
+    gen1_masked = [tf.boolean_mask(gen1[i], label[i]) for i in range(CHANNEL_NUM)]
     output_gen1 = [
-        tf.where(
-            label[:, i], 
-            process1(
-                inputs=gen1[i], num=i, update_collection=SPECTRAL_UPDATE_OPS
-            ), 
-            tf.constant(
-                0., dtype=tf.float32, shape=[BATCH_SIZE, CLASS_NUM // 4, INPUT_LENGTH // 4]
-            )
+        tf.scatter_nd(
+            label_indice[i], 
+            process1(gen1_masked[i], i, SPECTRAL_UPDATE_OPS), 
+            [BATCH_SIZE, CLASS_NUM // 4, INPUT_LENGTH // 4]
         ) for i in range(CHANNEL_NUM)
     ]
-    #output_gen1, gen1 = zip(*[
-    #    generator1(
-    #        inputs=shared_output, encode=encode, num=i, update_collection=SPECTRAL_UPDATE_OPS, train=train
-    #    ) for i in range(CHANNEL_NUM)
-    #])
     # shape: [6, None, 32, 128]
     # shape: [6, None, 32, 32, 128]
     output_gen1 = tf.stack(output_gen1, axis=1, name='output_gen1_stack')
     # shape: [None, 6, 32, 128]
+    gen2_stack = [
+        generator2(
+            inputs=gen1[i], 
+            encode=encode, 
+            num=i, 
+            update_collection=SPECTRAL_UPDATE_OPS, 
+            train=train
+        ) for i in range(CHANNEL_NUM)
+    ]
+    gen2_stack_masked = [tf.boolean_mask(gen2_stack[i], label[i]) for i in range(CHANNEL_NUM)]
     gen2 = [
-        tf.where(
-            label[:, i], 
-            generator2(
-                inputs=gen1[i], encode=encode, num=i, update_collection=SPECTRAL_UPDATE_OPS, train=train
-            ), 
-            tf.constant(
-                0., dtype=tf.float32, shape=[BATCH_SIZE, 32, CLASS_NUM // 2, INPUT_LENGTH // 2]
-            )
+        tf.scatter_nd(
+            label_indice[i], 
+            gen2_stack_masked[i], 
+            [BATCH_SIZE, 32, CLASS_NUM // 2, INPUT_LENGTH // 2]
         ) for i in range(CHANNEL_NUM)
     ]
+    gen2_masked = [tf.boolean_mask(gen2[i], label[i]) for i in range(CHANNEL_NUM)]
     output_gen2 = [
-        tf.where(
-            label[:, i], 
-            process2(
-                inputs=gen2[i], num=i, update_collection=SPECTRAL_UPDATE_OPS
-            ), 
-            tf.constant(
-                0., dtype=tf.float32, shape=[BATCH_SIZE, CLASS_NUM // 2, INPUT_LENGTH // 2]
-            )
+        tf.scatter_nd(
+            label_indice[i], 
+            process2(gen2_masked[i], i, SPECTRAL_UPDATE_OPS), 
+            [BATCH_SIZE, CLASS_NUM // 2, INPUT_LENGTH // 2]
         ) for i in range(CHANNEL_NUM)
     ]
-    #output_gen2, gen2 = zip(*[
-    #    generator2(
-    #        inputs=gen1[i], encode=encode, num=i, update_collection=SPECTRAL_UPDATE_OPS, train=train
-    #    ) for i in range(CHANNEL_NUM)
-    #])
     # shape: [6, None, 64, 256]
     # shape: [6, None, 16, 64, 256]
     output_gen2 = tf.stack(output_gen2, axis=1, name='output_gen2_stack')
     # shape: [None, 6, 64, 256]
+    gen3_stack = [
+        generator3(
+            inputs=gen2[i], 
+            encode=encode, 
+            num=i, 
+            update_collection=SPECTRAL_UPDATE_OPS, 
+            train=train
+        ) for i in range(CHANNEL_NUM)
+    ]
+    gen3_stack_masked = [tf.boolean_mask(gen3_stack[i], label[i]) for i in range(CHANNEL_NUM)]
     gen3 = [
-        tf.where(
-            label[:, i], 
-            generator3(
-                inputs=gen2[i], encode=encode, num=i, update_collection=SPECTRAL_UPDATE_OPS, train=train
-            ), 
-            tf.constant(
-                0., dtype=tf.float32, shape=[BATCH_SIZE, 16, CLASS_NUM, INPUT_LENGTH]
-            )
+        tf.scatter_nd(
+            label_indice[i], 
+            gen3_stack_masked[i], 
+            [BATCH_SIZE, 16, CLASS_NUM, INPUT_LENGTH]
         ) for i in range(CHANNEL_NUM)
     ]
+    gen3_masked = [tf.boolean_mask(gen3[i], label[i]) for i in range(CHANNEL_NUM)]
     output_gen3 = [
-        tf.where(
-            label[:, i], 
-            process3(
-                inputs=gen3[i], num=i, update_collection=SPECTRAL_UPDATE_OPS
-            ), 
-            tf.constant(
-                0., dtype=tf.float32, shape=[BATCH_SIZE, CLASS_NUM, INPUT_LENGTH]
-            )
+        tf.scatter_nd(
+            label_indice[i], 
+            process3(gen3_masked[i], i, SPECTRAL_UPDATE_OPS), 
+            [BATCH_SIZE, CLASS_NUM, INPUT_LENGTH]
         ) for i in range(CHANNEL_NUM)
     ]
-    #output_gen3 = [
-    #    generator3(
-    #        inputs=gen2[i], encode=encode, num=i, update_collection=SPECTRAL_UPDATE_OPS, train=train
-    #    ) for i in range(CHANNEL_NUM)
-    #]
     # shape: [6, None, 128, 512]
     output_gen3 = tf.stack(output_gen3, axis=1, name='output_gen3_stack')
     # shape: [None, 6, 128, 512]
@@ -248,15 +259,15 @@ def main():
     print('Discriminators set')
     loss_dis1 = tf.reduce_mean(dis1_gen - dis1_real) + lipschitz_penalty(
         real=real_input_1, gen=output_gen1, encode=encode, discriminator=discriminator1
-    )
+    ) + DRIFT * tf.reduce_mean(tf.square(dis1_real))
     loss_gen1 = -tf.reduce_mean(dis1_gen)
     loss_dis2 = tf.reduce_mean(dis2_gen - dis2_real) + lipschitz_penalty(
         real=real_input_2, gen=output_gen2, encode=encode, discriminator=discriminator2
-    )
+    ) + DRIFT * tf.reduce_mean(tf.square(dis2_real))
     loss_gen2 = -tf.reduce_mean(dis2_gen)
     loss_dis3 = tf.reduce_mean(dis3_gen - dis3_real) + lipschitz_penalty(
         real=real_input_3, gen=output_gen3, encode=encode, discriminator=discriminator3
-    )
+    ) + DRIFT * tf.reduce_mean(tf.square(dis3_real))
     loss_gen3 = -tf.reduce_mean(dis3_gen)
     loss_gen = tf.add_n([loss_gen1, loss_gen2, loss_gen3]) / 3
     tf.summary.scalar('loss_dis1', loss_dis1)
@@ -398,6 +409,7 @@ def main():
                     with open('Timelines_v1/timeline_%d.json' % train_count, 'w') as f:
                         f.write(ctf)
         writer.close()
+
 if __name__ == '__main__':
     with warnings.catch_warnings():
         warnings.simplefilter('ignore')

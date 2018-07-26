@@ -149,20 +149,24 @@ def encode_concat(inputs, encode, num, name='encode_concat'):
         output = tf.concat([inputs, encode, label], axis=1)
         return output
 
-def upsample(inputs, channels, update_collection, name='upsample'):
+def upsample(inputs, channels, update_collection, train, name='upsample'):
     with tf.variable_scope(name, reuse=tf.AUTO_REUSE):
         size = [i * 2 for i in inputs.get_shape().as_list()[-2:]]
         output = tf.transpose(inputs, [0, 2, 3, 1])
         output = tf.image.resize_nearest_neighbor(output, size)
         skip = tf.transpose(output, [0, 3, 1, 2])
+        output = tf.layers.batch_normalization(skip, axis=1, training=train)
+        output = tf.nn.relu(output)
         output = conv(
-            skip, channels=channels, update_collection=update_collection, regularization='relu', name='conv1'
+            output, channels=channels, update_collection=update_collection, regularization='', name='conv1'
         )
+        output = tf.layers.batch_normalization(output, axis=1, training=train)
+        output = tf.nn.relu(output)
         output = conv(
-            output, channels=channels, update_collection=update_collection, regularization='relu', name='conv2'
+            output, channels=channels, update_collection=update_collection, regularization='', name='conv2'
         )
         skip = conv(
-            skip, channels=channels, update_collection=update_collection, regularization='relu', name='skip'
+            skip, channels=channels, update_collection=update_collection, regularization='', name='skip'
         )
         return output + skip
 
@@ -170,7 +174,7 @@ def genblock(inputs, encode, channels, num, update_collection, train, name='genb
     with tf.variable_scope(name, reuse=tf.AUTO_REUSE):
         inputs = encode_concat(inputs, encode, num)
         #inputs = tf.layers.batch_normalization(inputs, axis=1, training=train)
-        output = upsample(inputs, channels=channels, update_collection=update_collection)
+        output = upsample(inputs, channels=channels, update_collection=update_collection, train=train)
         #upsample1 = tf.layers.batch_normalization(upsample1, axis=1, training=train)
         return output
 
@@ -215,7 +219,7 @@ def shared_gen(noise, encode, label, update_collection, train):
         # shape: [None, 198, 1, 4]
         for i in range(4):
             output = upsample(
-                output, channels=1024 // 2 ** i, update_collection=update_collection, name='upsample_%d' % (i + 3)
+                output, channels=1024 // 2 ** i, update_collection=update_collection, train=train, name='upsample_%d' % (i + 3)
             )
             #output = tf.layers.batch_normalization(output, axis=1, training=train)
         # shape: [None, 128, 16, 64]
