@@ -11,11 +11,11 @@ from tensorflow.python.client import timeline # pylint: disable=E0611
 import numpy as np
 import argparse
 from tqdm import tqdm
-from Data import roll, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH, BATCH_SIZE
+from Data import roll, CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH
 from Model import (get_noise, generator1, generator2, generator3, 
                     discriminator1, discriminator2, discriminator3, 
-                    process1, process2, process3, shared_gen, encoder, 
-                    NOISE_LENGTH, NO_OPS, SPECTRAL_UPDATE_OPS)
+                    process, shared_gen, encoder, NOISE_LENGTH, NO_OPS, 
+                    SPECTRAL_UPDATE_OPS)
 from Convert import unpack_sample
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 #os.environ['CUDA_VISIBLE_DEVICES'] = '1'
@@ -26,6 +26,7 @@ TRAIN_RATIO_DIS = 1
 TRAIN_RATIO_GEN = 1
 EPSILON = 1e-8
 DRIFT = 1e-3
+BATCH_SIZE = 2
 
 def gradient_penalty(real, gen, encode, discriminator):
     with tf.name_scope('gradient_penalty'):
@@ -170,7 +171,7 @@ def main():
         update_collection=SPECTRAL_UPDATE_OPS, 
         train=train
     )
-    gen1_process = tf.unstack(process1(gen1, SPECTRAL_UPDATE_OPS), axis=1)
+    gen1_process = tf.unstack(process(gen1, 1, train, SPECTRAL_UPDATE_OPS), axis=1)
     gen1_masked = [tf.boolean_mask(gen1_process[i], label[i]) for i in range(CHANNEL_NUM)]
     output_gen1 = [
         tf.scatter_nd(
@@ -190,7 +191,7 @@ def main():
         update_collection=SPECTRAL_UPDATE_OPS, 
         train=train
     )
-    gen2_process = tf.unstack(process2(gen2, SPECTRAL_UPDATE_OPS), axis=1)
+    gen2_process = tf.unstack(process(gen2, 2, train, SPECTRAL_UPDATE_OPS), axis=1)
     gen2_masked = [tf.boolean_mask(gen2_process[i], label[i]) for i in range(CHANNEL_NUM)]
     output_gen2 = [
         tf.scatter_nd(
@@ -210,7 +211,7 @@ def main():
         update_collection=SPECTRAL_UPDATE_OPS, 
         train=train
     )
-    gen3_process = tf.unstack(process3(gen3, SPECTRAL_UPDATE_OPS), axis=1)
+    gen3_process = tf.unstack(process(gen3, 3, train, SPECTRAL_UPDATE_OPS), axis=1)
     gen3_masked = [tf.boolean_mask(gen3_process[i], label[i]) for i in range(CHANNEL_NUM)]
     output_gen3 = [
         tf.scatter_nd(

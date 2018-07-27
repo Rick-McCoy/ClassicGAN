@@ -179,30 +179,9 @@ def genblock(inputs, encode, channels, label, update_collection, train, name='ge
         #upsample1 = tf.layers.batch_normalization(upsample1, axis=1, training=train)
         return output
 
-def process1(inputs, update_collection):
-    with tf.variable_scope('process_gen1'):
-        conv1 = conv(
-            inputs=inputs, channels=CHANNEL_NUM, update_collection=update_collection, regularization='tanh', name='conv1'
-        )
-        output = tf.transpose(conv1, perm=[0, 2, 3, 1])
-        for i in range(CHANNEL_NUM):
-            tf.summary.image(name='piano_roll_{}'.format(i), tensor=output[:1, :, :, i:i+1])
-        output = tf.transpose(output, perm=[0, 3, 1, 2])
-        return output
-
-def process2(inputs, update_collection):
-    with tf.variable_scope('process_gen2'):
-        conv1 = conv(
-            inputs=inputs, channels=CHANNEL_NUM, update_collection=update_collection, regularization='tanh', name='conv1'
-        )
-        output = tf.transpose(conv1, perm=[0, 2, 3, 1])
-        for i in range(CHANNEL_NUM):
-            tf.summary.image(name='piano_roll_{}'.format(i), tensor=output[:1, :, :, i:i+1])
-        output = tf.transpose(output, perm=[0, 3, 1, 2])
-        return output
-
-def process3(inputs, update_collection):
-    with tf.variable_scope('process_gen3'):
+def process(inputs, num, train, update_collection):
+    with tf.variable_scope('process_gen_{}'.format(num)):
+        inputs = tf.layers.batch_normalization(inputs, axis=1, training=train)
         conv1 = conv(
             inputs=inputs, channels=CHANNEL_NUM, update_collection=update_collection, regularization='tanh', name='conv1'
         )
