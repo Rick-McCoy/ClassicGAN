@@ -5,6 +5,7 @@ from __future__ import print_function
 import os
 import tensorflow as tf
 from numpy.random import normal
+from Data import CHANNEL_NUM
 
 NOISE_LENGTH = 128
 SPECTRAL_UPDATE_OPS = 'spectral_update_ops'
@@ -136,15 +137,15 @@ def encoder(inputs, update_collection, train=True):
         # shape: [None, 64]
         return tf.tanh(output)
 
-def encode_concat(inputs, encode, num, name='encode_concat'):
+def encode_concat(inputs, encode, label, name='encode_concat'):
     with tf.variable_scope(name, reuse=tf.AUTO_REUSE):
-        label = [tf.constant(0, dtype=tf.float32, shape=inputs.get_shape().as_list()[2:])] * 6
-        label[num] = tf.constant(1., dtype=tf.float32, shape=inputs.get_shape().as_list()[2:])
-        label = tf.stack(label)
-        label = tf.stack([label] * inputs.get_shape().as_list()[0])
         encode = tf.reshape(encode, [-1, 1, 4, 16])
         dim1 = inputs.get_shape().as_list()[-2] // 4
         dim2 = inputs.get_shape().as_list()[-1] // 16
+        label = tf.stack(label, axis=1)
+        label = tf.cast(label, tf.float32)
+        label = tf.expand_dims(tf.expand_dims(label, axis=-1), axis=-1)
+        label = tf.tile(label, multiples=(1, 1, dim1 * 4, dim2 * 16))
         encode = tf.tile(input=encode, multiples=(1, 1, dim1, dim2))
         output = tf.concat([inputs, encode, label], axis=1)
         return output
@@ -170,42 +171,45 @@ def upsample(inputs, channels, update_collection, train, name='upsample'):
         )
         return output + skip
 
-def genblock(inputs, encode, channels, num, update_collection, train, name='genblock'):
+def genblock(inputs, encode, channels, label, update_collection, train, name='genblock'):
     with tf.variable_scope(name, reuse=tf.AUTO_REUSE):
-        inputs = encode_concat(inputs, encode, num)
+        inputs = encode_concat(inputs, encode, label)
         #inputs = tf.layers.batch_normalization(inputs, axis=1, training=train)
         output = upsample(inputs, channels=channels, update_collection=update_collection, train=train)
         #upsample1 = tf.layers.batch_normalization(upsample1, axis=1, training=train)
         return output
 
-def process1(inputs, num, update_collection):
-    with tf.variable_scope('process_gen1_{}'.format(num)):
+def process1(inputs, update_collection):
+    with tf.variable_scope('process_gen1'):
         conv1 = conv(
-            inputs=inputs, channels=1, update_collection=update_collection, regularization='tanh', name='conv1'
+            inputs=inputs, channels=CHANNEL_NUM, update_collection=update_collection, regularization='tanh', name='conv1'
         )
         output = tf.transpose(conv1, perm=[0, 2, 3, 1])
-        tf.summary.image(name='piano_roll', tensor=output[:1])
-        output = tf.squeeze(output, axis=-1)
+        for i in range(CHANNEL_NUM):
+            tf.summary.image(name='piano_roll_{}'.format(i), tensor=output[:1, :, :, i:i+1])
+        output = tf.transpose(output, perm=[0, 3, 1, 2])
         return output
 
-def process2(inputs, num, update_collection):
-    with tf.variable_scope('process_gen2_{}'.format(num)):
+def process2(inputs, update_collection):
+    with tf.variable_scope('process_gen2'):
         conv1 = conv(
-            inputs=inputs, channels=1, update_collection=update_collection, regularization='tanh', name='conv1'
+            inputs=inputs, channels=CHANNEL_NUM, update_collection=update_collection, regularization='tanh', name='conv1'
         )
         output = tf.transpose(conv1, perm=[0, 2, 3, 1])
-        tf.summary.image(name='piano_roll', tensor=output[:1])
-        output = tf.squeeze(output, axis=-1)
+        for i in range(CHANNEL_NUM):
+            tf.summary.image(name='piano_roll_{}'.format(i), tensor=output[:1, :, :, i:i+1])
+        output = tf.transpose(output, perm=[0, 3, 1, 2])
         return output
 
-def process3(inputs, num, update_collection):
-    with tf.variable_scope('process_gen3_{}'.format(num)):
+def process3(inputs, update_collection):
+    with tf.variable_scope('process_gen3'):
         conv1 = conv(
-            inputs=inputs, channels=1, update_collection=update_collection, regularization='tanh', name='conv1'
+            inputs=inputs, channels=CHANNEL_NUM, update_collection=update_collection, regularization='tanh', name='conv1'
         )
         output = tf.transpose(conv1, perm=[0, 2, 3, 1])
-        tf.summary.image(name='piano_roll', tensor=output[:1])
-        output = tf.squeeze(output, axis=-1)
+        for i in range(CHANNEL_NUM):
+            tf.summary.image(name='piano_roll_{}'.format(i), tensor=output[:1, :, :, i:i+1])
+        output = tf.transpose(output, perm=[0, 3, 1, 2])
         return output
 
 def shared_gen(noise, encode, label, update_collection, train):
@@ -228,17 +232,17 @@ def shared_gen(noise, encode, label, update_collection, train):
         )
         return output
 
-def generator1(inputs, encode, num, update_collection, train):
+def generator1(inputs, encode, label, update_collection, train):
     with tf.variable_scope('Generator1', reuse=tf.AUTO_REUSE):
-        return genblock(inputs, encode, 64, num, update_collection, train)
+        return genblock(inputs, encode, 64, label, update_collection, train)
 
-def generator2(inputs, encode, num, update_collection, train):
+def generator2(inputs, encode, label, update_collection, train):
     with tf.variable_scope('Generator2', reuse=tf.AUTO_REUSE):
-        return genblock(inputs, encode, 32, num, update_collection, train)
+        return genblock(inputs, encode, 32, label, update_collection, train)
 
-def generator3(inputs, encode, num, update_collection, train):
+def generator3(inputs, encode, label, update_collection, train):
     with tf.variable_scope('Generator3', reuse=tf.AUTO_REUSE):
-        return genblock(inputs, encode, 16, num, update_collection, train)
+        return genblock(inputs, encode, 16, label, update_collection, train)
 
 def downblock(inputs, channels, update_collection, name='downblock'):
     with tf.variable_scope(name, reuse=tf.AUTO_REUSE):

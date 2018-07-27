@@ -111,6 +111,7 @@ def main():
     label = next_data['label']
     label = tf.cast(label, tf.bool)
     label = tf.unstack(label, axis=-1)
+    label_indice = [tf.where(tf.equal(mask, True)) for mask in label]
 
     input_noise = tf.placeholder(dtype=tf.float32, shape=[None, NOISE_LENGTH], name='input_noise')
 
@@ -162,29 +163,19 @@ def main():
         train=train
     )
     # shape: [None, 64, 16, 64]
-    gen1_stack = [
-        generator1(
-            inputs=shared_output, 
-            encode=encode, 
-            num=i, 
-            update_collection=SPECTRAL_UPDATE_OPS, 
-            train=train
-        ) for i in range(CHANNEL_NUM)
-    ]
-    gen1_stack_masked = [tf.boolean_mask(gen1_stack[i], label[i]) for i in range(CHANNEL_NUM)]
-    label_indice = [tf.where(tf.equal(mask, True)) for mask in label]
-    gen1 = [
-        tf.scatter_nd(
-            label_indice[i], 
-            gen1_stack_masked[i], 
-            [BATCH_SIZE, 64, CLASS_NUM // 4, INPUT_LENGTH // 4]
-        ) for i in range(CHANNEL_NUM)
-    ]
-    gen1_masked = [tf.boolean_mask(gen1[i], label[i]) for i in range(CHANNEL_NUM)]
+    gen1 = generator1(
+        inputs=shared_output, 
+        encode=encode, 
+        label=label, 
+        update_collection=SPECTRAL_UPDATE_OPS, 
+        train=train
+    )
+    gen1_process = tf.unstack(process1(gen1, SPECTRAL_UPDATE_OPS), axis=1)
+    gen1_masked = [tf.boolean_mask(gen1_process[i], label[i]) for i in range(CHANNEL_NUM)]
     output_gen1 = [
         tf.scatter_nd(
             label_indice[i], 
-            process1(gen1_masked[i], i, SPECTRAL_UPDATE_OPS), 
+            gen1_masked[i], 
             [BATCH_SIZE, CLASS_NUM // 4, INPUT_LENGTH // 4]
         ) for i in range(CHANNEL_NUM)
     ]
@@ -192,28 +183,19 @@ def main():
     # shape: [6, None, 32, 32, 128]
     output_gen1 = tf.stack(output_gen1, axis=1, name='output_gen1_stack')
     # shape: [None, 6, 32, 128]
-    gen2_stack = [
-        generator2(
-            inputs=gen1[i], 
-            encode=encode, 
-            num=i, 
-            update_collection=SPECTRAL_UPDATE_OPS, 
-            train=train
-        ) for i in range(CHANNEL_NUM)
-    ]
-    gen2_stack_masked = [tf.boolean_mask(gen2_stack[i], label[i]) for i in range(CHANNEL_NUM)]
-    gen2 = [
-        tf.scatter_nd(
-            label_indice[i], 
-            gen2_stack_masked[i], 
-            [BATCH_SIZE, 32, CLASS_NUM // 2, INPUT_LENGTH // 2]
-        ) for i in range(CHANNEL_NUM)
-    ]
-    gen2_masked = [tf.boolean_mask(gen2[i], label[i]) for i in range(CHANNEL_NUM)]
+    gen2 = generator2(
+        inputs=gen1, 
+        encode=encode, 
+        label=label, 
+        update_collection=SPECTRAL_UPDATE_OPS, 
+        train=train
+    )
+    gen2_process = tf.unstack(process2(gen2, SPECTRAL_UPDATE_OPS), axis=1)
+    gen2_masked = [tf.boolean_mask(gen2_process[i], label[i]) for i in range(CHANNEL_NUM)]
     output_gen2 = [
         tf.scatter_nd(
             label_indice[i], 
-            process2(gen2_masked[i], i, SPECTRAL_UPDATE_OPS), 
+            gen2_masked[i], 
             [BATCH_SIZE, CLASS_NUM // 2, INPUT_LENGTH // 2]
         ) for i in range(CHANNEL_NUM)
     ]
@@ -221,28 +203,19 @@ def main():
     # shape: [6, None, 16, 64, 256]
     output_gen2 = tf.stack(output_gen2, axis=1, name='output_gen2_stack')
     # shape: [None, 6, 64, 256]
-    gen3_stack = [
-        generator3(
-            inputs=gen2[i], 
-            encode=encode, 
-            num=i, 
-            update_collection=SPECTRAL_UPDATE_OPS, 
-            train=train
-        ) for i in range(CHANNEL_NUM)
-    ]
-    gen3_stack_masked = [tf.boolean_mask(gen3_stack[i], label[i]) for i in range(CHANNEL_NUM)]
-    gen3 = [
-        tf.scatter_nd(
-            label_indice[i], 
-            gen3_stack_masked[i], 
-            [BATCH_SIZE, 16, CLASS_NUM, INPUT_LENGTH]
-        ) for i in range(CHANNEL_NUM)
-    ]
-    gen3_masked = [tf.boolean_mask(gen3[i], label[i]) for i in range(CHANNEL_NUM)]
+    gen3 = generator3(
+        inputs=gen2, 
+        encode=encode, 
+        label=label, 
+        update_collection=SPECTRAL_UPDATE_OPS, 
+        train=train
+    )
+    gen3_process = tf.unstack(process3(gen3, SPECTRAL_UPDATE_OPS), axis=1)
+    gen3_masked = [tf.boolean_mask(gen3_process[i], label[i]) for i in range(CHANNEL_NUM)]
     output_gen3 = [
         tf.scatter_nd(
             label_indice[i], 
-            process3(gen3_masked[i], i, SPECTRAL_UPDATE_OPS), 
+            gen3_masked[i], 
             [BATCH_SIZE, CLASS_NUM, INPUT_LENGTH]
         ) for i in range(CHANNEL_NUM)
     ]
