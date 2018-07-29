@@ -141,7 +141,6 @@ def label_concat(inputs, label, name='label_concat'):
     with tf.variable_scope(name, reuse=tf.AUTO_REUSE):
         dim1 = inputs.get_shape().as_list()[-2]
         dim2 = inputs.get_shape().as_list()[-1]
-        label = tf.expand_dims(tf.expand_dims(label, axis=-1), axis=-1)
         label = tf.tile(label, multiples=(1, 1, dim1, dim2))
         output = tf.concat([inputs, label], axis=1)
         return output
@@ -189,12 +188,12 @@ def process(inputs, num, train, update_collection):
 
 def shared_gen(noise, label, update_collection, train):
     with tf.variable_scope('Shared_generator'):
-        noise = tf.concat([noise, label], axis=1)
-        # shape: [None, 198]
         output = tf.expand_dims(tf.expand_dims(noise, axis=-1), axis=-1)
-        # shape: [None, 198, 1, 1]
+        # shape: [None, 128, 1, 1]
+        output = tf.concat(output, label)
+        # shape: [None, 134, 1, 1]
         output = tf.tile(output, multiples=(1, 1, 1, 4))
-        # shape: [None, 198, 1, 4]
+        # shape: [None, 134, 1, 4]
         for i in range(4):
             output = upsample(
                 output, channels=1024 // 2 ** i, update_collection=update_collection, train=train, name='upsample_%d' % (i + 1)

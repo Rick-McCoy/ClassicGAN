@@ -1,5 +1,4 @@
 import tensorflow as tf
-import numpy as np
 
 weight_init = tf.random_normal_initializer()
 bias_init = tf.constant_initializer(0)
@@ -37,8 +36,15 @@ def conv2d(input, out_channels, filter_size=3, k=1, weight_norm=False):
         output = tf.squeeze(output, axis=1)
     return output
 
-def conv2d_transpose(input, output_shape, filter_size=4, k=1, weight_norm=False,
-                     w_init=weight_init, b_init=bias_init):
+def conv2d_transpose(
+        input, 
+        output_shape, 
+        filter_size=4, 
+        k=1, 
+        weight_norm=False, 
+        w_init=weight_init, 
+        b_init=bias_init
+    ):
     filter = tf.get_variable(
         'filter', 
         [filter_size // 2, filter_size * 2, output_shape[1], input.get_shape()[1]], 
@@ -51,11 +57,24 @@ def conv2d_transpose(input, output_shape, filter_size=4, k=1, weight_norm=False,
     else:
         filter = filter * tf.sqrt(2 / (filter_size ** 2 * int(input.get_shape()[1])))
     b = tf.get_variable('b', output_shape[1], initializer=b_init)
-    output = tf.nn.conv2d_transpose(input, filter, output_shape, [1, 1, k, k], padding='VALID', data_format='NCHW')
+    output = tf.nn.conv2d_transpose(
+        input, 
+        filter, 
+        output_shape, 
+        [1, 1, k, k], 
+        padding='VALID', 
+        data_format='NCHW'
+    )
     output = tf.nn.bias_add(output, b, data_format='NCHW')
     return output
 
-def dense_layer(input, output_size, weight_norm=False, w_init=weight_init, b_init=bias_init):
+def dense_layer(
+        input, 
+        output_size, 
+        weight_norm=False, 
+        w_init=weight_init, 
+        b_init=bias_init
+    ):
     W = tf.get_variable('W', [input.get_shape()[-1], output_size], initializer=w_init)
     if weight_norm:
         mean = tf.reduce_mean(W)
@@ -74,7 +93,10 @@ def dropout(input, kp=0.75):
 
 def pixelwise_norm(input):
     N = int(input.get_shape()[1])
-    sigma = tf.tile(tf.reduce_sum(tf.square(input), 1, keepdims=True), [1, tf.shape(input)[1], 1, 1])
+    sigma = tf.tile(
+        tf.reduce_sum(tf.square(input), 1, keepdims=True), 
+        [1, tf.shape(input)[1], 1, 1]
+    )
     return input / tf.sqrt((1 / N) * sigma + 1e-8)
 
 def minibatch_stddev(input):

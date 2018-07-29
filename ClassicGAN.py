@@ -99,6 +99,7 @@ def main():
         data = tf.reshape(data, [CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH])
         label.set_shape([8])
         label = label[:CHANNEL_NUM]
+        label = tf.expand_dims(tf.expand_dims(label, axis=-1), axis=-1)
         data = data * 2 - 1
         return {'data': data, 'label': label}
 
@@ -168,7 +169,7 @@ def main():
         update_collection=SPECTRAL_UPDATE_OPS, 
         train=train
     )
-    output_gen1 = process(gen1, 1, train, SPECTRAL_UPDATE_OPS) * tf.expand_dims(tf.expand_dims(label, axis=-1), axis=-1)
+    output_gen1 = process(gen1, 1, train, SPECTRAL_UPDATE_OPS) * label
     # shape: [None, 6, 32, 128]
     gen2 = generator2(
         inputs=gen1, 
@@ -176,7 +177,7 @@ def main():
         update_collection=SPECTRAL_UPDATE_OPS, 
         train=train
     )
-    output_gen2 = process(gen2, 2, train, SPECTRAL_UPDATE_OPS) * tf.expand_dims(tf.expand_dims(label, axis=-1), axis=-1)
+    output_gen2 = process(gen2, 2, train, SPECTRAL_UPDATE_OPS) * label
     # shape: [None, 6, 64, 256]
     gen3 = generator3(
         inputs=gen2, 
@@ -184,7 +185,7 @@ def main():
         update_collection=SPECTRAL_UPDATE_OPS, 
         train=train
     )
-    output_gen3 = process(gen3, 3, train, SPECTRAL_UPDATE_OPS) * tf.expand_dims(tf.expand_dims(label, axis=-1), axis=-1)
+    output_gen3 = process(gen3, 3, train, SPECTRAL_UPDATE_OPS) * label
     # shape: [None, 6, 128, 512]
     print('Generators set')
     dis1_real = discriminator1(inputs=real_input_1, encode=encode, update_collection=SPECTRAL_UPDATE_OPS)

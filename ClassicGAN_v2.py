@@ -55,7 +55,7 @@ class ClassicGAN:
             self.layer = tf.floor_div(tf.add(self.total_imgs, self.n_imgs), self.n_imgs * 2)
 
         self.get_dataset = self.make_dataset()
-        self.x = self.next_batch()
+        self.x, self.label = self.next_batch()
 
         self.g_optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate_g, beta1=0, beta2=0.9)
         self.d_optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate_d, beta1=0, beta2=0.9)
@@ -92,6 +92,7 @@ class ClassicGAN:
                 z = z[:self.batch_size[layers]]
                 with tf.variable_scope('latent_vector'):
                     g1 = tf.expand_dims(tf.expand_dims(z, axis=-1), axis=-1)
+                    g1 = tf.concat([g1, self.label], axis=1)
                 for i in range(layers):
                     with tf.variable_scope('layer_{}'.format(i)):
                         if i > 0:
@@ -156,7 +157,7 @@ class ClassicGAN:
                 else:
                     x = resize(self.x, (dim1, dim2))
             x = x[:self.batch_size[layers]]
-            G = generator(self.z)
+            G = generator(self.z) * self.label
             Dz = discriminator(G)
             Dx = discriminator(x)
 
@@ -230,21 +231,33 @@ class ClassicGAN:
         return np.random.normal(loc=0.0, scale=1.0, size=[batch_size, self.z_length])
 
     def make_dataset(self):
-        self.filename = 'Dataset/dataset.tfrecord'
+        self.filename = 'Dataset/cond_dataset.tfrecord'
         self.dataset = tf.data.TFRecordDataset(self.filename, num_parallel_reads=8)
         def _parse(example_proto):
-            feature = {'roll' : tf.FixedLenFeature([], tf.string)}
+            feature = {
+                'label': tf.FixedLenFeature([], tf.int64), 
+                'data': tf.FixedLenFeature([], tf.string)
+            }
             parsed = tf.parse_single_example(example_proto, feature)
-            data = tf.decode_raw(parsed['roll'], tf.uint8)
+            data = tf.decode_raw(parsed['data'], tf.uint8)
+            label = tf.cast(parsed['label'], tf.uint8)
             data = tf.py_func(func=np.unpackbits, inp=[data], Tout=tf.uint8)
+            label = tf.py_func(func=np.unpackbits, inp=[label], Tout=tf.uint8)
             data = tf.cast(data, tf.float32)
+            label = tf.cast(label, tf.float32)
             data = tf.reshape(data, [self.channel_num, self.class_num, self.input_length])
+            label.set_shape([8])
+            label = label[:self.channel_num]
+            label = tf.expand_dims(tf.expand_dims(label, axis=-1), axis=-1)
             data = data * 2 - 1
-            return data
+            return {'data': data, 'label': label}
+
         self.dataset = self.dataset.apply(data.shuffle_and_repeat(buffer_size=16384))
-        self.dataset = self.dataset.apply(data.map_and_batch(_parse, batch_size=256, 
-                                            num_parallel_batches=16, drop_remainder=True))
-        self.dataset = self.dataset.prefetch(128)
+        self.dataset = self.dataset.apply(
+            data.map_and_batch(_parse, batch_size=256, num_parallel_batches=16, drop_remainder=True)
+        )
+        self.dataset = self.dataset.prefetch(32)
+        self.dataset = self.dataset.apply(data.prefetch_to_device('/gpu:0'))
         self.iterator = self.dataset.make_one_shot_iterator()
         batch = self.iterator.get_next()
 
@@ -252,7 +265,7 @@ class ClassicGAN:
 
     def next_batch(self):
         batch = self.get_dataset
-        return batch
+        return batch['data'], batch['label']
 
     def train(self):
 
