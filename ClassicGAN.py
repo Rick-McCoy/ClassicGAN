@@ -95,6 +95,7 @@ def main():
         data = tf.py_func(func=np.unpackbits, inp=[data], Tout=tf.uint8)
         label = tf.py_func(func=np.unpackbits, inp=[label], Tout=tf.uint8)
         data = tf.cast(data, tf.float32)
+        label = tf.cast(label, tf.float32)
         data = tf.reshape(data, [CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH])
         label.set_shape([8])
         label = label[:CHANNEL_NUM]
@@ -105,14 +106,12 @@ def main():
     dataset = dataset.apply(
         data.map_and_batch(_parse, batch_size=BATCH_SIZE, num_parallel_batches=16, drop_remainder=True)
     )
-    dataset = dataset.prefetch(128)
+    dataset = dataset.prefetch(32)
+    dataset = dataset.apply(data.prefetch_to_device('/gpu:0'))
     iterator = dataset.make_one_shot_iterator()
     next_data = iterator.get_next()
     real_input_3 = next_data['data']
     label = next_data['label']
-    label = tf.cast(label, tf.bool)
-    label = tf.unstack(label, axis=-1)
-    label_indice = [tf.where(tf.equal(mask, True)) for mask in label]
 
     input_noise = tf.placeholder(dtype=tf.float32, shape=[None, NOISE_LENGTH], name='input_noise')
 
@@ -158,70 +157,34 @@ def main():
 
     shared_output = shared_gen(
         noise=input_noise, 
-        encode=encode, 
-        label=tf.stack(label, axis=1), 
+        label=label, 
         update_collection=SPECTRAL_UPDATE_OPS, 
         train=train
     )
     # shape: [None, 64, 16, 64]
     gen1 = generator1(
         inputs=shared_output, 
-        encode=encode, 
         label=label, 
         update_collection=SPECTRAL_UPDATE_OPS, 
         train=train
     )
-    gen1_process = tf.unstack(process(gen1, 1, train, SPECTRAL_UPDATE_OPS), axis=1)
-    gen1_masked = [tf.boolean_mask(gen1_process[i], label[i]) for i in range(CHANNEL_NUM)]
-    output_gen1 = [
-        tf.scatter_nd(
-            label_indice[i], 
-            gen1_masked[i], 
-            [BATCH_SIZE, CLASS_NUM // 4, INPUT_LENGTH // 4]
-        ) for i in range(CHANNEL_NUM)
-    ]
-    # shape: [6, None, 32, 128]
-    # shape: [6, None, 32, 32, 128]
-    output_gen1 = tf.stack(output_gen1, axis=1, name='output_gen1_stack')
+    output_gen1 = process(gen1, 1, train, SPECTRAL_UPDATE_OPS) * tf.expand_dims(tf.expand_dims(label, axis=-1), axis=-1)
     # shape: [None, 6, 32, 128]
     gen2 = generator2(
         inputs=gen1, 
-        encode=encode, 
         label=label, 
         update_collection=SPECTRAL_UPDATE_OPS, 
         train=train
     )
-    gen2_process = tf.unstack(process(gen2, 2, train, SPECTRAL_UPDATE_OPS), axis=1)
-    gen2_masked = [tf.boolean_mask(gen2_process[i], label[i]) for i in range(CHANNEL_NUM)]
-    output_gen2 = [
-        tf.scatter_nd(
-            label_indice[i], 
-            gen2_masked[i], 
-            [BATCH_SIZE, CLASS_NUM // 2, INPUT_LENGTH // 2]
-        ) for i in range(CHANNEL_NUM)
-    ]
-    # shape: [6, None, 64, 256]
-    # shape: [6, None, 16, 64, 256]
-    output_gen2 = tf.stack(output_gen2, axis=1, name='output_gen2_stack')
+    output_gen2 = process(gen2, 2, train, SPECTRAL_UPDATE_OPS) * tf.expand_dims(tf.expand_dims(label, axis=-1), axis=-1)
     # shape: [None, 6, 64, 256]
     gen3 = generator3(
         inputs=gen2, 
-        encode=encode, 
         label=label, 
         update_collection=SPECTRAL_UPDATE_OPS, 
         train=train
     )
-    gen3_process = tf.unstack(process(gen3, 3, train, SPECTRAL_UPDATE_OPS), axis=1)
-    gen3_masked = [tf.boolean_mask(gen3_process[i], label[i]) for i in range(CHANNEL_NUM)]
-    output_gen3 = [
-        tf.scatter_nd(
-            label_indice[i], 
-            gen3_masked[i], 
-            [BATCH_SIZE, CLASS_NUM, INPUT_LENGTH]
-        ) for i in range(CHANNEL_NUM)
-    ]
-    # shape: [6, None, 128, 512]
-    output_gen3 = tf.stack(output_gen3, axis=1, name='output_gen3_stack')
+    output_gen3 = process(gen3, 3, train, SPECTRAL_UPDATE_OPS) * tf.expand_dims(tf.expand_dims(label, axis=-1), axis=-1)
     # shape: [None, 6, 128, 512]
     print('Generators set')
     dis1_real = discriminator1(inputs=real_input_1, encode=encode, update_collection=SPECTRAL_UPDATE_OPS)
@@ -283,28 +246,28 @@ def main():
     with tf.name_scope('optimizers'):
         with tf.control_dependencies(dis1_extra_update_ops):
             dis1_train = tf.train.AdamOptimizer(
-                learning_rate=0.0004, beta1=0, beta2=0.9
+                learning_rate=0.0004, beta1=0.5, beta2=0.9
             ).minimize(
                 loss=loss_dis1, var_list=dis1_var, name='dis1_train'
             )
         print('dis1_train setup')
         with tf.control_dependencies(dis2_extra_update_ops):
             dis2_train = tf.train.AdamOptimizer(
-                learning_rate=0.0004, beta1=0, beta2=0.9
+                learning_rate=0.0004, beta1=0.5, beta2=0.9
             ).minimize(
                 loss=loss_dis2, var_list=dis2_var, name='dis2_train'
             )
         print('dis2_train setup')
         with tf.control_dependencies(dis3_extra_update_ops):
             dis3_train = tf.train.AdamOptimizer(
-                learning_rate=0.0004, beta1=0, beta2=0.9
+                learning_rate=0.0004, beta1=0.5, beta2=0.9
             ).minimize(
                 loss=loss_dis3, var_list=dis3_var, name='dis3_train'
             )
         print('dis3_train setup')
         with tf.control_dependencies(gen_extra_update_ops):
             gen_train = tf.train.AdamOptimizer(
-                learning_rate=0.0001, beta1=0, beta2=0.9
+                learning_rate=0.0001, beta1=0.5, beta2=0.9
             ).minimize(
                 loss=loss_gen, var_list=gen_var, name='gen_train'
             )

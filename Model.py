@@ -137,17 +137,13 @@ def encoder(inputs, update_collection, train=True):
         # shape: [None, 64]
         return tf.tanh(output)
 
-def encode_concat(inputs, encode, label, name='encode_concat'):
+def label_concat(inputs, label, name='label_concat'):
     with tf.variable_scope(name, reuse=tf.AUTO_REUSE):
-        encode = tf.reshape(encode, [-1, 1, 4, 16])
-        dim1 = inputs.get_shape().as_list()[-2] // 4
-        dim2 = inputs.get_shape().as_list()[-1] // 16
-        label = tf.stack(label, axis=1)
-        label = tf.cast(label, tf.float32)
+        dim1 = inputs.get_shape().as_list()[-2]
+        dim2 = inputs.get_shape().as_list()[-1]
         label = tf.expand_dims(tf.expand_dims(label, axis=-1), axis=-1)
-        label = tf.tile(label, multiples=(1, 1, dim1 * 4, dim2 * 16))
-        encode = tf.tile(input=encode, multiples=(1, 1, dim1, dim2))
-        output = tf.concat([inputs, encode, label], axis=1)
+        label = tf.tile(label, multiples=(1, 1, dim1, dim2))
+        output = tf.concat([inputs, label], axis=1)
         return output
 
 def upsample(inputs, channels, update_collection, train, name='upsample'):
@@ -171,9 +167,9 @@ def upsample(inputs, channels, update_collection, train, name='upsample'):
         )
         return output + skip
 
-def genblock(inputs, encode, channels, label, update_collection, train, name='genblock'):
+def genblock(inputs, channels, label, update_collection, train, name='genblock'):
     with tf.variable_scope(name, reuse=tf.AUTO_REUSE):
-        inputs = encode_concat(inputs, encode, label)
+        inputs = label_concat(inputs, label)
         #inputs = tf.layers.batch_normalization(inputs, axis=1, training=train)
         output = upsample(inputs, channels=channels, update_collection=update_collection, train=train)
         #upsample1 = tf.layers.batch_normalization(upsample1, axis=1, training=train)
@@ -191,10 +187,9 @@ def process(inputs, num, train, update_collection):
         output = tf.transpose(output, perm=[0, 3, 1, 2])
         return output
 
-def shared_gen(noise, encode, label, update_collection, train):
+def shared_gen(noise, label, update_collection, train):
     with tf.variable_scope('Shared_generator'):
-        label = tf.cast(label, tf.float32)
-        noise = tf.concat([noise, encode, label], axis=1)
+        noise = tf.concat([noise, label], axis=1)
         # shape: [None, 198]
         output = tf.expand_dims(tf.expand_dims(noise, axis=-1), axis=-1)
         # shape: [None, 198, 1, 1]
@@ -211,17 +206,17 @@ def shared_gen(noise, encode, label, update_collection, train):
         )
         return output
 
-def generator1(inputs, encode, label, update_collection, train):
+def generator1(inputs, label, update_collection, train):
     with tf.variable_scope('Generator1', reuse=tf.AUTO_REUSE):
-        return genblock(inputs, encode, 64, label, update_collection, train)
+        return genblock(inputs, 64, label, update_collection, train)
 
-def generator2(inputs, encode, label, update_collection, train):
+def generator2(inputs, label, update_collection, train):
     with tf.variable_scope('Generator2', reuse=tf.AUTO_REUSE):
-        return genblock(inputs, encode, 32, label, update_collection, train)
+        return genblock(inputs, 32, label, update_collection, train)
 
-def generator3(inputs, encode, label, update_collection, train):
+def generator3(inputs, label, update_collection, train):
     with tf.variable_scope('Generator3', reuse=tf.AUTO_REUSE):
-        return genblock(inputs, encode, 16, label, update_collection, train)
+        return genblock(inputs, 16, label, update_collection, train)
 
 def downblock(inputs, channels, update_collection, name='downblock'):
     with tf.variable_scope(name, reuse=tf.AUTO_REUSE):
