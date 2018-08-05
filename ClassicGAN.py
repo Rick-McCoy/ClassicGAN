@@ -69,7 +69,7 @@ def main():
     parser.add_argument(
         '--no-record', dest='record', action='store_false', help='Disable recording.'
     )
-    parser.set_defaults(record=False) # Warning: Windows kills python if enabled.
+    parser.set_defaults(record=True) # Warning: Windows kills python if enabled.
     args = parser.parse_args()
     sampling = args.sample != ''
 
@@ -304,7 +304,7 @@ def main():
         writer = tf.summary.FileWriter('Logs_v1', sess.graph)
         run_options = tf.RunOptions(report_tensor_allocations_upon_oom=True)
         epoch_num = 100001
-        for train_count in tqdm(range(epoch_num)):
+        for train_count in tqdm(range(epoch_num), smoothing=0.7):
             for i in range(TRAIN_RATIO_DIS):
                 feed_dict[input_noise] = get_noise([BATCH_SIZE, NOISE_LENGTH])
                 feed_dict[train] = True

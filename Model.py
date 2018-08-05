@@ -190,7 +190,7 @@ def shared_gen(noise, label, update_collection, train):
     with tf.variable_scope('Shared_generator'):
         output = tf.expand_dims(tf.expand_dims(noise, axis=-1), axis=-1)
         # shape: [None, 128, 1, 1]
-        output = tf.concat(output, label)
+        output = tf.concat([output, label], axis=1)
         # shape: [None, 134, 1, 1]
         output = tf.tile(output, multiples=(1, 1, 1, 4))
         # shape: [None, 134, 1, 4]
