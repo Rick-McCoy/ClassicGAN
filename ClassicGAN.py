@@ -26,7 +26,7 @@ TRAIN_RATIO_DIS = 1
 TRAIN_RATIO_GEN = 1
 EPSILON = 1e-8
 DRIFT = 1e-3
-BATCH_SIZE = 2
+BATCH_SIZE = 16
 
 def gradient_penalty(real, gen, encode, discriminator):
     with tf.name_scope('gradient_penalty'):
@@ -69,7 +69,7 @@ def main():
     parser.add_argument(
         '--no-record', dest='record', action='store_false', help='Disable recording.'
     )
-    parser.set_defaults(record=True) # Warning: Windows kills python if enabled.
+    parser.set_defaults(record=False) # Warning: Windows kills python if enabled.
     args = parser.parse_args()
     sampling = args.sample != ''
 
