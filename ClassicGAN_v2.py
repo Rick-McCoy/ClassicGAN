@@ -14,7 +14,7 @@ from ops import (conv2d, conv2d_transpose, pool, dense_layer,
                 leaky_relu, minibatch_stddev, pixelwise_norm, resize)
 from Convert import unpack_sample
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-os.environ['CUDA_VISIBLE_DEVICES'] = '1'
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
 class ClassicGAN:
     def __init__(self, 
@@ -161,7 +161,7 @@ class ClassicGAN:
             Dz = discriminator(G)
             Dx = discriminator(x)
 
-            alpha = tf.random_uniform(shape=[tf.shape(Dz)[0], 1, 1, 1], minval=0., maxval=1.)
+            alpha = tf.random_uniform(shape=[tf.shape(x)[0], 1, 1, 1], minval=0., maxval=1.)
             interpolate = alpha * x + (1 - alpha) * G
             D_inter = discriminator(interpolate)
 
