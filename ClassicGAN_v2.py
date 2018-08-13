@@ -71,9 +71,9 @@ class ClassicGAN:
         self.writer = tf.summary.FileWriter(logdir='Logs', graph=self.sess.graph)
         self.saver = tf.train.Saver()
 
-        if tf.train.latest_checkpoint('Checkpoints') is not None:
+        if tf.train.latest_checkpoint('Checkpoints_v2') is not None:
             print('Restoring...')
-            self.saver.restore(self.sess, tf.train.latest_checkpoint('Checkpoints'))
+            self.saver.restore(self.sess, tf.train.latest_checkpoint('Checkpoints_v2'))
             print('Completely restored.')
 
         print('Initialization complete.')
@@ -323,7 +323,7 @@ class ClassicGAN:
 
             if gs % save_interval == 0:
                 print('Saving...')
-                self.saver.save(self.sess, 'Checkpoints/{}.ckpt'.format(gs))
+                self.saver.save(self.sess, 'Checkpoints_v2/{}.ckpt'.format(gs))
                 print('Model saved.')
                 if self.record:
                     trace_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE) # pylint: disable=E1101
@@ -332,14 +332,14 @@ class ClassicGAN:
                     self.writer.add_run_metadata(run_metadata, 'run_%d' % gs)
                     tl = timeline.Timeline(run_metadata.step_stats) # pylint: disable=E1101
                     ctf = tl.generate_chrome_trace_format()
-                    with open('Timelines/%d.json' % gs, 'w') as f:
+                    with open('Timelines_v2/%d.json' % gs, 'w') as f:
                         f.write(ctf)
 
             img_count = self.batch_size[layer]
             self.sess.run(self.img_step_op, {self.img_count_placeholder: img_count})
         
         print('Saving...')
-        self.saver.save(self.sess, 'Checkpoints/{}.ckpt'.format(gs))
+        self.saver.save(self.sess, 'Checkpoints_v2/{}.ckpt'.format(gs))
         print('Model saved.')
 
         self.sess.close()
@@ -350,8 +350,8 @@ class ClassicGAN:
         *_, G, _ = self.networks[cur_layer]
         feed_dict = {self.z: self._z(self.batch_size[cur_layer])}
         gs, samples = self.sess.run([self.global_step, G], feed_dict)
-        np.save('Samples/{}'.format(gs), samples)
-        unpack_sample('Samples/{}'.format(gs))
+        np.save('Samples_v2/{}'.format(gs), samples)
+        unpack_sample('Samples_v2/{}'.format(gs))
 
 def main():
     parser = argparse.ArgumentParser()
@@ -363,14 +363,14 @@ def main():
     parser.set_defaults(record=False) # Warning: Windows kills python if enabled.
     args = parser.parse_args()
 
-    if not os.path.exists('Logs'):
-        os.mkdir('Logs')
-    if not os.path.exists('Checkpoints'):
-        os.mkdir('Checkpoints')
-    if not os.path.exists('Timelines'):
-        os.mkdir('Timelines')
-    if not os.path.exists('Samples'):
-        os.mkdir('Samples')
+    if not os.path.exists('Logs_v2'):
+        os.mkdir('Logs_v2')
+    if not os.path.exists('Checkpoints_v2'):
+        os.mkdir('Checkpoints_v2')
+    if not os.path.exists('Timelines_v2'):
+        os.mkdir('Timelines_v2')
+    if not os.path.exists('Samples_v2'):
+        os.mkdir('Samples_v2')
 
     classicgan = ClassicGAN(args=args)
     if args.sample:
