@@ -92,7 +92,7 @@ class ClassicGAN:
                 z = z[:self.batch_size[layers]]
                 with tf.variable_scope('latent_vector'):
                     g1 = tf.expand_dims(tf.expand_dims(z, axis=-1), axis=-1)
-                    g1 = tf.concat([g1, self.label], axis=1)
+                    g1 = tf.concat([g1, self.label[:self.batch_size[layers]]], axis=1)
                 for i in range(layers):
                     with tf.variable_scope('layer_{}'.format(i)):
                         if i > 0:
@@ -157,11 +157,11 @@ class ClassicGAN:
                 else:
                     x = resize(self.x, (dim1, dim2))
             x = x[:self.batch_size[layers]]
-            G = generator(self.z) * self.label
+            G = generator(self.z) * self.label[:self.batch_size[layers]]
             Dz = discriminator(G)
             Dx = discriminator(x)
 
-            alpha = tf.random_uniform(shape=[tf.shape(x)[0], 1, 1, 1], minval=0., maxval=1.)
+            alpha = tf.random_uniform(shape=[tf.shape(Dz)[0], 1, 1, 1], minval=0., maxval=1.)
             interpolate = alpha * x + (1 - alpha) * G
             D_inter = discriminator(interpolate)
 
