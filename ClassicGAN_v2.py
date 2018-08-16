@@ -68,7 +68,7 @@ class ClassicGAN:
         self.config = tf.ConfigProto(allow_soft_placement=True, gpu_options=self.GPU_options)
         self.sess = tf.Session(config=self.config)
         self.sess.run(tf.global_variables_initializer())
-        self.writer = tf.summary.FileWriter(logdir='Logs', graph=self.sess.graph)
+        self.writer = tf.summary.FileWriter(logdir='Logs_v2', graph=self.sess.graph)
         self.saver = tf.train.Saver()
 
         if tf.train.latest_checkpoint('Checkpoints_v2') is not None:
