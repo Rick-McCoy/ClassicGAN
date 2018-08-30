@@ -213,7 +213,7 @@ class ClassicGAN:
                 fake_imgs = resize(fake_imgs, (self.class_num, self.input_length))
                 real_imgs = resize(real_imgs, (self.class_num, self.input_length))
 
-            label_sum = tf.summary.image('label', tf.expand_dims(tf.expand_dims(self.label, axis=-1), axis=-1))
+            label_sum = tf.summary.image('label', tf.expand_dims(tf.expand_dims(self.label, axis=1), axis=-1))
             fake_img_sum = [tf.summary.image(
                 'fake{}x{}'.format(dim1, dim2), tf.expand_dims(fake_imgs[:, i], axis=-1)
                 ) for i in range(self.channel_num)]
