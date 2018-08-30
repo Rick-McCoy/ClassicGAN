@@ -213,6 +213,7 @@ class ClassicGAN:
                 fake_imgs = resize(fake_imgs, (self.class_num, self.input_length))
                 real_imgs = resize(real_imgs, (self.class_num, self.input_length))
 
+            label_sum = tf.summary.image('label', tf.expand_dims(tf.expand_dims(self.label, axis=-1), axis=-1))
             fake_img_sum = [tf.summary.image(
                 'fake{}x{}'.format(dim1, dim2), tf.expand_dims(fake_imgs[:, i], axis=-1)
                 ) for i in range(self.channel_num)]
@@ -223,7 +224,7 @@ class ClassicGAN:
         print('Stage {}x{} setup complete.'.format(dim1, dim2))
 
         return (dim1, dim2, WD, GP, WD_sum, GP_sum, g_train, d_train, 
-                fake_img_sum, real_img_sum, G, discriminator)
+                fake_img_sum, real_img_sum, label_sum, G, discriminator)
 
     def _add_summary(self, string, global_step):
         self.writer.add_summary(string, global_step)
@@ -291,15 +292,15 @@ class ClassicGAN:
             save_interval = max(1000, 10000 // 2 ** layer)
 
             (dim1, dim2, WD, GP, WD_sum, GP_sum, g_train, d_train, 
-            fake_img_sum, real_img_sum, *_) = self.networks[layer]
+            fake_img_sum, real_img_sum, label_sum, *_) = self.networks[layer]
             feed_dict = {self.z: self._z(self.batch_size[layer])}
 
             self.sess.run(g_train, feed_dict)
             self.sess.run(d_train, feed_dict)
 
             WD_, GP_, WD_sum_str, GP_sum_str, fake_img_sum_str, \
-            real_img_sum_str = self.sess.run([
-                WD, GP, WD_sum, GP_sum, fake_img_sum, real_img_sum
+            real_img_sum_str, label_sum_str = self.sess.run([
+                WD, GP, WD_sum, GP_sum, fake_img_sum, real_img_sum, label_sum
             ], feed_dict)
 
             current_time = datetime.datetime.now()
@@ -318,6 +319,7 @@ class ClassicGAN:
             if gs % 20 == 0:
                 self._add_summary(WD_sum_str, gs)
                 self._add_summary(GP_sum_str, gs)
+                self._add_summary(label_sum_str, gs)
                 for i in range(self.channel_num):
                     self._add_summary(fake_img_sum_str[i], gs)
                     self._add_summary(real_img_sum_str[i], gs)
