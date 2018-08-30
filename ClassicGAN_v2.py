@@ -256,9 +256,9 @@ class ClassicGAN:
 
         self.dataset = self.dataset.apply(data.shuffle_and_repeat(buffer_size=16384))
         self.dataset = self.dataset.apply(
-            data.map_and_batch(_parse, batch_size=256, num_parallel_batches=16, drop_remainder=True)
+            data.map_and_batch(_parse, batch_size=256, num_parallel_batches=32, drop_remainder=True)
         )
-        self.dataset = self.dataset.prefetch(32)
+        self.dataset = self.dataset.prefetch(48)
         self.dataset = self.dataset.apply(data.prefetch_to_device('/gpu:0'))
         self.iterator = self.dataset.make_one_shot_iterator()
         batch = self.iterator.get_next()
