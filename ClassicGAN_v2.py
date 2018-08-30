@@ -87,12 +87,12 @@ class ClassicGAN:
 
     def _create_network(self, layers):
 
-        def generator(z):
+        def generator(z, label):
             with tf.variable_scope('Generator'):
                 z = z[:self.batch_size[layers]]
                 with tf.variable_scope('latent_vector'):
                     g1 = tf.expand_dims(tf.expand_dims(z, axis=-1), axis=-1)
-                    g1 = tf.concat([g1, self.label[:self.batch_size[layers]]], axis=1)
+                    g1 = tf.concat([g1, label], axis=1)
                 for i in range(layers):
                     with tf.variable_scope('layer_{}'.format(i)):
                         if i > 0:
@@ -118,7 +118,7 @@ class ClassicGAN:
                     g = g1
             return tf.tanh(g)
 
-        def discriminator(x):
+        def discriminator(x, label):
             with tf.variable_scope('Discriminator'):
                 if layers > 1:
                     with tf.variable_scope('rgb_layer_{}'.format(layers - 2)):
@@ -142,7 +142,8 @@ class ClassicGAN:
                         if i == layers - 1 and layers > 1:
                             d1 = self._reparameterize(d0, d1)
                 with tf.variable_scope('dense'):
-                    d = dense_layer(tf.layers.flatten(d1), 1)
+                    d = tf.concat([tf.layers.flatten(d1), tf.layers.flatten(label)], axis=1)
+                    d = dense_layer(d, 1)
             return d
 
         dim1, dim2 = 2 ** layers, 2 ** (layers + 2)
@@ -157,13 +158,13 @@ class ClassicGAN:
                 else:
                     x = resize(self.x, (dim1, dim2))
             x = x[:self.batch_size[layers]]
-            G = generator(self.z) * self.label[:self.batch_size[layers]]
-            Dz = discriminator(G)
-            Dx = discriminator(x)
+            G = generator(self.z, self.label[:self.batch_size[layers]])
+            Dz = discriminator(G, self.label[:self.batch_size[layers]])
+            Dx = discriminator(x, self.label[:self.batch_size[layers]])
 
             alpha = tf.random_uniform(shape=[tf.shape(Dz)[0], 1, 1, 1], minval=0., maxval=1.)
             interpolate = alpha * x + (1 - alpha) * G
-            D_inter = discriminator(interpolate)
+            D_inter = discriminator(interpolate, self.label[:self.batch_size[layers]])
 
         with tf.variable_scope('Loss_function'):
 
