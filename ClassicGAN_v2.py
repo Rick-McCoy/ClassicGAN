@@ -29,7 +29,7 @@ class ClassicGAN:
             args=None
         ):
         self.channels = [512, 512, 512, 512, 256, 128, 64, 32]
-        self.batch_size = [256, 256, 128, 64, 32, 16, 8, 4]
+        self.batch_size = [256, 256, 256, 128, 128, 64, 16, 8]
         self.learning_rate_d = learning_rate_d
         self.learning_rate_g = learning_rate_g
         self.p_lambda = p_lambda
