@@ -28,7 +28,7 @@ class ClassicGAN:
             lipschitz_penalty=True, 
             args=None
         ):
-        self.channels = [512, 512, 512, 512, 256, 128, 64, 32]
+        self.channels = [512, 512, 512, 256, 128, 64, 32, 16]
         self.batch_size = [256, 256, 256, 128, 64, 32, 16, 8]
         self.learning_rate_d = learning_rate_d
         self.learning_rate_g = learning_rate_g
