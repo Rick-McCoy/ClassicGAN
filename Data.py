@@ -1,86 +1,85 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
-import tensorflow as tf
-import pretty_midi as pm
-import numpy as np
+import os
 import pathlib
 import random
-import os
 from tqdm import tqdm
+import pretty_midi as pm
+import numpy as np
+import torch
+import matplotlib.pyplot as plt
+import torch.utils.data as data
 
 CHANNEL_NUM = 6
 CLASS_NUM = 128
-INPUT_LENGTH = 512
-#0 Piano: 22584
-#1 Chromatic Percussion: 216
-#2 Organ: 500
-#3 Guitar: 6691
-#4 Bass: 151
-#5 Strings: 4356
-#6 Ensemble: 5304
-#7 Brass: 2044
-#8 Reed: 2497
-#9 Pipe: 1277
-#10 Synth Lead: 70
-#11 Synth Pad: 139
-#12 Synth Effects: 51
-#13 Ethnic: 91
-#14 Percussive: 56
-#15 Sound Effects: 36
-#16 Drums: 411
+INPUT_LENGTH = 4096
 
-def roll(path):
+def piano_roll(path):
     try:
         song = pm.PrettyMIDI(midi_file=str(path), resolution=96)
     except:
-        tqdm.write('Error while opening')
+        tqdm.write('Error Opening')
         raise Exception
     classes = [0, 3, 5, 7, 8, 9]
-    piano_rolls = [i.get_piano_roll() for i in song.instruments]
-    length = np.min([i.shape[1] for i in piano_rolls])
+    piano_rolls = [_.get_piano_roll() for _ in song.instruments]
+    length = np.min([_.shape[1] for _ in piano_rolls])
     if length < INPUT_LENGTH:
         tqdm.write('Too short')
         raise Exception
-    data = np.zeros(shape=(CHANNEL_NUM, CLASS_NUM, length))
-    for piano_roll, instrument in zip(piano_rolls, song.instruments):
+    data = np.zeros(shape=(CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH))
+    for roll, instrument in zip(piano_rolls, song.instruments):
         if not instrument.is_drum and instrument.program // 8 in classes:
-            id = classes.index(instrument.program // 8)
-            data[id] = np.add(data[id], piano_roll[:, :length])
+            i = classes.index(instrument.program // 8)
+            data[i] = np.add(data[i], roll[:, :INPUT_LENGTH])
     if np.amax(data) == 0:
         tqdm.write('No notes')
         raise Exception
     data = data > 0
-    data = np.split(data[:, :, :length // INPUT_LENGTH * INPUT_LENGTH], indices_or_sections=length // INPUT_LENGTH, axis=-1)
-    onoff = [np.array([np.amax(track) > 0 for track in datum]) for datum in data]
-    return data, onoff
+    data = np.concatenate(data, axis=0)
+    return data.astype(np.float32)
 
-def build_dataset():
+class Dataset(data.Dataset):
+    def __init__(self):
+        super(Dataset, self).__init__()
+
+        self.pathlist = list(pathlib.Path('Classics').glob('**/*.mid'))
+    
+    def __getitem__(self, index):
+        path = self.pathlist[index]
+        try:
+            data = piano_roll(path)
+        except:
+            path = self.pathlist[index + 1]
+            try:
+                data = piano_roll(path)
+            except:
+                raise Exception
+        return data
+
+    def __len__(self):
+        return len(self.pathlist)
+
+class DataLoader(data.DataLoader):
+    def __init__(self, receptive_fields, batch_size, shuffle=True, num_workers=4):
+        super(DataLoader, self).__init__(Dataset(), batch_size, shuffle, num_workers=num_workers)
+
+def Test():
     pathlist = list(pathlib.Path('Classics').glob('**/*.mid'))
     random.shuffle(pathlist)
-    if not os.path.exists('Dataset'):
-        os.mkdir('Dataset')
-    writer = tf.python_io.TFRecordWriter('Dataset/cond_dataset.tfrecord')
-    for path in tqdm(pathlist):
-        try:
-            data, onoff = roll(str(path))
-        except:
-            continue
-        for datum, act in zip(data, onoff):
-            packed_data = np.packbits(datum).tostring()
-            packed_act = np.packbits(act)
-            feature = {
-                'data': tf.train.Feature(bytes_list=tf.train.BytesList(value=[packed_data])), 
-                'label': tf.train.Feature(int64_list=tf.train.Int64List(value=[packed_act]))
-            }
-            example = tf.train.Example(features=tf.train.Features(feature=feature))
-            serialized = example.SerializeToString()
-            writer.write(serialized)
-    writer.close()
+    lengthlist = []
+    count = 0
+    for path in tqdm(pathlist[:100]):
+        song = pm.PrettyMIDI(midi_file=str(path), resolution=96)
+        piano_rolls = [_.get_piano_roll() for _ in song.instruments]
+        length = np.min([_.shape[1] for _ in piano_rolls])
+        lengthlist.append(length)
+        if length >= INPUT_LENGTH:
+            count += 1
 
-def main():
-    build_dataset()
+    plt.hist(lengthlist, 200, facecolor='green')
+    plt.xlabel('Length')
+    plt.ylabel('Number of Occurrence')
+    plt.axis([0, 40000, 0, 15])
+    plt.grid(True)
+    plt.show()
 
 if __name__ == '__main__':
-    main()
+    Test()
