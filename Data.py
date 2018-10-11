@@ -24,14 +24,17 @@ def piano_roll(path):
     if length < INPUT_LENGTH:
         tqdm.write('Too short')
         raise Exception
+    maxsum = 0
+    for roll in piano_rolls:
+        maxsum += np.amax(roll)
+    if maxsum == 0:
+        tqdm.write('No notes')
+        raise Exception
     data = np.zeros(shape=(CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH))
     for roll, instrument in zip(piano_rolls, song.instruments):
         if not instrument.is_drum and instrument.program // 8 in classes:
             i = classes.index(instrument.program // 8)
             data[i] = np.add(data[i], roll[:, :INPUT_LENGTH])
-    if np.amax(data) == 0:
-        tqdm.write('No notes')
-        raise Exception
     data = data > 0
     data = np.concatenate(data, axis=0)
     return data.astype(np.float32)

@@ -31,6 +31,7 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size', type=int, default=32)
     parser.add_argument('--shuffle', type=bool, default=True)
     parser.add_argument('--num_workers', type=int, default=4)
+    
     args = parser.parse_args()
     trainer = Trainer(args)
     trainer.run()

@@ -25,6 +25,7 @@ class Wavenet:
     def _prepare_for_gpu(self):
         if len(self.gpus) > 1:
             self.net = torch.nn.DataParallel(self.net, device_ids=self.gpus)
+            
         if torch.cuda.is_available():
             self.net.cuda()
 

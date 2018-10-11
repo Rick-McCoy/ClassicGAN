@@ -43,7 +43,7 @@ class ResidualBlock(torch.nn.Module):
         output += input[:, :, -output.size()[2]:]
 
         skip = self.conv_skip(gated)
-        skip = skip[:, :, -skip_size]
+        skip = skip[:, :, -skip_size:]
         return output, skip
 
 class ResidualStack(torch.nn.Module):
@@ -109,10 +109,9 @@ class Wavenet(torch.nn.Module):
         return output_size
 
     def forward(self, input):
-        #output = input.transpose(1, 2)
         output_size = self.calc_output_size(input)
         output = self.causal(input)
         skip_connections = self.res_stacks(output, output_size)
         output = torch.sum(skip_connections, dim=0) # pylint: disable=E1101
         output = self.post(output)
-        return output.contiguous()#output.transpose(1, 2).contiguous()
+        return output.contiguous()
