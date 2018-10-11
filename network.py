@@ -77,8 +77,8 @@ class ResidualStack(torch.nn.Module):
 class PostProcess(torch.nn.Module):
     def __init__(self, channels):
         super(PostProcess, self).__init__()
-        self.conv1 = torch.nn.Conv1d(channels, channels, 1)
-        self.conv2 = torch.nn.Conv1d(channels, channels, 1)
+        self.conv1 = torch.nn.Conv1d(channels, channels, 1).cuda(2)
+        self.conv2 = torch.nn.Conv1d(channels, channels, 1).cuda(2)
         self.relu = torch.nn.ReLU()
 
     def forward(self, input):
