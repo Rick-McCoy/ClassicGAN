@@ -1,28 +1,23 @@
 import torch
 import numpy as np
 
-class CausalConv1d(torch.nn.Module):
-    def __init__(self, in_channels, res_channels):
-        super(CausalConv1d, self).__init__()
-        self.conv = torch.nn.Conv1d(in_channels, res_channels, kernel_size=2, stride=1, padding=1, bias=False)
-
-    def forward(self, input):
-        output = self.conv(input)
-        return output[:, :, :-1]
-
 class DilatedCausalConv1d(torch.nn.Module):
-    def __init__(self, channels, dilation):
+    def __init__(self, in_channels, res_channels, dilation):
         super(DilatedCausalConv1d, self).__init__()
-        self.conv = torch.nn.Conv1d(channels, channels, kernel_size=2, stride=1, padding=0, dilation=dilation, bias=False)
+        self.padding = dilation
+        self.conv = torch.nn.Conv1d(in_channels, res_channels, 
+                                    kernel_size=2, stride=1, 
+                                    padding=self.padding, 
+                                    dilation=dilation, bias=False)
 
     def forward(self, input):
         output = self.conv(input)
-        return output
+        return output[:, :, :-self.padding]
 
 class ResidualBlock(torch.nn.Module):
     def __init__(self, res_channels, skip_channels, dilation):
         super(ResidualBlock, self).__init__()
-        self.dilated_conv = DilatedCausalConv1d(res_channels, dilation=dilation)
+        self.dilated_conv = DilatedCausalConv1d(res_channels, res_channels, dilation=dilation)
         self.tanh_conv = torch.nn.Conv1d(res_channels, res_channels, 1)
         self.sigmoid_conv = torch.nn.Conv1d(res_channels, res_channels, 1)
         self.conv_res = torch.nn.Conv1d(res_channels, res_channels, 1)
@@ -94,7 +89,7 @@ class Wavenet(torch.nn.Module):
         super(Wavenet, self).__init__()
 
         self.receptive_field = self.calc_receptive_field(layer_size, stack_size)
-        self.causal = CausalConv1d(in_channels, res_channels)
+        self.causal = DilatedCausalConv1d(in_channels, res_channels, 0)
         self.res_stacks = ResidualStack(layer_size, stack_size, res_channels, in_channels)
         self.post = PostProcess(in_channels)
     
