@@ -19,7 +19,7 @@ class Trainer():
         for i, sample in tqdm(enumerate(self.data_loader)):
             real = sample
             synth, loss = self.wavenet.train(sample, real)
-            tqdm.write('Step {}/{} Loss: {}'.format(i, self.args.num_steps, loss.item()))
+            tqdm.write('Step {}/{} Loss: {}'.format(i, self.args.num_steps, loss))
             self.writer.add_scalar('Loss', loss, i)
             if i % 20 == 19:
                 self.writer.add_image('Real', torch.nn.functional.pad(real > 0, (0, 0, 0, 0, 0, 2), "constant", 0), i)
