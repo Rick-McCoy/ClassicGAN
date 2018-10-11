@@ -38,7 +38,7 @@ class ResidualBlock(torch.nn.Module):
         output += input[:, :, -output.size()[2]:]
 
         skip = self.conv_skip(gated)
-        skip = skip[:, :, -skip_size:]
+        #skip = skip[:, :, -skip_size:]
         return output, skip
 
 class ResidualStack(torch.nn.Module):
