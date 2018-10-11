@@ -38,7 +38,7 @@ class Wavenet:
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
-        return loss.data[0]
+        return output, loss.data[0]
 
     def generate(self, input):
         output = self.net(input)
