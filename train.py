@@ -20,10 +20,10 @@ class Trainer():
             real = sample
             synth, loss = self.wavenet.train(sample, real)
             tqdm.write('Step {}/{} Loss: {}'.format(i, self.args.num_steps, loss.item()))
-            self.writer.add_scalar('Loss', loss)
+            self.writer.add_scalar('Loss', loss, i)
             if i % 20 == 19:
-                self.writer.add_image('Real', torch.nn.functional.pad(real, (0, 0, 0, 0, 0, 2), "constant", 0))
-                self.writer.add_image('Fake', torch.nn.functional.pad(synth, (0, 0, 0, 0, 0, 2), "constant", 0))
+                self.writer.add_image('Real', torch.nn.functional.pad(real, (0, 0, 0, 0, 0, 2), "constant", 0), i)
+                self.writer.add_image('Fake', torch.nn.functional.pad(synth, (0, 0, 0, 0, 0, 2), "constant", 0), i)
 
         self.wavenet.save(args.num_steps)
 
