@@ -14,19 +14,11 @@ CLASS_NUM = 128
 INPUT_LENGTH = 4096
 
 def piano_roll(path):
-    try:
-        with warnings.catch_warnings():
-            warnings.simplefilter('ignore')
-            song = pm.PrettyMIDI(midi_file=str(path), resolution=96)
-    except:
-        tqdm.write('Error Opening')
-        raise Exception
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        song = pm.PrettyMIDI(midi_file=str(path), resolution=96)
     classes = [0, 3, 5, 7, 8, 9]
     piano_rolls = [_.get_piano_roll() for _ in song.instruments]
-    length = np.min([_.shape[1] for _ in piano_rolls])
-    if length < INPUT_LENGTH:
-        tqdm.write('Too short')
-        raise Exception
     maxsum = 0
     for roll in piano_rolls:
         maxsum += np.amax(roll)
@@ -45,19 +37,16 @@ def piano_roll(path):
 class Dataset(data.Dataset):
     def __init__(self):
         super(Dataset, self).__init__()
-
         self.pathlist = list(pathlib.Path('Classics').glob('**/*.mid'))
     
     def __getitem__(self, index):
-        path = self.pathlist[index]
-        try:
-            data = piano_roll(path)
-        except:
-            path = self.pathlist[index + 1]
+        while True:
             try:
-                data = piano_roll(path)
+                data = piano_roll(self.pathlist[index])
             except:
-                raise Exception
+                index += 1
+                continue
+            break
         return data
 
     def __len__(self):
