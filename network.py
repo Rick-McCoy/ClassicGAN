@@ -89,7 +89,7 @@ class Wavenet(torch.nn.Module):
         super(Wavenet, self).__init__()
 
         self.receptive_field = self.calc_receptive_field(layer_size, stack_size)
-        self.causal = DilatedCausalConv1d(in_channels, res_channels, 0)
+        self.causal = DilatedCausalConv1d(in_channels, res_channels, 1)
         self.res_stacks = ResidualStack(layer_size, stack_size, res_channels, in_channels)
         self.post = PostProcess(in_channels)
     
