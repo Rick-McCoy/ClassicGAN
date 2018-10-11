@@ -34,7 +34,7 @@ class Wavenet:
 
     def train(self, input, real):
         output = self.net(input)
-        loss = self.loss(output.view(-1, self.in_channels), real.view(-1, self.in_channels))
+        loss = self.loss(output.view(-1, self.in_channels), real.view(-1, self.in_channels).cuda(2))
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
