@@ -17,9 +17,6 @@ class Trainer():
     
     def run(self):
         for i, sample in tqdm(enumerate(self.data_loader)):
-            if i == 0:
-                dummy = torch.zeros([1, 768, 4096], dtype=torch.float32, device=2) # pylint: disable=E1101
-                self.writer.add_graph(self.wavenet.net, (dummy, ))
             real = sample
             synth, loss = self.wavenet.train(sample, real)
             tqdm.write('Step {}/{} Loss: {}'.format(i, self.args.num_steps, loss.item()))
