@@ -73,7 +73,7 @@ class ResidualStack(torch.nn.Module):
         for res_block in self.res_blocks:
             output, skip = res_block(output, skip_size)
             skip_connections += [skip]
-        return torch.Stack(skip_connections) # pylint: disable=E1101
+        return torch.stack(skip_connections) # pylint: disable=E1101
 
 class PostProcess(torch.nn.Module):
     def __init__(self, channels):
