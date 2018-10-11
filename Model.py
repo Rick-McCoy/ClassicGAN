@@ -25,13 +25,13 @@ class Wavenet:
     def _prepare_for_gpu(self):
         if len(self.gpus) > 1:
             self.net = torch.nn.DataParallel(self.net, device_ids=self.gpus)
-            
+
         if torch.cuda.is_available():
             self.net.cuda()
 
     def train(self, input, real):
         output = self.net(input)
-        loss = self.loss(output.view(-1, self.in_channels), real.long().view(-1))
+        loss = self.loss(output.view(-1, self.in_channels), real.long().view(-1, self.in_channels))
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
