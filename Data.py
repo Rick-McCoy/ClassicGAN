@@ -5,6 +5,7 @@ from tqdm import tqdm
 import pretty_midi as pm
 import numpy as np
 import torch
+import warnings
 import matplotlib.pyplot as plt
 import torch.utils.data as data
 
@@ -14,7 +15,9 @@ INPUT_LENGTH = 4096
 
 def piano_roll(path):
     try:
-        song = pm.PrettyMIDI(midi_file=str(path), resolution=96)
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore')
+            song = pm.PrettyMIDI(midi_file=str(path), resolution=96)
     except:
         tqdm.write('Error Opening')
         raise Exception
