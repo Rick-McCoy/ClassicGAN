@@ -17,6 +17,7 @@ class Wavenet:
     @staticmethod
     def _loss():
         loss = torch.nn.BCEWithLogitsLoss()
+        
         return loss
 
     def _optimizer(self):
