@@ -5,7 +5,7 @@ from network import Wavenet as WavenetModule
 
 class Wavenet:
     def __init__(self, layer_size, stack_size, in_channels, res_channels, lr, gpus=(2, 3)):
-        self.net = WavenetModule(layer_size, stack_size, in_channels, res_channels)
+        self.net = WavenetModule(layer_size, stack_size, in_channels, res_channels, gpus)
         self.receptive_fields = self.net.receptive_field
         self.in_channels = in_channels
         self.lr = lr
@@ -17,6 +17,8 @@ class Wavenet:
     @staticmethod
     def _loss():
         loss = torch.nn.BCEWithLogitsLoss()
+        if torch.cuda.is_available():
+            loss = loss.cuda(2)
         
         return loss
 

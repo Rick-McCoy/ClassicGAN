@@ -42,24 +42,28 @@ class ResidualBlock(torch.nn.Module):
         return output, skip
 
 class ResidualStack(torch.nn.Module):
-    def __init__(self, layer_size, stack_size, res_channels, skip_channels):
+    def __init__(self, layer_size, stack_size, res_channels, skip_channels, gpus):
         super(ResidualStack, self).__init__()
         self.layer_size = layer_size
         self.stack_size = stack_size
-        self.res_blocks = self.stack_res_blocks(res_channels, skip_channels)
+        self.gpus = gpus
+        self.res_blocks = self.stack_res_blocks(res_channels, skip_channels, gpus)
         
     @staticmethod
-    def _residual_block(res_channels, skip_channels, dilation):
+    def _residual_block(res_channels, skip_channels, dilation, gpus):
         block = ResidualBlock(res_channels, skip_channels, dilation)
+        if torch.cuda.is_available():
+            block = torch.nn.DataParallel(block, device_ids=gpus)
+            block = block.cuda(2)
         return block
 
     def build_dilations(self):
         dilation = [2 ** i for i in range(self.layer_size)] * self.stack_size
         return dilation
 
-    def stack_res_blocks(self, res_channels, skip_channels):
+    def stack_res_blocks(self, res_channels, skip_channels, gpus):
         dilations = self.build_dilations()
-        res_blocks = [self._residual_block(res_channels, skip_channels, dilation) for dilation in dilations]
+        res_blocks = [self._residual_block(res_channels, skip_channels, dilation, gpus) for dilation in dilations]
         return res_blocks
     
     def forward(self, input, skip_size):
@@ -85,12 +89,12 @@ class PostProcess(torch.nn.Module):
         return output
 
 class Wavenet(torch.nn.Module):
-    def __init__(self, layer_size, stack_size, in_channels, res_channels):
+    def __init__(self, layer_size, stack_size, in_channels, res_channels, gpus):
         super(Wavenet, self).__init__()
 
         self.receptive_field = self.calc_receptive_field(layer_size, stack_size)
         self.causal = DilatedCausalConv1d(in_channels, res_channels, 1)
-        self.res_stacks = ResidualStack(layer_size, stack_size, res_channels, in_channels)
+        self.res_stacks = ResidualStack(layer_size, stack_size, res_channels, in_channels, gpus)
         self.post = PostProcess(in_channels)
     
     @staticmethod
