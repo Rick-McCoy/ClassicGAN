@@ -13,11 +13,11 @@ class CausalConv1d(torch.nn.Module):
 class DilatedCausalConv1d(torch.nn.Module):
     def __init__(self, channels, dilation):
         super(DilatedCausalConv1d, self).__init__()
-        self.conv = torch.nn.Conv1d(channels, channels, kernel_size=2, stride=1, padding=1, dilation=dilation, bias=False)
+        self.conv = torch.nn.Conv1d(channels, channels, kernel_size=2, stride=1, padding=0, dilation=dilation, bias=False)
 
     def forward(self, input):
         output = self.conv(input)
-        return output[:, :, :-1]
+        return output
 
 class ResidualBlock(torch.nn.Module):
     def __init__(self, res_channels, skip_channels, dilation):
