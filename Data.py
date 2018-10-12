@@ -11,7 +11,7 @@ import torch.utils.data as data
 
 CHANNEL_NUM = 6
 CLASS_NUM = 128
-INPUT_LENGTH = 4096
+INPUT_LENGTH = 2048
 
 def piano_roll(path):
     with warnings.catch_warnings():
@@ -19,17 +19,16 @@ def piano_roll(path):
         song = pm.PrettyMIDI(midi_file=str(path), resolution=96)
     classes = [0, 3, 5, 7, 8, 9]
     piano_rolls = [_.get_piano_roll() for _ in song.instruments]
-    maxsum = 0
-    for roll in piano_rolls:
-        maxsum += np.amax(roll)
-    if maxsum == 0:
-        tqdm.write('No notes')
-        raise Exception
-    data = np.zeros(shape=(CHANNEL_NUM, CLASS_NUM, INPUT_LENGTH))
+    length = np.amin([roll.shape[1] for roll in piano_rolls])
+    data = np.zeros(shape=(CHANNEL_NUM, CLASS_NUM, length))
     for roll, instrument in zip(piano_rolls, song.instruments):
         if not instrument.is_drum and instrument.program // 8 in classes:
             i = classes.index(instrument.program // 8)
-            data[i] = np.add(data[i], roll[:, :INPUT_LENGTH])
+            data[i] = np.add(data[i], roll[:, :length])
+    num = random.randint(0, length // INPUT_LENGTH - 1)
+    data = data[:, :, INPUT_LENGTH * num : INPUT_LENGTH * (num + 1)]
+    for datum in data:
+        datum[0] += 1 - datum.sum(axis=0)
     data = data > 0
     data = np.concatenate(data, axis=0)
     return data.astype(np.float32)
@@ -40,13 +39,7 @@ class Dataset(data.Dataset):
         self.pathlist = list(pathlib.Path('Classics').glob('**/*.mid'))
     
     def __getitem__(self, index):
-        while True:
-            try:
-                data = piano_roll(self.pathlist[index])
-            except:
-                index += 1
-                continue
-            break
+        data = piano_roll(self.pathlist[index])
         return data
 
     def __len__(self):

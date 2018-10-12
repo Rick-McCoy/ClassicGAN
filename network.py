@@ -53,7 +53,7 @@ class ResidualStack(torch.nn.Module):
     def _residual_block(res_channels, skip_channels, dilation, gpus):
         block = ResidualBlock(res_channels, skip_channels, dilation)
         if torch.cuda.is_available():
-            block = torch.nn.DataParallel(block, device_ids=gpus)
+            block = torch.nn.DataParallel(block, device_ids=gpus, output_device=2)
             block = block.cuda(2)
         return block
 
@@ -68,11 +68,11 @@ class ResidualStack(torch.nn.Module):
     
     def forward(self, input, skip_size):
         output = input
-        skip_connections = []
+        sum = 0
         for res_block in self.res_blocks:
             output, skip = res_block(output, skip_size)
-            skip_connections += [skip]
-        return torch.stack(skip_connections) # pylint: disable=E1101
+            sum += skip
+        return sum
 
 class PostProcess(torch.nn.Module):
     def __init__(self, channels):
@@ -80,12 +80,14 @@ class PostProcess(torch.nn.Module):
         self.conv1 = torch.nn.Conv1d(channels, channels, 1).cuda(2)
         self.conv2 = torch.nn.Conv1d(channels, channels, 1).cuda(2)
         self.relu = torch.nn.ReLU()
+        self.sigmoid = torch.nn.Sigmoid()
 
     def forward(self, input):
         output = self.relu(input)
         output = self.conv1(output)
         output = self.relu(output)
         output = self.conv2(output)
+        output = self.sigmoid(output)
         return output
 
 class Wavenet(torch.nn.Module):
@@ -110,7 +112,6 @@ class Wavenet(torch.nn.Module):
     def forward(self, input):
         output_size = self.calc_output_size(input)
         output = self.causal(input)
-        skip_connections = self.res_stacks(output, output_size)
-        output = torch.sum(skip_connections, dim=0) # pylint: disable=E1101
+        output = self.res_stacks(output, output_size)
         output = self.post(output)
-        return output.contiguous()
+        return output

@@ -16,7 +16,7 @@ class Wavenet:
     
     @staticmethod
     def _loss():
-        loss = torch.nn.BCEWithLogitsLoss()
+        loss = torch.nn.BCELoss()
         if torch.cuda.is_available():
             loss = loss.cuda(2)
         
@@ -27,14 +27,15 @@ class Wavenet:
     
     def _prepare_for_gpu(self):
         if len(self.gpus) > 1:
-            self.net = torch.nn.DataParallel(self.net, device_ids=self.gpus)
+            self.net = torch.nn.DataParallel(self.net, device_ids=self.gpus, output_device=2)
 
         if torch.cuda.is_available():
-            self.net.cuda()
+            self.net.cuda(2)
 
     def train(self, input, real):
-        output = self.net(input)
-        loss = self.loss(output.view(-1, self.in_channels), real.view(-1, self.in_channels).cuda(2))
+        output = self.net(input).transpose(1, 2)
+        real = real.contiguous().view(-1, self.in_channels).cuda(2)
+        loss = self.loss(output.contiguous().view(-1, self.in_channels), real)
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
@@ -42,9 +43,11 @@ class Wavenet:
 
     def generate(self, input):
         output = self.net(input)
-        return self.sigmoid(output)
+        return output
 
     def save(self, step):
+        if not os.path.exists('Checkpoints'):
+            os.mkdir('Checkpoints')
         torch.save(self.net.state_dict(), 'Checkpoints/{}.pkl'.format(step))
     
     def load(self, step):
