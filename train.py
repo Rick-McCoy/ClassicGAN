@@ -12,12 +12,12 @@ class Trainer():
     def __init__(self, args):
         self.args = args
         self.wavenet = Wavenet(args.layer_size, args.stack_size, args.in_channels, args.res_channels, args.learning_rate, args.gpus)
-        self.data_loader = DataLoader(self.wavenet.receptive_fields, args.batch_size, args.shuffle, args.num_workers)
+        self.data_loader = DataLoader(args.batch_size, args.shuffle, args.num_workers)
         self.writer = SummaryWriter('Logs')
     
     def run(self):
         for epoch in tqdm(range(self.args.num_epochs)):
-            for i, sample in tqdm(enumerate(self.data_loader)):
+            for i, sample in tqdm(enumerate(self.data_loader), total=self.data_loader.__len__()):
                 step = i + epoch * self.data_loader.__len__()
                 real = sample.transpose(1, 2)
                 synth, loss = self.wavenet.train(sample, real)
@@ -28,8 +28,9 @@ class Trainer():
                     self.writer.add_image('Real', real_image, step)
                     synth_image = synth[:1]
                     self.writer.add_image('Generated', synth_image, step)
-                    
-            self.wavenet.save((epoch + 1) * self.data_loader.__len__())
+            end_step = (epoch + 1) * self.data_loader.__len__()
+            self.wavenet.sample(end_step)
+            self.wavenet.save(end_step)
 
 
 if __name__ == '__main__':
@@ -40,11 +41,15 @@ if __name__ == '__main__':
     parser.add_argument('--res_channels', type=int, default=512)
     parser.add_argument('--num_epochs', type=int, default=1000)
     parser.add_argument('--learning_rate', type=float, default=0.0002)
-    parser.add_argument('--gpus', type=tuple, default=(2, 3))
-    parser.add_argument('--batch_size', type=int, default=12)
+    parser.add_argument('--gpus', type=list, default=[2, 3, 0])
+    parser.add_argument('--batch_size', type=int, default=18)
     parser.add_argument('--shuffle', type=bool, default=True)
-    parser.add_argument('--num_workers', type=int, default=4)
+    parser.add_argument('--num_workers', type=int, default=16)
 
     args = parser.parse_args()
+    if torch.cuda.device_count() == 1:
+        args.gpus = [0]
+        args.batch_size = 1
+
     trainer = Trainer(args)
     trainer.run()

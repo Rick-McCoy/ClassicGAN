@@ -25,13 +25,60 @@ def piano_roll(path):
         if not instrument.is_drum and instrument.program // 8 in classes:
             i = classes.index(instrument.program // 8)
             data[i] = np.add(data[i], roll[:, :length])
-    num = random.randint(0, length // INPUT_LENGTH - 1)
-    data = data[:, :, INPUT_LENGTH * num : INPUT_LENGTH * (num + 1)]
+    data_all = data
+    num = random.randint(0, length - INPUT_LENGTH)
+    data = data_all[:, :, num : INPUT_LENGTH + num]
+    datasum = np.sum(data)
+    sumall = np.sum(data_all)
+    datasum = 0
+    while datasum == 0 and sumall > 0:
+        num = random.randint(0, length - INPUT_LENGTH)
+        data = data_all[:, :, num : INPUT_LENGTH + num]
+        datasum = np.sum(data)
     for datum in data:
         datum[0] += 1 - datum.sum(axis=0)
     data = data > 0
     data = np.concatenate(data, axis=0)
     return data.astype(np.float32)
+
+def clean(x):
+    x = x[0] > 0.5
+    for i in range(6):
+        x[:, i * 128] = 0
+    x = np.split(x.T, 128)
+    return x
+
+def piano_rolls_to_midi(x, fs=96):
+    notes = x[0].shape[0]
+    midi = pm.PrettyMIDI()
+    instruments = [0, 24, 40, 56, 64, 72]
+    for roll, instrument in zip(x, instruments):
+        current_inst = pm.Instrument(instrument)
+        current_roll = np.pad(roll, [(0, 0), (1, 1)], 'constant')
+        velocity_changes = np.nonzero(np.diff(current_roll).T)
+        prev_velocities = np.zeros(notes, dtype=int)
+        note_on_time = np.zeros(notes)
+        for time, note in zip(*velocity_changes):
+            velocity = current_roll[note, time + 1]
+            time /= fs
+            if velocity > 0:
+                if prev_velocities[note] == 0:
+                    note_on_time[note] = time
+                    prev_velocities[note] = velocity
+            else:
+                pm_note = pm.Note(
+                    velocity=prev_velocities[note], 
+                    pitch=note, 
+                    start=note_on_time[note], 
+                    end=time
+                )
+                current_inst.notes.append(pm_note)
+                prev_velocities[note] = 0
+        midi.instruments.append(current_inst)
+    return midi
+
+
+
 
 class Dataset(data.Dataset):
     def __init__(self):
@@ -46,7 +93,7 @@ class Dataset(data.Dataset):
         return len(self.pathlist)
 
 class DataLoader(data.DataLoader):
-    def __init__(self, receptive_fields, batch_size, shuffle=True, num_workers=4):
+    def __init__(self, batch_size, shuffle=True, num_workers=4):
         super(DataLoader, self).__init__(Dataset(), batch_size, shuffle, num_workers=num_workers)
 
 def Test():

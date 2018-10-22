@@ -1,25 +1,25 @@
 import os
 import torch
 import torch.optim
+import numpy as np
+import pretty_midi as pm
+from tqdm import tqdm
+from data import INPUT_LENGTH, clean, piano_rolls_to_midi
 from network import Wavenet as WavenetModule
 
 class Wavenet:
-    def __init__(self, layer_size, stack_size, in_channels, res_channels, lr, gpus=(2, 3)):
-        self.net = WavenetModule(layer_size, stack_size, in_channels, res_channels, gpus)
-        self.receptive_fields = self.net.receptive_field
+    def __init__(self, layer_size, stack_size, in_channels, res_channels, lr, gpus):
+        self.net = WavenetModule(layer_size, stack_size, in_channels, res_channels)
+        self.gpus = gpus
+        self._prepare_for_gpu()
         self.in_channels = in_channels
         self.lr = lr
-        self.gpus = gpus
         self.sigmoid = torch.nn.Sigmoid()
         self.loss = self._loss()
         self.optimizer = self._optimizer()
     
-    @staticmethod
-    def _loss():
+    def _loss(self):
         loss = torch.nn.BCELoss()
-        if torch.cuda.is_available():
-            loss = loss.cuda(2)
-        
         return loss
 
     def _optimizer(self):
@@ -27,22 +27,43 @@ class Wavenet:
     
     def _prepare_for_gpu(self):
         if len(self.gpus) > 1:
-            self.net = torch.nn.DataParallel(self.net, device_ids=self.gpus, output_device=2)
-
+            self.net = torch.nn.DataParallel(self.net, device_ids=self.gpus, output_device=self.gpus[0])
         if torch.cuda.is_available():
-            self.net.cuda(2)
+            self.net.cuda(self.gpus[0])
 
     def train(self, input, real):
-        output = self.net(input).transpose(1, 2)
-        real = real.contiguous().view(-1, self.in_channels).cuda(2)
+        output = self.net(input)[:, :, :-1]
+        output = output.transpose(1, 2)
+        real = real[:, 1:, :]
+        real = real.contiguous().view(-1, self.in_channels).cuda(self.gpus[0])
         loss = self.loss(output.contiguous().view(-1, self.in_channels), real)
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
         return output, loss.item()
 
-    def generate(self, input):
+    def sample(self, step):
+        if not os.path.isdir('Samples'):
+            os.mkdir('Samples')
+        roll = self.generate_slow()
+        roll = clean(roll)
+        midi = piano_rolls_to_midi(roll)
+        midi.write('Samples/{}.mid'.format(step))
+        tqdm.write('Save to Samples/{}.mid'.format(step))
+
+    def generate_with_input(self, input):
         output = self.net(input)
+        return output
+
+    def generate_slow(self):
+        output = np.zeros([1, 768, 1])
+        for i in range(6):
+            output[:, i * 128, :] = 1
+        for i in tqdm(range(INPUT_LENGTH - 1)):
+            x = torch.Tensor(output[:, :, -1024:]).cuda(self.gpus[0])
+            x = self.net(x)[:, :, -1:].detach().cpu().numpy()
+            output = np.concatenate((output, x), axis=2)
+            del x
         return output
 
     def save(self, step):

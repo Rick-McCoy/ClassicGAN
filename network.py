@@ -42,28 +42,24 @@ class ResidualBlock(torch.nn.Module):
         return output, skip
 
 class ResidualStack(torch.nn.Module):
-    def __init__(self, layer_size, stack_size, res_channels, skip_channels, gpus):
+    def __init__(self, layer_size, stack_size, res_channels, skip_channels):
         super(ResidualStack, self).__init__()
         self.layer_size = layer_size
         self.stack_size = stack_size
-        self.gpus = gpus
-        self.res_blocks = self.stack_res_blocks(res_channels, skip_channels, gpus)
+        self.res_blocks = torch.nn.ModuleList(self.stack_res_blocks(res_channels, skip_channels))
         
     @staticmethod
-    def _residual_block(res_channels, skip_channels, dilation, gpus):
+    def _residual_block(res_channels, skip_channels, dilation):
         block = ResidualBlock(res_channels, skip_channels, dilation)
-        if torch.cuda.is_available():
-            block = torch.nn.DataParallel(block, device_ids=gpus, output_device=2)
-            block = block.cuda(2)
         return block
 
     def build_dilations(self):
         dilation = [2 ** i for i in range(self.layer_size)] * self.stack_size
         return dilation
 
-    def stack_res_blocks(self, res_channels, skip_channels, gpus):
+    def stack_res_blocks(self, res_channels, skip_channels):
         dilations = self.build_dilations()
-        res_blocks = [self._residual_block(res_channels, skip_channels, dilation, gpus) for dilation in dilations]
+        res_blocks = [self._residual_block(res_channels, skip_channels, dilation) for dilation in dilations]
         return res_blocks
     
     def forward(self, input, skip_size):
@@ -77,8 +73,8 @@ class ResidualStack(torch.nn.Module):
 class PostProcess(torch.nn.Module):
     def __init__(self, channels):
         super(PostProcess, self).__init__()
-        self.conv1 = torch.nn.Conv1d(channels, channels, 1).cuda(2)
-        self.conv2 = torch.nn.Conv1d(channels, channels, 1).cuda(2)
+        self.conv1 = torch.nn.Conv1d(channels, channels, 1)
+        self.conv2 = torch.nn.Conv1d(channels, channels, 1)
         self.relu = torch.nn.ReLU()
         self.sigmoid = torch.nn.Sigmoid()
 
@@ -91,12 +87,11 @@ class PostProcess(torch.nn.Module):
         return output
 
 class Wavenet(torch.nn.Module):
-    def __init__(self, layer_size, stack_size, in_channels, res_channels, gpus):
+    def __init__(self, layer_size, stack_size, in_channels, res_channels):
         super(Wavenet, self).__init__()
-
         self.receptive_field = self.calc_receptive_field(layer_size, stack_size)
         self.causal = DilatedCausalConv1d(in_channels, res_channels, 1)
-        self.res_stacks = ResidualStack(layer_size, stack_size, res_channels, in_channels, gpus)
+        self.res_stacks = ResidualStack(layer_size, stack_size, res_channels, in_channels)
         self.post = PostProcess(in_channels)
     
     @staticmethod
