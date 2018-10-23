@@ -4,7 +4,7 @@ import torch.optim
 import numpy as np
 import pretty_midi as pm
 from tqdm import tqdm
-from data import INPUT_LENGTH, clean, piano_rolls_to_midi
+from data import INPUT_LENGTH, clean, piano_rolls_to_midi, save_roll
 from network import Wavenet as WavenetModule
 
 class Wavenet:
@@ -47,6 +47,7 @@ class Wavenet:
             os.mkdir('Samples')
         roll = self.generate_slow()
         roll = clean(roll)
+        save_roll(roll, step)
         midi = piano_rolls_to_midi(roll)
         midi.write('Samples/{}.mid'.format(step))
         tqdm.write('Save to Samples/{}.mid'.format(step))

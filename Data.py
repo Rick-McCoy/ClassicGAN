@@ -6,6 +6,9 @@ import pretty_midi as pm
 import numpy as np
 import torch
 import warnings
+import librosa.display
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import torch.utils.data as data
 
@@ -44,9 +47,17 @@ def piano_roll(path):
 def clean(x):
     x = x[0] > 0.5
     for i in range(6):
-        x[:, i * 128] = 0
-    x = np.split(x.T, 128)
+        x[i * 128, :] = 0
+    x = np.split(x, 128)
     return x
+
+def save_roll(x, step):
+    x = np.concatenate(x, axis=0)
+    fig = plt.figure(figsize=(72, 24))
+    librosa.display.specshow(x, x_axis='time', hop_length=1, sr=96, fmin=pm.note_number_to_hz(12))
+    plt.title('{}'.format(step))
+    fig.savefig('Samples/{}.png'.format(step))
+    plt.close(fig)
 
 def piano_rolls_to_midi(x, fs=96):
     notes = x[0].shape[0]
@@ -93,7 +104,7 @@ class Dataset(data.Dataset):
         return len(self.pathlist)
 
 class DataLoader(data.DataLoader):
-    def __init__(self, batch_size, shuffle=True, num_workers=4):
+    def __init__(self, batch_size, shuffle=True, num_workers=32):
         super(DataLoader, self).__init__(Dataset(), batch_size, shuffle, num_workers=num_workers)
 
 def Test():
