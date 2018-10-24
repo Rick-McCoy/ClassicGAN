@@ -1,6 +1,7 @@
 import os
 import torch
 import torch.optim
+import random
 import numpy as np
 import pretty_midi as pm
 from tqdm import tqdm
@@ -51,6 +52,8 @@ class Wavenet:
         midi = piano_rolls_to_midi(roll)
         midi.write('Samples/{}.mid'.format(step))
         tqdm.write('Save to Samples/{}.mid'.format(step))
+        roll = np.expand_dims(roll.T, axis=0)
+        return roll
 
     def generate_with_input(self, input):
         output = self.net(input)
@@ -60,6 +63,8 @@ class Wavenet:
         output = np.zeros([1, 768, 1])
         for i in range(6):
             output[:, i * 128, :] = 1
+            if random.randint(0, 1) == 1:
+                output[:, i * 128 + random.randint(48, 80), :] = 1
         for i in tqdm(range(INPUT_LENGTH - 1)):
             x = torch.Tensor(output[:, :, -1024:]).cuda(self.gpus[0])
             x = self.net(x)[:, :, -1:].detach().cpu().numpy()

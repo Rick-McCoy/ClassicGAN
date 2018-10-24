@@ -11,7 +11,14 @@ from tensorboardX import SummaryWriter
 class Trainer():
     def __init__(self, args):
         self.args = args
-        self.wavenet = Wavenet(args.layer_size, args.stack_size, args.in_channels, args.res_channels, args.learning_rate, args.gpus)
+        self.wavenet = Wavenet(
+            args.layer_size, 
+            args.stack_size, 
+            args.in_channels, 
+            args.res_channels, 
+            args.learning_rate, 
+            args.gpus
+        )
         self.data_loader = DataLoader(args.batch_size, args.shuffle, args.num_workers)
         self.writer = SummaryWriter('Logs')
     
@@ -29,20 +36,20 @@ class Trainer():
                     synth_image = synth[:1]
                     self.writer.add_image('Generated', synth_image, step)
             end_step = (epoch + 1) * self.data_loader.__len__()
-            self.wavenet.sample(end_step)
+            sampled_image = self.wavenet.sample(end_step)
+            self.writer.add_image('Sampled', sampled_image, end_step)
             self.wavenet.save(end_step)
-
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--layer_size', type=int, default=10)
     parser.add_argument('--stack_size', type=int, default=5)
-    parser.add_argument('--in_channels', type=int, default=768)
+    parser.add_argument('--in_channels', type=int, default=324)
     parser.add_argument('--res_channels', type=int, default=512)
     parser.add_argument('--num_epochs', type=int, default=1000)
     parser.add_argument('--learning_rate', type=float, default=0.0002)
     parser.add_argument('--gpus', type=list, default=[2, 3, 0])
-    parser.add_argument('--batch_size', type=int, default=18)
+    parser.add_argument('--batch_size', type=int, default=6)
     parser.add_argument('--shuffle', type=bool, default=True)
     parser.add_argument('--num_workers', type=int, default=16)
 
