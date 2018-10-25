@@ -21,21 +21,21 @@ def piano_roll(path):
     classes = [0, 3, 5, 7, 8, 9]
     limits = [[24, 96], [36, 84], [24, 96], [36, 84], [36, 84], [60, 96]]
     piano_rolls = [(_.get_piano_roll(), _.program) for _ in song.instruments if not _.is_drum and _.program // 8 in classes]
-    length = np.amin([roll.shape[1] for roll in piano_rolls])
+    length = np.amin([roll.shape[1] for roll, _ in piano_rolls])
     data = [np.zeros(shape=(limits[i][1]-limits[i][0], length)) for i in range(6)]
     for roll, instrument in piano_rolls:
-        i = classes.index(instrument.program // 8)
+        i = classes.index(instrument // 8)
         data[i] = np.add(data[i], roll[limits[i][0]:limits[i][1], :length])
     data_all = data
     num = random.randint(0, length - INPUT_LENGTH)
     data = [data_all[i][:, num : INPUT_LENGTH + num] for i in range(6)]
-    datasum = np.sum(data)
-    sumall = np.sum(data_all)
+    datasum = sum([np.sum(datum) for datum in data])
+    sumall = sum([np.sum(datum) for datum in data_all])
     datasum = 0
     while datasum == 0 and sumall > 0:
         num = random.randint(0, length - INPUT_LENGTH)
         data = [data_all[i][:, num : INPUT_LENGTH + num] for i in range(6)]
-        datasum = np.sum(data)
+        datasum = sum([np.sum(datum) for datum in data])
     data = np.concatenate(data, axis=0)
     data[0] += 1 - data.sum(axis = 0)
     data = data > 0
@@ -43,8 +43,7 @@ def piano_roll(path):
 
 def clean(x):
     x = x[0] > 0.5
-    for i in range(6):
-        x[i * 128, :] = 0
+    x[0] = 0
     return x
 
 def save_roll(x, step):
@@ -55,14 +54,17 @@ def save_roll(x, step):
     plt.close(fig)
 
 def piano_rolls_to_midi(x, fs=96):
-    x = np.split(x, 128)
-    notes = x[0].shape[0]
+    channels = [72, 48, 72, 48, 48, 36]
+    for i in range(1, 6):
+        channels[i] += channels[i - 1]
+    x = np.split(x, channels)
     midi = pm.PrettyMIDI()
     limits = [[24, 96], [36, 84], [24, 96], [36, 84], [36, 84], [60, 96]]
     instruments = [0, 24, 40, 56, 64, 72]
     for roll, instrument, limit in zip(x, instruments, limits):
         current_inst = pm.Instrument(instrument)
         current_roll = np.pad(roll, [(limit[0], 128 - limit[1]), (1, 1)], 'constant')
+        notes = current_roll.shape[0]
         velocity_changes = np.nonzero(np.diff(current_roll).T)
         prev_velocities = np.zeros(notes, dtype=int)
         note_on_time = np.zeros(notes)

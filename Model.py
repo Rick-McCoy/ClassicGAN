@@ -9,15 +9,34 @@ from data import INPUT_LENGTH, clean, piano_rolls_to_midi, save_roll
 from network import Wavenet as WavenetModule
 
 class Wavenet:
-    def __init__(self, layer_size, stack_size, in_channels, res_channels, lr, gpus):
-        self.net = WavenetModule(layer_size, stack_size, in_channels, res_channels)
+    def __init__(
+            self, 
+            layer_size, 
+            stack_size, 
+            channels, 
+            residual_channels, 
+            dilation_channels, 
+            skip_channels, 
+            end_channels, 
+            lr, gpus, writer
+        ):
+        self.net = WavenetModule(
+            layer_size, 
+            stack_size, 
+            channels, 
+            residual_channels, 
+            dilation_channels, 
+            skip_channels, 
+            end_channels
+        )
         self.gpus = gpus
         self._prepare_for_gpu()
-        self.in_channels = in_channels
+        self.channels = channels
         self.lr = lr
         self.sigmoid = torch.nn.Sigmoid()
         self.loss = self._loss()
         self.optimizer = self._optimizer()
+        self.writer = writer
     
     def _loss(self):
         loss = torch.nn.BCELoss()
@@ -32,16 +51,19 @@ class Wavenet:
         if torch.cuda.is_available():
             self.net.cuda(self.gpus[0])
 
-    def train(self, input, real):
-        output = self.net(input)[:, :, :-1]
-        output = output.transpose(1, 2)
-        real = real[:, 1:, :]
-        real = real.contiguous().view(-1, self.in_channels).cuda(self.gpus[0])
-        loss = self.loss(output.contiguous().view(-1, self.in_channels), real)
+    def train(self, x, step):
+        output = self.net(x).transpose_(1, 2)[:, :-1, :]
+        real = x.transpose_(1, 2)[:, 1:, :]
+        loss = self.loss(output.reshape(-1, self.channels), real.reshape(-1, self.channels))
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
-        return output, loss.item()
+        if step % 20 == 0:
+            real_image = real[:1]
+            self.writer.add_image('Real', real_image, step)
+            output_image = output[:1]
+            self.writer.add_image('Generated', output_image, step)
+        return loss.item()
 
     def sample(self, step):
         if not os.path.isdir('Samples'):
@@ -60,11 +82,16 @@ class Wavenet:
         return output
 
     def generate_slow(self):
-        output = np.zeros([1, 768, 1])
-        for i in range(6):
-            output[:, i * 128, :] = 1
-            if random.randint(0, 1) == 1:
-                output[:, i * 128 + random.randint(48, 80), :] = 1
+        channels = [0, 72, 48, 72, 48, 48, 36]
+        for i in range(1, 7):
+            channels[i] += channels[i - 1]
+        output = np.zeros([1, self.channels, 1])
+        if random.randint(0, 1) == 1:
+            output[:, 0, :] = 1
+        else:
+            for i in range(6):
+                if random.randint(0, 1) == 1:
+                    output[:, random.randint(channels[i], channels[i + 1] - 1), :] = 1
         for i in tqdm(range(INPUT_LENGTH - 1)):
             x = torch.Tensor(output[:, :, -1024:]).cuda(self.gpus[0])
             x = self.net(x)[:, :, -1:].detach().cpu().numpy()
