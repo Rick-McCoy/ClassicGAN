@@ -51,19 +51,23 @@ class Wavenet:
         if torch.cuda.is_available():
             self.net.cuda(self.gpus[0])
 
-    def train(self, x, step):
+    def train(self, x, step=0, train=True, total=0):
         output = self.net(x).transpose_(1, 2)[:, :-1, :]
         real = x.transpose_(1, 2)[:, 1:, :]
         loss = self.loss(output.reshape(-1, self.channels), real.reshape(-1, self.channels))
         self.optimizer.zero_grad()
-        loss.backward()
-        self.optimizer.step()
-        if step % 20 == 0:
-            real_image = real[:1]
-            self.writer.add_image('Real', real_image, step)
-            output_image = output[:1]
-            self.writer.add_image('Generated', output_image, step)
-        return loss.item()
+        if train:
+            loss.backward()
+            self.optimizer.step()
+            tqdm.write('Training step {}/{} Loss: {}'.format(step, total, loss))
+            self.writer.add_scalar('Training loss', loss.item(), step)
+            if step % 20 == 0:
+                real_image = real[:1]
+                self.writer.add_image('Real', real_image, step)
+                output_image = output[:1]
+                self.writer.add_image('Generated', output_image, step)
+        else:
+            return loss.item()
 
     def sample(self, step):
         if not os.path.isdir('Samples'):

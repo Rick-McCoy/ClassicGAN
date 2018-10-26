@@ -13,6 +13,9 @@ import matplotlib.pyplot as plt
 import torch.utils.data as data
 
 INPUT_LENGTH = 4096
+pathlist = list(pathlib.Path('Classics').glob('**/*.mid'))
+trainlist = pathlist[:-108]
+testlist = pathlist[-108:]
 
 def piano_roll(path):
     with warnings.catch_warnings():
@@ -88,9 +91,12 @@ def piano_rolls_to_midi(x, fs=96):
     return midi
 
 class Dataset(data.Dataset):
-    def __init__(self):
+    def __init__(self, train):
         super(Dataset, self).__init__()
-        self.pathlist = list(pathlib.Path('Classics').glob('**/*.mid'))
+        if train:
+            self.pathlist = trainlist
+        else:
+            self.pathlist = testlist
     
     def __getitem__(self, index):
         data = piano_roll(self.pathlist[index])
@@ -100,8 +106,8 @@ class Dataset(data.Dataset):
         return len(self.pathlist)
 
 class DataLoader(data.DataLoader):
-    def __init__(self, batch_size, shuffle=True, num_workers=32):
-        super(DataLoader, self).__init__(Dataset(), batch_size, shuffle, num_workers=num_workers)
+    def __init__(self, batch_size, shuffle=True, num_workers=32, train=True):
+        super(DataLoader, self).__init__(Dataset(train), batch_size, shuffle, num_workers=num_workers)
 
 def Test():
     pathlist = list(pathlib.Path('Classics').glob('**/*.mid'))

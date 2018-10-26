@@ -11,7 +11,8 @@ from tensorboardX import SummaryWriter
 class Trainer():
     def __init__(self, args):
         self.args = args
-        self.writer = SummaryWriter('Logs')
+        self.train_writer = SummaryWriter('Logs/train')
+        self.test_writer = SummaryWriter('Logs/test')
         self.wavenet = Wavenet(
             args.layer_size, 
             args.stack_size, 
@@ -22,20 +23,25 @@ class Trainer():
             args.end_channels, 
             args.learning_rate, 
             args.gpus, 
-            self.writer
+            self.train_writer
         )
-        self.data_loader = DataLoader(args.batch_size, args.shuffle, args.num_workers)
+        self.train_data_loader = DataLoader(args.batch_size, args.shuffle, args.num_workers, True)
+        self.test_data_loader = DataLoader(args.batch_size, args.shuffle, args.num_workers, False)
     
     def run(self):
         for epoch in tqdm(range(self.args.num_epochs)):
-            for i, sample in tqdm(enumerate(self.data_loader), total=self.data_loader.__len__()):
-                step = i + epoch * self.data_loader.__len__()
-                loss = self.wavenet.train(sample.cuda(self.args.gpus[0]), step)
-                tqdm.write('Step {}/{} Loss: {}'.format(step, self.args.num_epochs, loss))
-                self.writer.add_scalar('Loss', loss, step)
-            end_step = (epoch + 1) * self.data_loader.__len__()
+            for i, sample in tqdm(enumerate(self.train_data_loader), total=self.train_data_loader.__len__()):
+                step = i + epoch * self.train_data_loader.__len__()
+                self.wavenet.train(sample.cuda(self.args.gpus[0]), step, True, self.args.num_epochs * self.train_data_loader.__len__())
+            train_loss = 0
+            for i, sample in tqdm(enumerate(self.test_data_loader), total=self.test_data_loader.__len__()):
+                train_loss += self.wavenet.train(sample.cuda(self.args.gpus[0]), train=False)
+            train_loss /= self.test_data_loader.__len__()
+            tqdm.write('Testing step Loss: {}'.format(train_loss))
+            end_step = (epoch + 1) * self.train_data_loader.__len__()
             sampled_image = self.wavenet.sample(end_step)
-            self.writer.add_image('Sampled', sampled_image, end_step)
+            self.test_writer.add_scalar('Testing loss', train_loss, end_step)
+            self.test_writer.add_image('Sampled', sampled_image, end_step)
             self.wavenet.save(end_step)
 
 if __name__ == '__main__':
@@ -46,13 +52,13 @@ if __name__ == '__main__':
     parser.add_argument('--residual_channels', type=int, default=128)
     parser.add_argument('--dilation_channels', type=int, default=128)
     parser.add_argument('--skip_channels', type=int, default=512)
-    parser.add_argument('--end_channels', type=int, default=256)
+    parser.add_argument('--end_channels', type=int, default=1024)
     parser.add_argument('--num_epochs', type=int, default=1000)
     parser.add_argument('--learning_rate', type=float, default=0.0002)
     parser.add_argument('--gpus', type=list, default=[2, 3, 0])
-    parser.add_argument('--batch_size', type=int, default=12)
+    parser.add_argument('--batch_size', type=int, default=36)
     parser.add_argument('--shuffle', type=bool, default=True)
-    parser.add_argument('--num_workers', type=int, default=16)
+    parser.add_argument('--num_workers', type=int, default=32)
 
     args = parser.parse_args()
     if torch.cuda.device_count() == 1:
