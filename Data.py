@@ -1,11 +1,11 @@
 import os
 import pathlib
-import random
 from tqdm import tqdm
 import pretty_midi as pm
 import numpy as np
 import torch
 import warnings
+import re
 import librosa.display
 import matplotlib
 matplotlib.use('Agg')
@@ -14,8 +14,11 @@ import torch.utils.data as data
 
 INPUT_LENGTH = 4096
 pathlist = list(pathlib.Path('Classics').glob('**/*.mid'))
-trainlist = pathlist[:-108]
-testlist = pathlist[-108:]
+trainlist = pathlist[:-144]
+testlist = pathlist[-144:]
+
+def natural_sort_key(s, _nsre=re.compile('(\\d+)')):
+    return [int(text) if text.isdigit() else text.lower() for text in _nsre.split(s)]
 
 def piano_roll(path):
     with warnings.catch_warnings():
@@ -30,13 +33,13 @@ def piano_roll(path):
         i = classes.index(instrument // 8)
         data[i] = np.add(data[i], roll[limits[i][0]:limits[i][1], :length])
     data_all = data
-    num = random.randint(0, length - INPUT_LENGTH)
+    num = np.random.randint(0, length - INPUT_LENGTH)
     data = [data_all[i][:, num : INPUT_LENGTH + num] for i in range(6)]
     datasum = sum([np.sum(datum) for datum in data])
     sumall = sum([np.sum(datum) for datum in data_all])
     datasum = 0
     while datasum == 0 and sumall > 0:
-        num = random.randint(0, length - INPUT_LENGTH)
+        num = np.random.randint(0, length - INPUT_LENGTH)
         data = [data_all[i][:, num : INPUT_LENGTH + num] for i in range(6)]
         datasum = sum([np.sum(datum) for datum in data])
     data = np.concatenate(data, axis=0)
@@ -60,7 +63,7 @@ def piano_rolls_to_midi(x, fs=96):
     channels = [72, 48, 72, 48, 48, 36]
     for i in range(1, 6):
         channels[i] += channels[i - 1]
-    x = np.split(x, channels)
+    x = np.split(x * 100, channels)
     midi = pm.PrettyMIDI()
     limits = [[24, 96], [36, 84], [24, 96], [36, 84], [36, 84], [60, 96]]
     instruments = [0, 24, 40, 56, 64, 72]
@@ -111,7 +114,7 @@ class DataLoader(data.DataLoader):
 
 def Test():
     pathlist = list(pathlib.Path('Classics').glob('**/*.mid'))
-    random.shuffle(pathlist)
+    np.random.shuffle(pathlist)
     print(len(pathlist))
     instruments = [0, 3, 5, 7, 8, 9]
     limits = [[24, 96], [36, 84], [24, 96], [36, 84], [36, 84], [60, 96]]

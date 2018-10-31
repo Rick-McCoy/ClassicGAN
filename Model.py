@@ -1,7 +1,6 @@
 import os
 import torch
 import torch.optim
-import random
 import numpy as np
 import pretty_midi as pm
 from tqdm import tqdm
@@ -52,8 +51,8 @@ class Wavenet:
             self.net.cuda(self.gpus[0])
 
     def train(self, x, step=0, train=True, total=0):
-        output = self.net(x).transpose_(1, 2)[:, :-1, :]
-        real = x.transpose_(1, 2)[:, 1:, :]
+        output = self.net(x).transpose(1, 2)[:, :-1, :]
+        real = x.transpose(1, 2)[:, 1:, :]
         loss = self.loss(output.reshape(-1, self.channels), real.reshape(-1, self.channels))
         self.optimizer.zero_grad()
         if train:
@@ -69,15 +68,15 @@ class Wavenet:
         else:
             return loss.item()
 
-    def sample(self, step):
+    def sample(self, step, temperature=1., init=None):
         if not os.path.isdir('Samples'):
             os.mkdir('Samples')
-        roll = self.generate_slow()
+        roll = self.generate_slow(temperature, init)
         roll = clean(roll)
         save_roll(roll, step)
         midi = piano_rolls_to_midi(roll)
         midi.write('Samples/{}.mid'.format(step))
-        tqdm.write('Save to Samples/{}.mid'.format(step))
+        tqdm.write('Saved to Samples/{}.mid'.format(step))
         roll = np.expand_dims(roll.T, axis=0)
         return roll
 
@@ -85,22 +84,29 @@ class Wavenet:
         output = self.net(input)
         return output
 
-    def generate_slow(self):
+    def generate_slow(self, temperature=1., init=None):
         channels = [0, 72, 48, 72, 48, 48, 36]
         for i in range(1, 7):
             channels[i] += channels[i - 1]
-        output = np.zeros([1, self.channels, 1])
-        if random.randint(0, 1) == 1:
-            output[:, 0, :] = 1
+        if init is None:
+            output = np.zeros([1, self.channels, 1])
+            if np.random.randint(0, 2) == 1:
+                output[:, 0, :] = 1
+            else:
+                for i in range(6):
+                    num = np.random.randint(0, 4)
+                    for _ in range(num):
+                        output[:, np.random.randint(channels[i], channels[i + 1]), :] = 1
         else:
-            for i in range(6):
-                if random.randint(0, 1) == 1:
-                    output[:, random.randint(channels[i], channels[i + 1] - 1), :] = 1
-        for i in tqdm(range(INPUT_LENGTH - 1)):
-            x = torch.Tensor(output[:, :, -1024:]).cuda(self.gpus[0])
+            output = init
+        *_, length = output.shape
+        for i in tqdm(range(INPUT_LENGTH - length)):
+            x = torch.Tensor(output[:, :, -1023:]).cuda(self.gpus[0])
             x = self.net(x)[:, :, -1:].detach().cpu().numpy()
+            if temperature < 1:
+                x = np.power(x + 0.5, temperature) - 0.5
+            x = x > np.random.rand(1, self.channels, 1)
             output = np.concatenate((output, x), axis=2)
-            del x
         return output
 
     def save(self, step):
@@ -108,5 +114,6 @@ class Wavenet:
             os.mkdir('Checkpoints')
         torch.save(self.net.state_dict(), 'Checkpoints/{}.pkl'.format(step))
     
-    def load(self, step):
-        self.net.load_state_dict(torch.load('Checkpoints/{}.pkl'.format(step)))
+    def load(self, path):
+        tqdm.write('Loading from {}'.format(path))
+        self.net.load_state_dict(torch.load(path))

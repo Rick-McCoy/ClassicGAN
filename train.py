@@ -3,9 +3,11 @@ from __future__ import division
 import os
 import argparse
 import torch
+import pathlib
+import time
 from tqdm import tqdm
 from model import Wavenet
-from data import DataLoader
+from data import DataLoader, natural_sort_key
 from tensorboardX import SummaryWriter
 
 class Trainer():
@@ -29,6 +31,11 @@ class Trainer():
         self.test_data_loader = DataLoader(args.batch_size, args.shuffle, args.num_workers, False)
     
     def run(self):
+        checkpoint_list = list(pathlib.Path('Checkpoints').glob('**/*.pkl'))
+        checkpoint_list = [str(i) for i in checkpoint_list]
+        if len(checkpoint_list) > 0:
+            checkpoint_list.sort(key=natural_sort_key)
+            self.wavenet.load(str(checkpoint_list[-1]))
         for epoch in tqdm(range(self.args.num_epochs)):
             for i, sample in tqdm(enumerate(self.train_data_loader), total=self.train_data_loader.__len__()):
                 step = i + epoch * self.train_data_loader.__len__()
@@ -44,21 +51,33 @@ class Trainer():
             self.test_writer.add_image('Sampled', sampled_image, end_step)
             self.wavenet.save(end_step)
 
+    def sample(self):
+        checkpoint_list = list(pathlib.Path('Checkpoints').glob('**/*.pkl'))
+        checkpoint_list = [str(i) for i in checkpoint_list]
+        if len(checkpoint_list) > 0:
+            checkpoint_list.sort(key=natural_sort_key)
+            self.wavenet.load(str(checkpoint_list[-1]))
+        for sample in self.test_data_loader:
+            self.wavenet.sample('Sample_{}'.format(int(time.time())), self.args.temperature, sample[:1, :, :1023])
+            return
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--layer_size', type=int, default=10)
     parser.add_argument('--stack_size', type=int, default=5)
     parser.add_argument('--channels', type=int, default=324)
-    parser.add_argument('--residual_channels', type=int, default=128)
-    parser.add_argument('--dilation_channels', type=int, default=128)
+    parser.add_argument('--residual_channels', type=int, default=256)
+    parser.add_argument('--dilation_channels', type=int, default=256)
     parser.add_argument('--skip_channels', type=int, default=512)
     parser.add_argument('--end_channels', type=int, default=1024)
-    parser.add_argument('--num_epochs', type=int, default=1000)
+    parser.add_argument('--num_epochs', type=int, default=10000)
     parser.add_argument('--learning_rate', type=float, default=0.0002)
     parser.add_argument('--gpus', type=list, default=[2, 3, 0])
-    parser.add_argument('--batch_size', type=int, default=36)
+    parser.add_argument('--batch_size', type=int, default=24)
     parser.add_argument('--shuffle', type=bool, default=True)
     parser.add_argument('--num_workers', type=int, default=32)
+    parser.add_argument('--sample', type=bool, default=False)
+    parser.add_argument('--temperature', type=float, default=1.)
 
     args = parser.parse_args()
     if torch.cuda.device_count() == 1:
@@ -66,4 +85,7 @@ if __name__ == '__main__':
         args.batch_size = 1
 
     trainer = Trainer(args)
-    trainer.run()
+    if args.sample:
+        trainer.sample()
+    else:
+        trainer.run()
