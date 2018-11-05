@@ -101,7 +101,7 @@ class Wavenet:
             output = init
         *_, length = output.shape
         for i in tqdm(range(INPUT_LENGTH - length)):
-            x = torch.Tensor(output[:, :, -1023:]).cuda(self.gpus[0])
+            x = torch.Tensor(output).cuda(self.gpus[0])
             x = self.net(x)[:, :, -1:].detach().cpu().numpy()
             if temperature < 1:
                 x = np.power(x + 0.5, temperature) - 0.5

@@ -27,8 +27,8 @@ class Trainer():
             args.gpus, 
             self.train_writer
         )
-        self.train_data_loader = DataLoader(args.batch_size, args.shuffle, args.num_workers, True)
-        self.test_data_loader = DataLoader(args.batch_size, args.shuffle, args.num_workers, False)
+        self.train_data_loader = DataLoader(args.batch_size * len(args.gpus), args.shuffle, args.num_workers, True)
+        self.test_data_loader = DataLoader(args.batch_size * len(args.gpus), args.shuffle, args.num_workers, False)
     
     def run(self):
         checkpoint_list = list(pathlib.Path('Checkpoints').glob('**/*.pkl'))
@@ -51,15 +51,16 @@ class Trainer():
             self.test_writer.add_image('Sampled', sampled_image, end_step)
             self.wavenet.save(end_step)
 
-    def sample(self):
+    def sample(self, num):
         checkpoint_list = list(pathlib.Path('Checkpoints').glob('**/*.pkl'))
         checkpoint_list = [str(i) for i in checkpoint_list]
         if len(checkpoint_list) > 0:
             checkpoint_list.sort(key=natural_sort_key)
             self.wavenet.load(str(checkpoint_list[-1]))
-        for sample in self.test_data_loader:
-            self.wavenet.sample('Sample_{}'.format(int(time.time())), self.args.temperature, sample[:1, :, :1023])
-            return
+        for i, sample in tqdm(enumerate(self.test_data_loader), total=num):
+            if i >= num:
+                return
+            self.wavenet.sample('Sample_{}'.format(int(time.time())), self.args.temperature, sample)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -72,11 +73,11 @@ if __name__ == '__main__':
     parser.add_argument('--end_channels', type=int, default=1024)
     parser.add_argument('--num_epochs', type=int, default=10000)
     parser.add_argument('--learning_rate', type=float, default=0.0002)
-    parser.add_argument('--gpus', type=list, default=[2, 3, 0])
-    parser.add_argument('--batch_size', type=int, default=24)
+    parser.add_argument('--gpus', type=list, default=[1, 2, 3])
+    parser.add_argument('--batch_size', type=int, default=8)
     parser.add_argument('--shuffle', type=bool, default=True)
     parser.add_argument('--num_workers', type=int, default=32)
-    parser.add_argument('--sample', type=bool, default=False)
+    parser.add_argument('--sample', type=int, default=0)
     parser.add_argument('--temperature', type=float, default=1.)
 
     args = parser.parse_args()
@@ -84,8 +85,13 @@ if __name__ == '__main__':
         args.gpus = [0]
         args.batch_size = 1
 
+    if args.sample > 0:
+        args.gpus = [2, 3]
+        args.batch_size = 1
+
     trainer = Trainer(args)
-    if args.sample:
-        trainer.sample()
+
+    if args.sample > 0:
+        trainer.sample(args.sample)
     else:
         trainer.run()

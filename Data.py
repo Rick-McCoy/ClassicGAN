@@ -118,16 +118,22 @@ def Test():
     print(len(pathlist))
     instruments = [0, 3, 5, 7, 8, 9]
     limits = [[24, 96], [36, 84], [24, 96], [36, 84], [36, 84], [60, 96]]
-    for path in tqdm(pathlist):
-        song = pm.PrettyMIDI(midi_file=str(path), resolution=96)
+    lengthlist = []
+    for path in tqdm(pathlist[:1000]):
+        song = pm.PrettyMIDI(midi_file=str(path), resolution=384)
         rolls = [(_.get_piano_roll(), _.program) for _ in song.instruments if _.program // 8 in instruments and not _.is_drum]
         length = min([_.shape[1] for _, _1 in rolls])
-        data = [np.zeros(shape=(limits[i][1]-limits[i][0], length)) for i in range(6)]
-        for roll, instrument in rolls:
-            i = instruments.index(instrument // 8)
-            data[i] = np.add(data[i], roll[limits[i][0]:limits[i][1], :length])
-        if sum([np.sum(datum) for datum in data]) == 0:
-            tqdm.write(str(path))
+        lengthlist.append(length)
+        #data = [np.zeros(shape=(limits[i][1]-limits[i][0], length)) for i in range(6)]
+        #for roll, instrument in rolls:
+        #    i = instruments.index(instrument // 8)
+        #    data[i] = np.add(data[i], roll[limits[i][0]:limits[i][1], :length])
+        #if sum([np.sum(datum) for datum in data]) == 0:
+        #    tqdm.write(str(path))
+    plt.hist(lengthlist, bins=100)
+    plt.grid()
+    plt.axis([0, 30000, 0, 120])
+    plt.show()
 
 if __name__ == '__main__':
     Test()
