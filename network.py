@@ -1,22 +1,35 @@
 import torch
+import queue
 import numpy as np
+from torch.utils.checkpoint import checkpoint
+
+class CausalConv1d(torch.nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super(CausalConv1d, self).__init__()
+        self.conv = torch.nn.Conv1d(in_channels, out_channels, 
+                                    kernel_size=2, padding=1, 
+                                    dilation=1, bias=False)
+    
+    def forward(self, x):
+        return self.conv(x)[:, :, :-1]
 
 class DilatedCausalConv1d(torch.nn.Module):
     def __init__(self, in_channels, out_channels, dilation):
         super(DilatedCausalConv1d, self).__init__()
-        self.padding = dilation
         self.conv = torch.nn.Conv1d(in_channels, out_channels, 
-                                    kernel_size=2, stride=1, 
-                                    padding=self.padding, 
-                                    dilation=dilation, bias=False)
+                                    kernel_size=2, dilation=dilation, 
+                                    bias=False)
+        self.sample_conv = torch.nn.Conv1d(in_channels, out_channels, 
+                                    kernel_size=2, bias=False)
+        self.sample_conv.weight = self.conv.weight
 
-    def forward(self, input):
-        output = self.conv(input)
-        return output[:, :, :-self.padding]
+    def forward(self, x):
+        return self.conv(x)
 
 class ResidualBlock(torch.nn.Module):
     def __init__(self, residual_channels, dilation_channels, skip_channels, dilation):
         super(ResidualBlock, self).__init__()
+        self.dilation = dilation
         self.dilated_conv = DilatedCausalConv1d(residual_channels, residual_channels, dilation=dilation)
         self.tanh_conv = torch.nn.Conv1d(residual_channels, dilation_channels, 1)
         self.sigmoid_conv = torch.nn.Conv1d(residual_channels, dilation_channels, 1)
@@ -24,9 +37,13 @@ class ResidualBlock(torch.nn.Module):
         self.skip_conv = torch.nn.Conv1d(dilation_channels, skip_channels, 1)
         self.gate_tanh = torch.nn.Tanh()
         self.gate_sigmoid = torch.nn.Sigmoid()
+        self.queue = queue.Queue(dilation)
 
-    def forward(self, input, skip_size):
-        output = self.dilated_conv(input)
+    def forward(self, x, skip_size, sample=False):
+        if sample:
+            output = self.dilated_conv.sample_conv(x)
+        else:
+            output = self.dilated_conv(x)
 
         gated_tanh = self.tanh_conv(output)
         gated_sigmoid = self.sigmoid_conv(output)
@@ -35,10 +52,10 @@ class ResidualBlock(torch.nn.Module):
         gated = gated_tanh * gated_sigmoid
 
         output = self.residual_conv(gated)
-        output += input[:, :, -output.size()[2]:]
+        output += x[:, :, -output.size()[2]:]
 
         skip = self.skip_conv(gated)
-        #skip = skip[:, :, -skip_size:]
+        skip = skip[:, :, -skip_size:]
         return output, skip
 
 class ResidualStack(torch.nn.Module):
@@ -61,27 +78,40 @@ class ResidualStack(torch.nn.Module):
             )
         )
         
-    @staticmethod
-    def _residual_block(residual_channels, dilation_channels, skip_channels, dilation):
-        block = ResidualBlock(residual_channels, dilation_channels, skip_channels, dilation)
-        return block
-
-    def build_dilations(self):
-        dilation = [2 ** i for i in range(self.layer_size)] * self.stack_size
-        return dilation
-
     def stack_res_blocks(self, residual_channels, dilation_channels, skip_channels):
-        dilations = self.build_dilations()
-        res_blocks = [self._residual_block(residual_channels, dilation_channels, skip_channels, dilation) for dilation in dilations]
+        dilations = [2 ** i for i in range(self.layer_size)] * self.stack_size
+        res_blocks = [ResidualBlock(residual_channels, dilation_channels, skip_channels, dilation) for dilation in dilations]
         return res_blocks
     
-    def forward(self, input, skip_size):
-        output = input
-        sum = 0
+    def forward(self, x, skip_size):
+        output = x
+        res_sum = 0
         for res_block in self.res_blocks:
             output, skip = res_block(output, skip_size)
-            sum += skip
-        return sum
+            res_sum += skip
+        return res_sum
+
+    def sample_forward(self, x):
+        output = x
+        res_sum = 0
+        for res_block in self.res_blocks:
+            top = res_block.queue.get_nowait()
+            res_block.queue.put_nowait(output)
+            full = torch.cat((top, output), dim=2) # pylint: disable=E1101
+            output, skip = res_block(full, 1, sample=True)
+            res_sum += skip
+        return res_sum
+
+    def fill_queues(self, x):
+        for res_block in self.res_blocks:
+            with res_block.queue.mutex:
+                res_block.queue.queue.clear()
+            for i in range(-res_block.dilation, 0):
+                if i == -1:
+                    res_block.queue.put_nowait(x[:, :, i:])
+                else:
+                    res_block.queue.put_nowait(x[:, :, i:i + 1])
+            x, _ = res_block(x, 1)
 
 class PostProcess(torch.nn.Module):
     def __init__(self, skip_channels, end_channels, channels):
@@ -91,8 +121,8 @@ class PostProcess(torch.nn.Module):
         self.relu = torch.nn.ReLU()
         self.sigmoid = torch.nn.Sigmoid()
 
-    def forward(self, input):
-        output = self.relu(input)
+    def forward(self, x):
+        output = self.relu(x)
         output = self.conv1(output)
         output = self.relu(output)
         output = self.conv2(output)
@@ -112,7 +142,7 @@ class Wavenet(torch.nn.Module):
         ):
         super(Wavenet, self).__init__()
         self.receptive_field = self.calc_receptive_field(layer_size, stack_size)
-        self.causal = DilatedCausalConv1d(channels, residual_channels, 1)
+        self.causal = CausalConv1d(channels, residual_channels)
         self.res_stacks = ResidualStack(
             layer_size, 
             stack_size, 
@@ -125,16 +155,25 @@ class Wavenet(torch.nn.Module):
     @staticmethod
     def calc_receptive_field(layer_size, stack_size):
         layers = [2 ** i for i in range(layer_size)] * stack_size
-        num_receptive_fields = np.sum(layers)
-        return int(num_receptive_fields)
+        return np.sum(layers)
 
-    def calc_output_size(self, input):
-        output_size = int(input.size()[2]) - self.receptive_field
+    def calc_output_size(self, x):
+        output_size = x.size()[2] - self.receptive_field
         return output_size
 
-    def forward(self, input):
-        output_size = self.calc_output_size(input)
-        output = self.causal(input)
+    def forward(self, x):
+        output_size = self.calc_output_size(x)
+        output = self.causal(x)
         output = self.res_stacks(output, output_size)
         output = self.post(output)
         return output
+    
+    def sample_forward(self, x):
+        output = self.causal(x)
+        output = self.res_stacks.sample_forward(output)
+        output = self.post(output)
+        return output
+
+    def fill_queues(self, x):
+        x = self.causal(x)
+        self.res_stacks.fill_queues(x)

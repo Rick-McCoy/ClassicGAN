@@ -12,7 +12,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import torch.utils.data as data
 
-INPUT_LENGTH = 4096
+INPUT_LENGTH = 8192
 pathlist = list(pathlib.Path('Classics').glob('**/*.mid'))
 trainlist = pathlist[:-144]
 testlist = pathlist[-144:]
@@ -20,35 +20,33 @@ testlist = pathlist[-144:]
 def natural_sort_key(s, _nsre=re.compile('(\\d+)')):
     return [int(text) if text.isdigit() else text.lower() for text in _nsre.split(s)]
 
-def piano_roll(path):
+def piano_roll(path, receptive_field):
     with warnings.catch_warnings():
         warnings.simplefilter('ignore')
         song = pm.PrettyMIDI(midi_file=str(path), resolution=96)
     classes = [0, 3, 5, 7, 8, 9]
     limits = [[24, 96], [36, 84], [24, 96], [36, 84], [36, 84], [60, 96]]
     piano_rolls = [(_.get_piano_roll(), _.program) for _ in song.instruments if not _.is_drum and _.program // 8 in classes]
-    length = np.amin([roll.shape[1] for roll, _ in piano_rolls])
-    data = [np.zeros(shape=(limits[i][1]-limits[i][0], length)) for i in range(6)]
+    length = np.amax([roll.shape[1] for roll, _ in piano_rolls] + [INPUT_LENGTH])
+    data_full = np.zeros(shape=(324, length))
     for roll, instrument in piano_rolls:
         i = classes.index(instrument // 8)
-        data[i] = np.add(data[i], roll[limits[i][0]:limits[i][1], :length])
-    data_all = data
-    num = np.random.randint(0, length - INPUT_LENGTH)
-    data = [data_all[i][:, num : INPUT_LENGTH + num] for i in range(6)]
-    datasum = sum([np.sum(datum) for datum in data])
-    sumall = sum([np.sum(datum) for datum in data_all])
-    datasum = 0
+        sliced_roll = roll[limits[i][0]:limits[i][1]]
+        data_full[limits[i][0]:limits[i][1]] += np.pad(sliced_roll, [(0, 0), (0, length - sliced_roll.shape[1])], 'constant')
+    num = np.random.randint(0, length - INPUT_LENGTH + 1)
+    data = data_full[:, num : INPUT_LENGTH + num]
+    datasum = np.sum(data)
+    sumall = np.sum(data_full)
     while datasum == 0 and sumall > 0:
-        num = np.random.randint(0, length - INPUT_LENGTH)
-        data = [data_all[i][:, num : INPUT_LENGTH + num] for i in range(6)]
-        datasum = sum([np.sum(datum) for datum in data])
-    data = np.concatenate(data, axis=0)
+        num = np.random.randint(0, length - INPUT_LENGTH + 1)
+        data = data_full[:, num : INPUT_LENGTH + num]
+        datasum = np.sum(data)
     data[0] += 1 - data.sum(axis = 0)
     data = data > 0
-    return data.astype(np.float32)
+    answer = np.transpose(data[:, receptive_field + 1:], (1, 0))
+    return data.astype(np.float32), answer.astype(np.float32)
 
 def clean(x):
-    x = x[0] > 0.5
     x[0] = 0
     return x
 
@@ -94,46 +92,50 @@ def piano_rolls_to_midi(x, fs=96):
     return midi
 
 class Dataset(data.Dataset):
-    def __init__(self, train):
+    def __init__(self, train, receptive_field):
         super(Dataset, self).__init__()
         if train:
             self.pathlist = trainlist
         else:
             self.pathlist = testlist
+        self.receptive_field = receptive_field
     
     def __getitem__(self, index):
-        data = piano_roll(self.pathlist[index])
+        data = piano_roll(self.pathlist[index], self.receptive_field)
         return data
 
     def __len__(self):
         return len(self.pathlist)
 
 class DataLoader(data.DataLoader):
-    def __init__(self, batch_size, shuffle=True, num_workers=32, train=True):
-        super(DataLoader, self).__init__(Dataset(train), batch_size, shuffle, num_workers=num_workers)
+    def __init__(self, batch_size, receptive_field, shuffle=True, num_workers=16, train=True):
+        super(DataLoader, self).__init__(Dataset(train, receptive_field), batch_size, shuffle, num_workers=num_workers)
 
 def Test():
     pathlist = list(pathlib.Path('Classics').glob('**/*.mid'))
     np.random.shuffle(pathlist)
     print(len(pathlist))
     instruments = [0, 3, 5, 7, 8, 9]
-    limits = [[24, 96], [36, 84], [24, 96], [36, 84], [36, 84], [60, 96]]
+    #limits = [[24, 96], [36, 84], [24, 96], [36, 84], [36, 84], [60, 96]]
     lengthlist = []
-    for path in tqdm(pathlist[:1000]):
+    #over_limit = 0
+    for path in tqdm(pathlist):
         song = pm.PrettyMIDI(midi_file=str(path), resolution=384)
+        #lengthlist.append(song.get_end_time())
+        #if song.get_end_time() >= 81:
+        #    over_limit += 1
         rolls = [(_.get_piano_roll(), _.program) for _ in song.instruments if _.program // 8 in instruments and not _.is_drum]
-        length = min([_.shape[1] for _, _1 in rolls])
-        lengthlist.append(length)
-        #data = [np.zeros(shape=(limits[i][1]-limits[i][0], length)) for i in range(6)]
-        #for roll, instrument in rolls:
-        #    i = instruments.index(instrument // 8)
-        #    data[i] = np.add(data[i], roll[limits[i][0]:limits[i][1], :length])
-        #if sum([np.sum(datum) for datum in data]) == 0:
-        #    tqdm.write(str(path))
+        lengthlist.append(np.amax([np.amax([_.shape[1] for _, _1 in rolls]) - INPUT_LENGTH + 1, 1]))
+        #if np.amax([_.shape[1] for _, _1 in rolls]) >= 8192:
+        #    over_limit += 1
+    #print(over_limit)
+    print(np.sum(lengthlist))
+    lengthlist /= np.sum(lengthlist)
     plt.hist(lengthlist, bins=100)
+    #plt.axis([0, 0.014, 0, 25])
     plt.grid()
-    plt.axis([0, 30000, 0, 120])
-    plt.show()
+    #plt.show()
+    plt.savefig('Images/Amounts.png')
 
 if __name__ == '__main__':
     Test()
