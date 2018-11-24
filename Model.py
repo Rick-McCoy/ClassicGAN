@@ -19,6 +19,7 @@ class Wavenet:
             dilation_channels, 
             skip_channels, 
             end_channels, 
+            out_channels, 
             lr, writer
         ):
         self.net = WavenetModule(
@@ -28,11 +29,13 @@ class Wavenet:
             residual_channels, 
             dilation_channels, 
             skip_channels, 
-            end_channels
+            end_channels, 
+            out_channels
         )
         self.receptive_field = self.net.receptive_field
         self._prepare_for_gpu()
         self.channels = channels
+        self.out_channels = out_channels
         self.lr = lr
         self.sigmoid = torch.nn.Sigmoid()
         self.loss = self._loss()
@@ -47,19 +50,18 @@ class Wavenet:
         return torch.optim.Adam(self.net.parameters(), lr=self.lr)
     
     def _prepare_for_gpu(self):
-        if torch.cuda.device_count() > 1:
-            self.net = torch.nn.DataParallel(self.net)
         if torch.cuda.is_available():
+            self.net = torch.nn.DataParallel(self.net)
             self.net.cuda()
 
     def train(self, x, real, step=1, train=True, total=0):
         output = self.net(x).transpose(1, 2)[:, :-1, :]
-        loss = self.loss(output.reshape(-1, self.channels), real.reshape(-1, self.channels))
+        loss = self.loss(output.reshape(-1, self.out_channels), real.reshape(-1, self.out_channels))
         self.optimizer.zero_grad()
         if train:
             loss.backward()
             self.optimizer.step()
-            if step % 20 == 0:
+            if step % 20 == 19:
                 tqdm.write('Training step {}/{} Loss: {}'.format(step, total, loss))
                 self.writer.add_scalar('Training loss', loss.item(), step)
                 self.writer.add_image('Real', real[:1], step)
@@ -81,14 +83,15 @@ class Wavenet:
 
     def gen_init(self):
         channels = [0, 72, 120, 192, 240, 288, 324]
-        output = np.zeros([1, self.channels, self.receptive_field + 1])
-        output[:, 0] = 1
+        output = np.zeros([1, self.channels, self.receptive_field + 2])
+        output[:, 324] = 1
         for i in range(6):
             num = np.random.randint(0, 4)
             on = np.random.randint(0, 2)
-            for _ in range(num):
+            for j in range(num):
                 if on:
-                    output[:, 0, -1] = 0
+                    output[:, 324, -1] = 0
+                    output[:, 324 + j] = 1
                     output[:, np.random.randint(channels[i], channels[i + 1]), -1] = 1
                     on = np.random.randint(0, 2)
         return output
@@ -98,17 +101,20 @@ class Wavenet:
             init = self.gen_init()
         else:
             init = np.expand_dims(init, axis=0)
-        init = init[:, :, -self.receptive_field - 1:] # pylint: disable=E1130
-        output = np.zeros((self.channels, 1))
+        init = init[:, :, -self.receptive_field - 2:-1] # pylint: disable=E1130
+        output = np.zeros((self.out_channels, 1))
         self.net.module.fill_queues(torch.Tensor(init).cuda())
-        x = init[:, :, -1:]
+        x = init[:, :, -2:]
         for _ in tqdm(range(GEN_LENGTH)):
-            x = self.net.module.sample_forward(torch.Tensor(x).cuda()).detach().cpu().numpy()
+            nxt = self.net.module.sample_forward(torch.Tensor(x).cuda()).detach().cpu().numpy()
             if temperature != 1:
-                x = np.power(x + 0.5, temperature) - 0.5
-            x = x > np.random.rand(1, self.channels, 1)
-            x = x.astype(np.float32)
-            output = np.concatenate((output, x[0]), axis=1)
+                nxt = np.power(nxt + 0.5, temperature) - 0.5
+            nxt = nxt > np.random.rand(1, self.out_channels, 1)
+            nxt = nxt.astype(np.float32)
+            output = np.concatenate((output, nxt[0]), axis=1)
+            nxt = np.concatenate((nxt, x[:, -6:, :1]), axis=1)
+            x = np.concatenate((x, nxt), axis=2)
+            x = x[:, :, 1:]
         return output[:, -GEN_LENGTH:]
 
     def save(self, step):

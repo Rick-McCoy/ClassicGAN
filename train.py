@@ -25,6 +25,7 @@ class Trainer():
             args.dilation_channels, 
             args.skip_channels, 
             args.end_channels, 
+            args.out_channels,
             args.learning_rate, 
             self.train_writer
         )
@@ -80,11 +81,12 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--layer_size', type=int, default=10)
     parser.add_argument('--stack_size', type=int, default=5)
-    parser.add_argument('--channels', type=int, default=324)
+    parser.add_argument('--channels', type=int, default=331)
     parser.add_argument('--residual_channels', type=int, default=256)
     parser.add_argument('--dilation_channels', type=int, default=512)
     parser.add_argument('--skip_channels', type=int, default=512)
     parser.add_argument('--end_channels', type=int, default=1024)
+    parser.add_argument('--out_channels', type=int, default=325)
     parser.add_argument('--num_epochs', type=int, default=10000)
     parser.add_argument('--learning_rate', type=float, default=0.0002)
     parser.add_argument('--batch_size', type=int, default=4)
@@ -94,8 +96,6 @@ if __name__ == '__main__':
     parser.add_argument('--temperature', type=float, default=1.)
 
     args = parser.parse_args()
-    if torch.cuda.device_count() == 1:
-        args.batch_size = 1
 
     if args.sample > 0:
         args.batch_size = 1

@@ -95,8 +95,8 @@ class ResidualStack(torch.nn.Module):
         output = x
         res_sum = 0
         for res_block in self.res_blocks:
-            top = res_block.queue.get_nowait()
-            res_block.queue.put_nowait(output)
+            top = res_block.queue.get()
+            res_block.queue.put(output)
             full = torch.cat((top, output), dim=2) # pylint: disable=E1101
             output, skip = res_block(full, 1, sample=True)
             res_sum += skip
@@ -106,18 +106,15 @@ class ResidualStack(torch.nn.Module):
         for res_block in self.res_blocks:
             with res_block.queue.mutex:
                 res_block.queue.queue.clear()
-            for i in range(-res_block.dilation, 0):
-                if i == -1:
-                    res_block.queue.put_nowait(x[:, :, i:])
-                else:
-                    res_block.queue.put_nowait(x[:, :, i:i + 1])
+            for i in range(-res_block.dilation - 1, -1):
+                    res_block.queue.put(x[:, :, i:i + 1])
             x, _ = res_block(x, 1)
 
 class PostProcess(torch.nn.Module):
-    def __init__(self, skip_channels, end_channels, channels):
+    def __init__(self, skip_channels, end_channels, out_channels):
         super(PostProcess, self).__init__()
         self.conv1 = torch.nn.Conv1d(skip_channels, end_channels, 1)
-        self.conv2 = torch.nn.Conv1d(end_channels, channels, 1)
+        self.conv2 = torch.nn.Conv1d(end_channels, out_channels, 1)
         self.relu = torch.nn.ReLU()
         self.sigmoid = torch.nn.Sigmoid()
 
@@ -138,7 +135,8 @@ class Wavenet(torch.nn.Module):
             residual_channels, 
             dilation_channels, 
             skip_channels, 
-            end_channels
+            end_channels, 
+            out_channels
         ):
         super(Wavenet, self).__init__()
         self.receptive_field = self.calc_receptive_field(layer_size, stack_size)
@@ -150,7 +148,7 @@ class Wavenet(torch.nn.Module):
             dilation_channels, 
             skip_channels
         )
-        self.post = PostProcess(skip_channels, end_channels, channels)
+        self.post = PostProcess(skip_channels, end_channels, out_channels)
     
     @staticmethod
     def calc_receptive_field(layer_size, stack_size):
@@ -169,7 +167,7 @@ class Wavenet(torch.nn.Module):
         return output
     
     def sample_forward(self, x):
-        output = self.causal(x)
+        output = self.causal(x)[:, :, 1:]
         output = self.res_stacks.sample_forward(output)
         output = self.post(output)
         return output
